@@ -1,0 +1,44 @@
+{
+	"name": "spaze/security-txt",
+	"description": "security.txt generator, parser, validator",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Michal Špaček",
+			"homepage": "https://www.michalspacek.com/"
+		}
+	],
+	"require-dev": {
+		"php": "^8.1",
+		"nette/tester": "^2.4",
+		"php-parallel-lint/php-console-highlighter": "^0.5.0",
+		"php-parallel-lint/php-parallel-lint": "^1.3",
+		"phpstan/phpstan": "^1.3",
+		"spaze/coding-standard": "^0.0",
+		"spaze/phpstan-disallowed-calls": "^2.2"
+	},
+	"config": {
+		"sort-packages": true,
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	},
+	"autoload": {
+		"psr-4": {
+			"Spaze\\SecurityTxt\\": "src/"
+		}
+	},
+	"scripts": {
+		"cs-fix": "vendor/squizlabs/php_codesniffer/bin/phpcbf bin/ src/ tests/",
+		"lint": "vendor/php-parallel-lint/php-parallel-lint/parallel-lint --colors bin/ src/ tests/",
+		"phpcs": "vendor/squizlabs/php_codesniffer/bin/phpcs bin/ src/ tests/",
+		"phpstan": "vendor/phpstan/phpstan/phpstan -vvv --ansi analyse --configuration phpstan.neon",
+		"test": [
+			"@lint",
+			"@phpcs",
+			"@phpstan",
+			"@tester"
+		],
+		"tester": "vendor/nette/tester/src/tester -c tests/php-unix.ini --colors 1 tests/"
+	}
+}

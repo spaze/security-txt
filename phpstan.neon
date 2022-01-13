@@ -1,0 +1,13 @@
+parameters:
+	paths:
+		- src
+		- bin
+	level: max
+
+includes:
+	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
+	- vendor/spaze/phpstan-disallowed-calls/extension.neon
+	- vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
+	- vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon
+	- vendor/spaze/phpstan-disallowed-calls/disallowed-insecure-calls.neon
+	- vendor/spaze/phpstan-disallowed-calls/disallowed-loose-calls.neon

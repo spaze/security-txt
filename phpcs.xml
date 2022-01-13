@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<ruleset name="SecurityTxt">
+	<arg name="extensions" value="php,phpt"/>
+	<arg name="cache"/>
+	<arg name="colors"/>
+	<arg value="s"/>
+	<arg value="p"/>
+	<rule ref="vendor/spaze/coding-standard/src/ruleset.xml"/>
+	<rule ref="PSR1.Files.SideEffects.FoundWithSymbols">
+		<exclude-pattern>tests/</exclude-pattern>  <!-- Tests require bootstrap.php -->
+	</rule>
+	<rule ref="Generic.WhiteSpace.ScopeIndent">
+		<!-- Sniffer doesn't support enums yet https://github.com/squizlabs/PHP_CodeSniffer/issues/3474 -->
+		<exclude-pattern>src/Fields/SecurityTxtField.php</exclude-pattern>
+	</rule>
+</ruleset>

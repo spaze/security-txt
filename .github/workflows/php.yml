@@ -1,0 +1,39 @@
+name: PHP Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php-version:
+          - "8.1"
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: OS info
+      run: cat /etc/os-release
+
+    - name: "Install PHP"
+      uses: shivammathur/setup-php@v2
+      with:
+        coverage: "none"
+        php-version: ${{ matrix.php-version }}
+
+    - name: PHP info
+      run: |
+        php -v
+        php -m
+
+    - name: Validate composer.json
+      run: composer validate --strict --no-interaction
+
+    - name: Install dependencies
+      run: composer update --no-progress --no-interaction
+
+    - name: Run tests
+      run: composer test
