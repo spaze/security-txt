@@ -7,6 +7,7 @@ namespace Spaze\SecurityTxt\Parser;
 use DateTime;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresOldFormatError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresWrongFormatError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtMultipleExpiresError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
@@ -35,7 +36,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		return [
 			'expired' => ['-5 days', true, [2 => [SecurityTxtExpiredError::class]]],
-			'not expired' => ['+1337 days', false, []],
+			'not expired' => ['+37 days', false, []],
 		];
 	}
 
@@ -150,6 +151,17 @@ class SecurityTxtParserTest extends TestCase
 		$contents = 'Expires: Mon, 15 Aug 2005 15:52:01 +0000';
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::type(SecurityTxtExpiresOldFormatError::class, $parseResult->getParseErrors()[1][0]);
+	}
+
+
+	public function testParseStringExpiresTooLong(): void
+	{
+		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 years'))->format(DATE_RFC3339);
+		$parseResult = $this->securityTxtParser->parseString($contents);
+		Assert::count(0, $parseResult->getParseErrors());
+		Assert::count(1, $parseResult->getParseWarnings());
+		Assert::count(1, $parseResult->getParseWarnings()[2]);
+		Assert::type(SecurityTxtExpiresTooLongWarning::class, $parseResult->getParseWarnings()[2][0]);
 	}
 
 }

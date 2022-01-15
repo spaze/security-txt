@@ -12,6 +12,11 @@ if (!isset($_SERVER['argv'][1])) {
 	exit(2);
 }
 
+$red = "\033[1;31m";
+$green = "\033[1;32m";
+$bold = "\033[1m";
+$clear = "\033[0m";
+
 $contents = file_get_contents($_SERVER['argv'][1]);
 if ($contents === false) {
 	exit(3);
@@ -23,16 +28,17 @@ $parseResult = $parser->parseString($contents);
 
 foreach ($parseResult->getParseErrors() as $line => $errors) {
 	foreach ($errors as $error) {
-		echo "Error on line $line: " . $error->getMessage() . "\n";
+		echo "[{$red}Error{$clear}] on line {$bold}$line{$clear}: " . $error->getMessage() . "\n";
 	}
 }
 foreach ($parseResult->getFileErrors() as $error) {
-	echo "Error: " . $error->getMessage() . "\n";
+	echo "[{$red}Error{$clear}]: " . $error->getMessage() . "\n";
 }
-
-$red = "\033[1;31m";
-$green = "\033[1;32m";
-$clear = "\033[0m";
+foreach ($parseResult->getParseWarnings() as $line => $warnings) {
+	foreach ($warnings as $warning) {
+		echo "[{$bold}Warning{$clear}] on line {$bold}$line{$clear}: " . $warning->getMessage() . "\n";
+	}
+}
 
 $expires = $parseResult->getSecurityTxt()->getExpires();
 if ($expires !== null) {

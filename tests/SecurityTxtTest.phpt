@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt;
 
 use DateTimeImmutable;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Fields\Expires;
 use Tester\Assert;
 use Tester\TestCase;
@@ -23,6 +24,17 @@ class SecurityTxtTest extends TestCase
 		$securityTxt->setExpires($in2Weeks);
 		$securityTxt->setExpires($in3Weeks);
 		Assert::equal($in3Weeks, $securityTxt->getExpires());
+	}
+
+
+	public function testSetExpiresTooLong(): void
+	{
+		$securityTxt = new SecurityTxt();
+		$future = new Expires(new DateTimeImmutable('+1 year +1 month'));
+		Assert::throws(function () use ($securityTxt, $future): void {
+			$securityTxt->setExpires($future);
+		}, SecurityTxtExpiresTooLongWarning::class);
+		Assert::equal($future, $securityTxt->getExpires());
 	}
 
 }

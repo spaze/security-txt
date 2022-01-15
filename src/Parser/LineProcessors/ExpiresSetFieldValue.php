@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use Exception;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresOldFormatError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresWrongFormatError;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -18,6 +19,7 @@ class ExpiresSetFieldValue implements LineProcessor
 	 * @throws SecurityTxtExpiresOldFormatError
 	 * @throws SecurityTxtExpiresWrongFormatError
 	 * @throws SecurityTxtExpiredError
+	 * @throws SecurityTxtExpiresTooLongWarning
 	 * @throws Exception
 	 */
 	public function process(string $value, SecurityTxt $securityTxt): void

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
@@ -25,6 +26,9 @@ class SecurityTxtParser
 	/** @var array<int, array<int, SecurityTxtError>> */
 	private array $parseErrors = [];
 
+	/** @var array<int, array<int, SecurityTxtWarning>> */
+	private array $parseWarnings = [];
+
 
 	public function __construct(
 		private SecurityTxtValidator $validator,
@@ -43,6 +47,8 @@ class SecurityTxtParser
 				$processor->process($value, $securityTxt);
 			} catch (SecurityTxtError $e) {
 				$this->parseErrors[$lineNumber][] = $e;
+			} catch (SecurityTxtWarning $e) {
+				$this->parseWarnings[$lineNumber][] = $e;
 			}
 		}
 	}
@@ -72,7 +78,7 @@ class SecurityTxtParser
 			}
 		}
 		$validateResult = $this->validator->validate($securityTxt);
-		return new SecurityTxtParseResult($securityTxt, $this->parseErrors, $validateResult->getErrors());
+		return new SecurityTxtParseResult($securityTxt, $this->parseErrors, $validateResult->getErrors(), $this->parseWarnings);
 	}
 
 
