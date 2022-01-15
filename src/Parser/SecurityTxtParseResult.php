@@ -49,6 +49,12 @@ class SecurityTxtParseResult
 	}
 
 
+	public function hasErrors(): bool
+	{
+		return $this->parseErrors || $this->fileErrors;
+	}
+
+
 	/**
 	 * @return array<int, array<int, SecurityTxtWarning>>
 	 */
