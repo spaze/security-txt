@@ -6,11 +6,13 @@ namespace Spaze\SecurityTxt;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Fields\Expires;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 
 class SecurityTxt
 {
 
 	private ?Expires $expires = null;
+	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
 
 
 	/**
@@ -32,6 +34,18 @@ class SecurityTxt
 	public function getExpires(): ?Expires
 	{
 		return $this->expires;
+	}
+
+
+	public function setSignatureVerifyResult(SecurityTxtSignatureVerifyResult $signatureVerifyResult): void
+	{
+		$this->signatureVerifyResult = $signatureVerifyResult;
+	}
+
+
+	public function getSignatureVerifyResult(): ?SecurityTxtSignatureVerifyResult
+	{
+		return $this->signatureVerifyResult;
 	}
 
 }

@@ -112,6 +112,16 @@ class SecurityTxtCheckFile
 				));
 			}
 		}
+		$signatureVerifyResult = $parseResult->getSecurityTxt()->getSignatureVerifyResult();
+		if ($signatureVerifyResult) {
+			$this->info(sprintf(
+				'%sSignature valid%s, key %s, signed on %s',
+				self::GREEN,
+				self::CLEAR,
+				$signatureVerifyResult->getKeyFingerprint(),
+				$signatureVerifyResult->getDate()->format(DATE_RFC3339),
+			));
+		}
 		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors()) {
 			$this->error(self::RED . 'Please update the file!' . self::CLEAR);
 			exit(self::STATUS_ERROR);

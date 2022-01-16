@@ -17,6 +17,9 @@
 		"spaze/coding-standard": "^0.0",
 		"spaze/phpstan-disallowed-calls": "^2.2"
 	},
+	"suggest": {
+		"ext-gnupg": "Needed to verify and create signatures"
+	},
 	"config": {
 		"sort-packages": true,
 		"allow-plugins": {

@@ -4,12 +4,15 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureExtensionNotLoadedWarning;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureInvalidError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\LineProcessor;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 
 class SecurityTxtParser
@@ -32,6 +35,7 @@ class SecurityTxtParser
 
 	public function __construct(
 		private SecurityTxtValidator $validator,
+		private SecurityTxtSignature $signature,
 	) {
 		$this->lineProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),
@@ -67,6 +71,7 @@ class SecurityTxtParser
 			if (str_starts_with($line, '#')) {
 				continue;
 			}
+			$this->checkSignature($lineNumber, $line, $contents, $securityTxt);
 			$field = explode(':', $line, 2);
 			if (count($field) !== 2) {
 				continue;
@@ -79,6 +84,21 @@ class SecurityTxtParser
 		}
 		$validateResult = $this->validator->validate($securityTxt);
 		return new SecurityTxtParseResult($securityTxt, $this->parseErrors, $validateResult->getErrors(), $this->parseWarnings);
+	}
+
+
+	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): void
+	{
+		if ($this->signature->isCleartextHeader($line)) {
+			try {
+				$result = $this->signature->verify($contents);
+				$securityTxt->setSignatureVerifyResult($result);
+			} catch (SecurityTxtSignatureInvalidError $e) {
+				$this->parseErrors[$lineNumber][] = $e;
+			} catch (SecurityTxtSignatureExtensionNotLoadedWarning $e) {
+				$this->parseWarnings[$lineNumber][] = $e;
+			}
+		}
 	}
 
 
