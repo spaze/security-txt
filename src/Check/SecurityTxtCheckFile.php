@@ -10,12 +10,6 @@ use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 class SecurityTxtCheckFile
 {
 
-	private const RED = "\033[1;31m";
-	private const GREEN = "\033[1;32m";
-	private const BOLD = "\033[1m";
-	private const DARK = "\033[1;30m";
-	private const CLEAR = "\033[0m";
-
 	private const STATUS_OK = 0;
 	private const STATUS_ERROR = 1;
 	private const STATUS_NO_FILE = 2;
@@ -25,6 +19,7 @@ class SecurityTxtCheckFile
 	public function __construct(
 		private SecurityTxtParser $parser,
 		private string $scriptName,
+		private bool $colors,
 	) {
 	}
 
@@ -34,9 +29,9 @@ class SecurityTxtCheckFile
 		$message = sprintf(
 			'%s%s%s%s: %s (How to fix: %s%s)',
 			$line ? 'on line ' : '',
-			$line ? self::BOLD : '',
+			$line ? $this->colorBold() : '',
 			$line ?: '',
-			$line ? self::CLEAR : '',
+			$line ? $this->colorClear() : '',
 			$throwable->getMessage(),
 			$throwable->getHowToFix(),
 			$throwable->getCorrectValue() ? ', e.g. ' . $throwable->getCorrectValue() : '',
@@ -52,7 +47,7 @@ class SecurityTxtCheckFile
 	public function check(?string $file = null, ?int $expiresWarningThreshold = null): never
 	{
 		if ($file === null) {
-			$this->info("Usage: {$this->scriptName} <file> [days]\nThe check will return 1 instead of 0 if the file has expired or expires in less than [days]");
+			$this->info("Usage: {$this->scriptName} <file> [days] [--colors] \nThe check will return 1 instead of 0 if the file has expired or expires in less than [days]");
 			exit(self::STATUS_NO_FILE);
 		}
 
@@ -61,7 +56,7 @@ class SecurityTxtCheckFile
 			exit(self::STATUS_FILE_ERROR);
 		}
 
-		$this->info('parsing ' . self::BOLD . $file . self::CLEAR);
+		$this->info('parsing ' . $this->colorBold() . $file . $this->colorClear());
 
 		$parseResult = $this->parser->parseString($contents);
 		foreach ($parseResult->getParseErrors() as $line => $errors) {
@@ -86,28 +81,28 @@ class SecurityTxtCheckFile
 			if ($expires->isExpired()) {
 				$this->error(sprintf(
 					'%sThe file has expired %s %s ago%s (%s)',
-					self::RED,
+					$this->colorRed(),
 					abs($days),
 					$days === 1 ? 'day' : 'days',
-					self::CLEAR,
+					$this->colorClear(),
 					$expiresDate,
 				));
 			} elseif ($expiresSoon) {
 				$this->error(sprintf(
 					'%sThe file will expire very soon in %s %s%s (%s)',
-					self::RED,
+					$this->colorRed(),
 					$days,
 					$days === 1 ? 'day' : 'days',
-					self::CLEAR,
+					$this->colorClear(),
 					$expiresDate,
 				));
 			} else {
 				$this->info(sprintf(
 					'%sThe file will expire in %s %s%s (%s)',
-					self::GREEN,
+					$this->colorGreen(),
 					$days,
 					$days === 1 ? 'day' : 'days',
-					self::CLEAR,
+					$this->colorClear(),
 					$expiresDate,
 				));
 			}
@@ -116,14 +111,14 @@ class SecurityTxtCheckFile
 		if ($signatureVerifyResult) {
 			$this->info(sprintf(
 				'%sSignature valid%s, key %s, signed on %s',
-				self::GREEN,
-				self::CLEAR,
+				$this->colorGreen(),
+				$this->colorClear(),
 				$signatureVerifyResult->getKeyFingerprint(),
 				$signatureVerifyResult->getDate()->format(DATE_RFC3339),
 			));
 		}
 		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors()) {
-			$this->error(self::RED . 'Please update the file!' . self::CLEAR);
+			$this->error($this->colorRed() . 'Please update the file!' . $this->colorClear());
 			exit(self::STATUS_ERROR);
 		} else {
 			exit(self::STATUS_OK);
@@ -133,19 +128,19 @@ class SecurityTxtCheckFile
 
 	private function info(string $message): void
 	{
-		$this->print(self::DARK . '[Info]' . self::CLEAR, $message);
+		$this->print($this->colorDark() . '[Info]' . $this->colorClear(), $message);
 	}
 
 
 	private function error(string $message): void
 	{
-		$this->print(self::RED . '[Error]' . self::CLEAR, $message);
+		$this->print($this->colorRed() . '[Error]' . $this->colorClear(), $message);
 	}
 
 
 	private function warning(string $message): void
 	{
-		$this->print(self::BOLD . '[Warning]' . self::CLEAR, $message);
+		$this->print($this->colorBold() . '[Warning]' . $this->colorClear(), $message);
 	}
 
 
@@ -153,6 +148,36 @@ class SecurityTxtCheckFile
 	{
 		$message = str_replace("\n", "\n{$level} ", $message);
 		echo "{$level} {$message}\n";
+	}
+
+
+	private function colorRed(): string
+	{
+		return $this->colors ? "\033[1;31m" : '';
+	}
+
+
+	private function colorGreen(): string
+	{
+		return $this->colors ? "\033[1;32m" : '';
+	}
+
+
+	private function colorBold(): string
+	{
+		return $this->colors ? "\033[1m" : '';
+	}
+
+
+	private function colorDark(): string
+	{
+		return $this->colors ? "\033[1;30m" : '';
+	}
+
+
+	private function colorClear(): string
+	{
+		return $this->colors ? "\033[0m" : '';
 	}
 
 }
