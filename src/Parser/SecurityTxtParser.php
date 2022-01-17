@@ -93,7 +93,7 @@ class SecurityTxtParser
 			}
 		}
 		$validateResult = $this->validator->validate($securityTxt);
-		return new SecurityTxtParseResult($securityTxt, $this->parseErrors, $validateResult->getErrors(), $this->parseWarnings);
+		return new SecurityTxtParseResult($securityTxt, $this->parseErrors, $this->parseWarnings, $validateResult);
 	}
 
 

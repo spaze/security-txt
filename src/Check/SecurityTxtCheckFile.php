@@ -20,6 +20,7 @@ class SecurityTxtCheckFile
 		private SecurityTxtParser $parser,
 		private string $scriptName,
 		private bool $colors,
+		private bool $strictMode,
 	) {
 	}
 
@@ -47,7 +48,7 @@ class SecurityTxtCheckFile
 	public function check(?string $file = null, ?int $expiresWarningThreshold = null): never
 	{
 		if ($file === null) {
-			$this->info("Usage: {$this->scriptName} <file> [days] [--colors] \nThe check will return 1 instead of 0 if the file has expired or expires in less than [days]");
+			$this->info("Usage: {$this->scriptName} <file> [days] [--colors] [--strict] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than [days], has errors, has warnings when using --strict");
 			exit(self::STATUS_NO_FILE);
 		}
 
@@ -71,6 +72,9 @@ class SecurityTxtCheckFile
 			foreach ($warnings as $warning) {
 				$this->printResult($warning, $line);
 			}
+		}
+		foreach ($parseResult->getFileWarnings() as $error) {
+			$this->printResult($error);
 		}
 
 		$expires = $parseResult->getSecurityTxt()->getExpires();
@@ -117,7 +121,7 @@ class SecurityTxtCheckFile
 				$signatureVerifyResult->getDate()->format(DATE_RFC3339),
 			));
 		}
-		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors()) {
+		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors() || ($this->strictMode && $parseResult->hasWarnings())) {
 			$this->error($this->colorRed() . 'Please update the file!' . $this->colorClear());
 			exit(self::STATUS_ERROR);
 		} else {

@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Parser;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 
 class SecurityTxtParseResult
 {
@@ -13,14 +14,14 @@ class SecurityTxtParseResult
 	/**
 	 * @param SecurityTxt $securityTxt
 	 * @param array<int, array<int, SecurityTxtError>> $parseErrors
-	 * @param array<int, SecurityTxtError> $fileErrors
 	 * @param array<int, array<int, SecurityTxtWarning>> $parseWarnings
+	 * @param SecurityTxtValidateResult $validateResult
 	 */
 	public function __construct(
 		private SecurityTxt $securityTxt,
 		private array $parseErrors,
-		private array $fileErrors,
 		private array $parseWarnings,
+		private SecurityTxtValidateResult $validateResult,
 	) {
 	}
 
@@ -45,13 +46,13 @@ class SecurityTxtParseResult
 	 */
 	public function getFileErrors(): array
 	{
-		return $this->fileErrors;
+		return $this->validateResult->getErrors();
 	}
 
 
 	public function hasErrors(): bool
 	{
-		return $this->parseErrors || $this->fileErrors;
+		return $this->getParseErrors() || $this->getFileErrors();
 	}
 
 
@@ -61,6 +62,21 @@ class SecurityTxtParseResult
 	public function getParseWarnings(): array
 	{
 		return $this->parseWarnings;
+	}
+
+
+	/**
+	 * @return array<int, SecurityTxtWarning>
+	 */
+	public function getFileWarnings(): array
+	{
+		return $this->validateResult->getWarnings();
+	}
+
+
+	public function hasWarnings(): bool
+	{
+		return $this->getParseWarnings() || $this->getFileWarnings();
 	}
 
 }
