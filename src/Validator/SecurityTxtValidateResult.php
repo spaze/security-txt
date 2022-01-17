@@ -4,15 +4,19 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Validator;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 
 class SecurityTxtValidateResult
 {
 
 	/**
 	 * @param array<int, SecurityTxtError> $errors
+	 * @param array<int, SecurityTxtWarning> $warnings
 	 */
-	public function __construct(private array $errors)
-	{
+	public function __construct(
+		private array $errors,
+		private array $warnings,
+	) {
 	}
 
 
@@ -22,6 +26,15 @@ class SecurityTxtValidateResult
 	public function getErrors(): array
 	{
 		return $this->errors;
+	}
+
+
+	/**
+	 * @return array<int, SecurityTxtWarning>
+	 */
+	public function getWarnings(): array
+	{
+		return $this->warnings;
 	}
 
 }

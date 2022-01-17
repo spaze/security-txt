@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
+use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 
@@ -13,6 +14,11 @@ class SecurityTxt
 
 	private ?Expires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
+
+	/**
+	 * @var array<int, Canonical>
+	 */
+	private array $canonical = [];
 
 
 	/**
@@ -46,6 +52,21 @@ class SecurityTxt
 	public function getSignatureVerifyResult(): ?SecurityTxtSignatureVerifyResult
 	{
 		return $this->signatureVerifyResult;
+	}
+
+
+	public function addCanonical(Canonical $canonical): void
+	{
+		$this->canonical[] = $canonical;
+	}
+
+
+	/**
+	 * @return array<int, Canonical>
+	 */
+	public function getCanonical(): array
+	{
+		return $this->canonical;
 	}
 
 }
