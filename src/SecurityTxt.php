@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
 
+use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Fields\Canonical;
@@ -55,9 +56,16 @@ class SecurityTxt
 	}
 
 
+	/**
+	 * @throws SecurityTxtCanonicalNotHttpsError
+	 */
 	public function addCanonical(Canonical $canonical): void
 	{
 		$this->canonical[] = $canonical;
+		$scheme = parse_url($canonical->getUri(), PHP_URL_SCHEME);
+		if ($scheme && strtolower($scheme) === 'http') {
+			throw new SecurityTxtCanonicalNotHttpsError();
+		}
 	}
 
 

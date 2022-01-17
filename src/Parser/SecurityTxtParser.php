@@ -8,6 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureExtensionNotLoadedWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureInvalidError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
+use Spaze\SecurityTxt\Parser\LineProcessors\CanonicalAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\LineProcessor;
@@ -37,6 +38,9 @@ class SecurityTxtParser
 		private SecurityTxtValidator $validator,
 		private SecurityTxtSignature $signature,
 	) {
+		$this->lineProcessors[SecurityTxtField::Canonical->value] = [
+			new CanonicalAddFieldValue(),
+		];
 		$this->lineProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),
 			new ExpiresSetFieldValue(),
@@ -65,6 +69,12 @@ class SecurityTxtParser
 		$this->lines = array_map(function (string $line): string {
 			return trim($line);
 		}, $lines);
+		$securityTxtFields = array_combine(
+			array_map(function (SecurityTxtField $securityTxtField): string {
+				return strtolower($securityTxtField->value);
+			}, SecurityTxtField::cases()),
+			SecurityTxtField::cases(),
+		);
 		$securityTxt = new SecurityTxt();
 		for ($lineNumber = 1; $lineNumber <= count($this->lines); $lineNumber++) {
 			$line = $this->lines[$lineNumber - 1];
@@ -78,8 +88,8 @@ class SecurityTxtParser
 			}
 			$fieldName = strtolower($field[0]);
 			$fieldValue = trim($field[1]);
-			if ($fieldName === strtolower(SecurityTxtField::Expires->value)) {
-				$this->processLine($lineNumber, $fieldValue, SecurityTxtField::Expires, $securityTxt);
+			if (isset($securityTxtFields[$fieldName])) {
+				$this->processLine($lineNumber, $fieldValue, $securityTxtFields[$fieldName], $securityTxt);
 			}
 		}
 		$validateResult = $this->validator->validate($securityTxt);

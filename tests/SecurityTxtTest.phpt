@@ -5,7 +5,9 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt;
 
 use DateTimeImmutable;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
+use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Expires;
 use Tester\Assert;
 use Tester\TestCase;
@@ -35,6 +37,29 @@ class SecurityTxtTest extends TestCase
 			$securityTxt->setExpires($future);
 		}, SecurityTxtExpiresTooLongWarning::class);
 		Assert::equal($future, $securityTxt->getExpires());
+	}
+
+
+	public function testSetCanonical(): void
+	{
+		$securityTxt = new SecurityTxt();
+		$securityTxt->addCanonical(new Canonical('ftp://foo.bar.example.net/security.txt'));
+		Assert::throws(function () use ($securityTxt): void {
+			$securityTxt->addCanonical(new Canonical('http://example.com/.well-known/security.txt'));
+		}, SecurityTxtCanonicalNotHttpsError::class);
+		$securityTxt->addCanonical(new Canonical('https://example.com/.well-known/security.txt'));
+		$securityTxt->addCanonical(new Canonical('C:\\security.txt'));
+		Assert::same(
+			[
+				'ftp://foo.bar.example.net/security.txt',
+				'http://example.com/.well-known/security.txt',
+				'https://example.com/.well-known/security.txt',
+				'C:\\security.txt',
+			],
+			array_map(function (Canonical $canonical): string {
+				return $canonical->getUri();
+			}, $securityTxt->getCanonical()),
+		);
 	}
 
 }
