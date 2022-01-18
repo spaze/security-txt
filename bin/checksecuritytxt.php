@@ -7,7 +7,24 @@ use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+$autoloadFiles = [
+	__DIR__ . '/../vendor/autoload.php',
+	__DIR__ . '/../../../autoload.php',
+];
+
+$autoloadLoaded = false;
+foreach ($autoloadFiles as $autoloadFile) {
+	if (is_file($autoloadFile)) {
+		require_once $autoloadFile;
+		$autoloadLoaded = true;
+		break;
+	}
+}
+
+if (!$autoloadLoaded) {
+	fwrite(STDERR, "Install packages using Composer.\n");
+	exit(254);
+}
 
 $validator = new SecurityTxtValidator();
 $signature = new SecurityTxtSignature();

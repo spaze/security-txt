@@ -31,6 +31,9 @@
 			"Spaze\\SecurityTxt\\": "src/"
 		}
 	},
+	"bin": [
+		"bin/checksecuritytxt.php"
+	],
 	"scripts": {
 		"cs-fix": "vendor/squizlabs/php_codesniffer/bin/phpcbf bin/ src/ tests/",
 		"lint": "vendor/php-parallel-lint/php-parallel-lint/parallel-lint --colors bin/ src/ tests/",
