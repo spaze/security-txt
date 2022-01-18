@@ -28,11 +28,9 @@ class SecurityTxtCheckFile
 	private function printResult(SecurityTxtThrowable $throwable, ?int $line = null): void
 	{
 		$message = sprintf(
-			'%s%s%s%s: %s (How to fix: %s%s)',
+			'%s%s: %s (How to fix: %s%s)',
 			$line ? 'on line ' : '',
-			$line ? $this->colorBold() : '',
-			$line ?: '',
-			$line ? $this->colorClear() : '',
+			$line ? $this->colorBold((string)$line) : '',
 			$throwable->getMessage(),
 			$throwable->getHowToFix(),
 			$throwable->getCorrectValue() ? ', e.g. ' . $throwable->getCorrectValue() : '',
@@ -57,7 +55,7 @@ class SecurityTxtCheckFile
 			exit(self::STATUS_FILE_ERROR);
 		}
 
-		$this->info('parsing ' . $this->colorBold() . $file . $this->colorClear());
+		$this->info('parsing ' . $this->colorBold($file));
 
 		$parseResult = $this->parser->parseString($contents);
 		foreach ($parseResult->getParseErrors() as $line => $errors) {
@@ -83,46 +81,24 @@ class SecurityTxtCheckFile
 			$days = $expires->inDays();
 			$expiresDate = $expires->getDateTime()->format(DATE_RFC3339);
 			if ($expires->isExpired()) {
-				$this->error(sprintf(
-					'%sThe file has expired %s %s ago%s (%s)',
-					$this->colorRed(),
-					abs($days),
-					$days === 1 ? 'day' : 'days',
-					$this->colorClear(),
-					$expiresDate,
-				));
+				$this->error($this->colorRed('The file has expired ' . abs($days) . ' ' . ($days === 1 ? 'day' : 'days') . ' ago') . " ({$expiresDate})");
 			} elseif ($expiresSoon) {
-				$this->error(sprintf(
-					'%sThe file will expire very soon in %s %s%s (%s)',
-					$this->colorRed(),
-					$days,
-					$days === 1 ? 'day' : 'days',
-					$this->colorClear(),
-					$expiresDate,
-				));
+				$this->error($this->colorRed("The file will expire very soon in {$days} " . ($days === 1 ? 'day' : 'days')) . " ({$expiresDate})");
 			} else {
-				$this->info(sprintf(
-					'%sThe file will expire in %s %s%s (%s)',
-					$this->colorGreen(),
-					$days,
-					$days === 1 ? 'day' : 'days',
-					$this->colorClear(),
-					$expiresDate,
-				));
+				$this->info($this->colorGreen("The file will expire in {$days} " . ($days === 1 ? 'day' : 'days')) . " ({$expiresDate})");
 			}
 		}
 		$signatureVerifyResult = $parseResult->getSecurityTxt()->getSignatureVerifyResult();
 		if ($signatureVerifyResult) {
 			$this->info(sprintf(
-				'%sSignature valid%s, key %s, signed on %s',
-				$this->colorGreen(),
-				$this->colorClear(),
+				'%s, key %s, signed on %s',
+				$this->colorGreen('Signature valid'),
 				$signatureVerifyResult->getKeyFingerprint(),
 				$signatureVerifyResult->getDate()->format(DATE_RFC3339),
 			));
 		}
 		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors() || ($this->strictMode && $parseResult->hasWarnings())) {
-			$this->error($this->colorRed() . 'Please update the file!' . $this->colorClear());
+			$this->error($this->colorRed('Please update the file!'));
 			exit(self::STATUS_ERROR);
 		} else {
 			exit(self::STATUS_OK);
@@ -132,19 +108,19 @@ class SecurityTxtCheckFile
 
 	private function info(string $message): void
 	{
-		$this->print($this->colorDark() . '[Info]' . $this->colorClear(), $message);
+		$this->print($this->colorDarkGray('[Info]'), $message);
 	}
 
 
 	private function error(string $message): void
 	{
-		$this->print($this->colorRed() . '[Error]' . $this->colorClear(), $message);
+		$this->print($this->colorRed('[Error]'), $message);
 	}
 
 
 	private function warning(string $message): void
 	{
-		$this->print($this->colorBold() . '[Warning]' . $this->colorClear(), $message);
+		$this->print($this->colorBold('[Warning]'), $message);
 	}
 
 
@@ -155,33 +131,33 @@ class SecurityTxtCheckFile
 	}
 
 
-	private function colorRed(): string
+	private function colorRed(string $message): string
 	{
-		return $this->colors ? "\033[1;31m" : '';
+		return $this->color("\033[1;31m", $message);
 	}
 
 
-	private function colorGreen(): string
+	private function colorGreen(string $message): string
 	{
-		return $this->colors ? "\033[1;32m" : '';
+		return $this->color("\033[1;32m", $message);
 	}
 
 
-	private function colorBold(): string
+	private function colorBold(string $message): string
 	{
-		return $this->colors ? "\033[1m" : '';
+		return $this->color("\033[1m", $message);
 	}
 
 
-	private function colorDark(): string
+	private function colorDarkGray(string $message): string
 	{
-		return $this->colors ? "\033[1;30m" : '';
+		return $this->color("\033[1;90m", $message);
 	}
 
 
-	private function colorClear(): string
+	private function color(string $color, string $message): string
 	{
-		return $this->colors ? "\033[0m" : '';
+		return sprintf('%s%s%s', $this->colors ? $color : '', $message, $this->colors ? "\033[0m" : '');
 	}
 
 }
