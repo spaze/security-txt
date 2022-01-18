@@ -50,7 +50,12 @@ class SecurityTxtCheckFile
 			exit(self::STATUS_NO_FILE);
 		}
 
-		$contents = file_get_contents($file);
+		$context = stream_context_create([
+			'http' => [
+				'user_agent' => str_replace('\\', '/', __METHOD__),
+			],
+		]);
+		$contents = file_get_contents($file, context: $context);
 		if ($contents === false) {
 			exit(self::STATUS_FILE_ERROR);
 		}
