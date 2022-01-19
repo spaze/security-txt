@@ -46,7 +46,7 @@ class SecurityTxtCheckFile
 	public function check(?string $file = null, ?int $expiresWarningThreshold = null): never
 	{
 		if ($file === null) {
-			$this->info("Usage: {$this->scriptName} <file> [days] [--colors] [--strict] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than [days], has errors, has warnings when using --strict");
+			$this->info("Usage: {$this->scriptName} <file> [days] [--colors] [--strict] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
 			exit(self::STATUS_NO_FILE);
 		}
 

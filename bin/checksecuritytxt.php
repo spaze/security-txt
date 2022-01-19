@@ -35,4 +35,4 @@ $checkFile = new SecurityTxtCheckFile(
 	in_array('--colors', $_SERVER['argv'], true),
 	in_array('--strict', $_SERVER['argv'], true),
 );
-$checkFile->check($_SERVER['argv'][1] ?? null, isset($_SERVER['argv'][2]) ? (int)$_SERVER['argv'][2] : null);
+$checkFile->check($_SERVER['argv'][1] ?? null, empty($_SERVER['argv'][2]) ? null : (int)$_SERVER['argv'][2]);
