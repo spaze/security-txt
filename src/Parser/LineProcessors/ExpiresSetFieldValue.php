@@ -26,16 +26,19 @@ class ExpiresSetFieldValue implements LineProcessor
 	{
 		$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC3339, $value);
 		if (!$expiresValue) {
-			$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC2822, $value);
-			if ($expiresValue) {
-				throw new SecurityTxtExpiresOldFormatError($expiresValue);
-			} else {
-				try {
-					$expiresValue = new DateTimeImmutable($value);
-				} catch (Exception) {
-					$expiresValue = null;
+			$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC3339_EXTENDED, $value);
+			if (!$expiresValue) {
+				$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC2822, $value);
+				if ($expiresValue) {
+					throw new SecurityTxtExpiresOldFormatError($expiresValue);
+				} else {
+					try {
+						$expiresValue = new DateTimeImmutable($value);
+					} catch (Exception) {
+						$expiresValue = null;
+					}
+					throw new SecurityTxtExpiresWrongFormatError($expiresValue);
 				}
-				throw new SecurityTxtExpiresWrongFormatError($expiresValue);
 			}
 		}
 		$expires = new Expires(new DateTimeImmutable($value));
