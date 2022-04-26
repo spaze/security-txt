@@ -11,6 +11,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresWrongFormatError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtMultipleExpiresError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
@@ -25,13 +26,15 @@ class SecurityTxtParserTest extends TestCase
 	private SecurityTxtParser $securityTxtParser;
 	private SecurityTxtValidator $securityTxtValidator;
 	private SecurityTxtSignature $securityTxtSignature;
+	private SecurityTxtFetcher $securityTxtFetcher;
 
 
 	protected function setUp(): void
 	{
 		$this->securityTxtValidator = new SecurityTxtValidator();
 		$this->securityTxtSignature = new SecurityTxtSignature();
-		$this->securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $this->securityTxtSignature);
+		$this->securityTxtFetcher = new SecurityTxtFetcher();
+		$this->securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $this->securityTxtSignature, $this->securityTxtFetcher);
 	}
 
 

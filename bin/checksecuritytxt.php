@@ -2,8 +2,11 @@
 <?php
 declare(strict_types = 1);
 
-use Spaze\SecurityTxt\Check\SecurityTxtCheckFile;
+use Spaze\SecurityTxt\Check\ConsolePrinter;
+use Spaze\SecurityTxt\Check\SecurityTxtCheckHost;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
+use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 
@@ -28,11 +31,15 @@ if (!$autoloadLoaded) {
 
 $validator = new SecurityTxtValidator();
 $signature = new SecurityTxtSignature();
-$parser = new SecurityTxtParser($validator, $signature);
-$checkFile = new SecurityTxtCheckFile(
+$fetcher = new SecurityTxtFetcher();
+$parser = new SecurityTxtParser($validator, $signature, $fetcher);
+$urlParser = new SecurityTxtUrlParser();
+$consolePrinter = new ConsolePrinter(in_array('--colors', $_SERVER['argv'], true));
+$checkFile = new SecurityTxtCheckHost(
 	$parser,
+	$urlParser,
+	$consolePrinter,
 	$_SERVER['argv'][0],
-	in_array('--colors', $_SERVER['argv'], true),
 	in_array('--strict', $_SERVER['argv'], true),
 );
 $checkFile->check($_SERVER['argv'][1] ?? null, empty($_SERVER['argv'][2]) ? null : (int)$_SERVER['argv'][2]);

@@ -7,6 +7,12 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureExtensionNotLoadedWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureInvalidError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\LineProcessors\CanonicalAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
@@ -37,6 +43,7 @@ class SecurityTxtParser
 	public function __construct(
 		private SecurityTxtValidator $validator,
 		private SecurityTxtSignature $signature,
+		private readonly SecurityTxtFetcher $fetcher,
 	) {
 		$this->lineProcessors[SecurityTxtField::Canonical->value] = [
 			new CanonicalAddFieldValue(),
@@ -97,6 +104,25 @@ class SecurityTxtParser
 	}
 
 
+	/**
+	 * @param string $url
+	 * @return SecurityTxtParseResult
+	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotReadUrlException
+	 * @throws SecurityTxtNotFoundException
+	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtHostNotFoundException
+	 */
+	public function parseUrl(string $url): SecurityTxtParseResult
+	{
+		$fetchResult = $this->fetcher->fetchHost($url);
+		return SecurityTxtParseResult::fromResults(
+			$this->parseString($fetchResult->getContents()),
+			$fetchResult,
+		);
+	}
+
+
 	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): void
 	{
 		if ($this->signature->isCleartextHeader($line)) {
@@ -115,6 +141,12 @@ class SecurityTxtParser
 	public function getLine(int $lineNumber): ?string
 	{
 		return $this->lines[$lineNumber] ?? null;
+	}
+
+
+	public function getFetcher(): SecurityTxtFetcher
+	{
+		return $this->fetcher;
 	}
 
 }
