@@ -7,7 +7,7 @@ class Canonical
 {
 
 	public function __construct(
-		private string $uri,
+		private readonly string $uri,
 	) {
 	}
 

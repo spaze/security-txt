@@ -9,8 +9,8 @@ class SecurityTxtSignatureVerifyResult
 {
 
 	public function __construct(
-		private string $keyFingerprint,
-		private DateTimeImmutable $date,
+		private readonly string $keyFingerprint,
+		private readonly DateTimeImmutable $date,
 	) {
 	}
 

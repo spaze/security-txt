@@ -20,10 +20,10 @@ class SecurityTxtParseResult
 	 * @param SecurityTxtFetchResult|null $fetchResult
 	 */
 	public function __construct(
-		private SecurityTxt $securityTxt,
-		private array $parseErrors,
-		private array $parseWarnings,
-		private SecurityTxtValidateResult $validateResult,
+		private readonly SecurityTxt $securityTxt,
+		private readonly array $parseErrors,
+		private readonly array $parseWarnings,
+		private readonly SecurityTxtValidateResult $validateResult,
 		private readonly ?SecurityTxtFetchResult $fetchResult = null,
 	) {
 	}

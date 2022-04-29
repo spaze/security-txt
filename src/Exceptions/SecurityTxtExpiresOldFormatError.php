@@ -10,7 +10,7 @@ class SecurityTxtExpiresOldFormatError extends SecurityTxtError
 {
 
 	public function __construct(
-		private DateTimeInterface $expires,
+		private readonly DateTimeInterface $expires,
 		?Throwable $previous = null,
 	) {
 		$correctValue = $this->expires->format(DATE_RFC3339);

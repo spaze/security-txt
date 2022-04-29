@@ -14,8 +14,8 @@ class SecurityTxtValidateResult
 	 * @param array<int, SecurityTxtWarning> $warnings
 	 */
 	public function __construct(
-		private array $errors,
-		private array $warnings,
+		private readonly array $errors,
+		private readonly array $warnings,
 	) {
 	}
 

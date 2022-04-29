@@ -20,11 +20,11 @@ abstract class SecurityTxtThrowable extends Exception
 	 */
 	public function __construct(
 		string $message,
-		private string $since,
-		private ?string $correctValue,
-		private string $howToFix,
-		private ?string $specSection,
-		private array $seeAlsoSections = [],
+		private readonly string $since,
+		private readonly ?string $correctValue,
+		private readonly string $howToFix,
+		private readonly ?string $specSection,
+		private readonly array $seeAlsoSections = [],
 		?Throwable $previous = null,
 	) {
 		parent::__construct($message, previous: $previous);

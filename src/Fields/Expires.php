@@ -14,7 +14,7 @@ class Expires
 
 
 	public function __construct(
-		private DateTimeInterface $dateTime,
+		private readonly DateTimeInterface $dateTime,
 	) {
 		$this->interval = (new DateTimeImmutable())->diff($this->dateTime);
 	}

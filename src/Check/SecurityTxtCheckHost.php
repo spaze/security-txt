@@ -20,11 +20,11 @@ class SecurityTxtCheckHost
 
 
 	public function __construct(
-		private SecurityTxtParser $parser,
-		private SecurityTxtUrlParser $urlParser,
+		private readonly SecurityTxtParser $parser,
+		private readonly SecurityTxtUrlParser $urlParser,
 		private readonly ConsolePrinter $printer,
-		private string $scriptName,
-		private bool $strictMode,
+		private readonly string $scriptName,
+		private readonly bool $strictMode,
 	) {
 		$fetcher = $this->parser->getFetcher();
 		$fetcher->addOnFetchUrl(

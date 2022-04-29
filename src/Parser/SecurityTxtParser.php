@@ -41,8 +41,8 @@ class SecurityTxtParser
 
 
 	public function __construct(
-		private SecurityTxtValidator $validator,
-		private SecurityTxtSignature $signature,
+		private readonly SecurityTxtValidator $validator,
+		private readonly SecurityTxtSignature $signature,
 		private readonly SecurityTxtFetcher $fetcher,
 	) {
 		$this->lineProcessors[SecurityTxtField::Canonical->value] = [
