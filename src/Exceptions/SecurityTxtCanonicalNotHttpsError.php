@@ -15,7 +15,7 @@ class SecurityTxtCanonicalNotHttpsError extends SecurityTxtError
 			'draft-foudil-securitytxt-06',
 			null,
 			'Make sure the `Canonical` field points to an https:// URI',
-			'3.5.2',
+			'2.5.2',
 			previous: $previous,
 		);
 	}

@@ -15,7 +15,7 @@ class SecurityTxtWellKnownPathOnlyWarning extends SecurityTxtWarning
 			'draft-foudil-securitytxt-02',
 			null,
 			'Redirect the top-level file to the one under the `/.well-known/` path',
-			'4',
+			'3',
 			previous: $previous,
 		);
 	}

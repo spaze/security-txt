@@ -23,7 +23,7 @@ class SecurityTxtExpiresWrongFormatError extends SecurityTxtError
 			'draft-foudil-securitytxt-09',
 			$correctValue ?? (new DateTimeImmutable('+1 year midnight -1 sec'))->format(DATE_RFC3339),
 			$howToFix ?? 'The `Expires` field should contain a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339',
-			'3.5.5',
+			'2.5.5',
 			previous: $previous,
 		);
 	}

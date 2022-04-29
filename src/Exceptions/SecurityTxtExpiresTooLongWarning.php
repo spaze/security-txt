@@ -17,7 +17,7 @@ class SecurityTxtExpiresTooLongWarning extends SecurityTxtWarning
 			'draft-foudil-securitytxt-10',
 			$correctValue,
 			'Change the value of the `Expires` field to less than a year into the future',
-			'3.5.5',
+			'2.5.5',
 			previous: $previous,
 		);
 	}

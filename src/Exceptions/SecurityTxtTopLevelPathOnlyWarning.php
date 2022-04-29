@@ -15,7 +15,7 @@ class SecurityTxtTopLevelPathOnlyWarning extends SecurityTxtWarning
 			'draft-foudil-securitytxt-02',
 			null,
 			'Move the `security.txt` file from the top-level location under the `/.well-known/` path and redirect `/security.txt` to `/.well-known/security.txt`',
-			'4',
+			'3',
 			previous: $previous,
 		);
 	}

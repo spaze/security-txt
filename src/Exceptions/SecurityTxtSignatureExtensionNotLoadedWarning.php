@@ -15,7 +15,7 @@ class SecurityTxtSignatureExtensionNotLoadedWarning extends SecurityTxtWarning
 			'draft-foudil-securitytxt-01',
 			null,
 			'Load the `gnupg` extension',
-			'3.3',
+			'2.3',
 			previous: $previous,
 		);
 	}

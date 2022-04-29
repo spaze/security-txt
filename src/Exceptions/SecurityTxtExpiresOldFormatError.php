@@ -19,7 +19,7 @@ class SecurityTxtExpiresOldFormatError extends SecurityTxtError
 			'draft-foudil-securitytxt-12',
 			$correctValue,
 			"Change the value of the `Expires` field to `{$correctValue}`",
-			'3.5.5',
+			'2.5.5',
 			previous: $previous,
 		);
 	}

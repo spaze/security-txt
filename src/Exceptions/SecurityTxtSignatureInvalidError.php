@@ -15,7 +15,7 @@ class SecurityTxtSignatureInvalidError extends SecurityTxtError
 			'draft-foudil-securitytxt-01',
 			null,
 			'Sign the file again',
-			'3.3',
+			'2.3',
 			previous: $previous,
 		);
 	}

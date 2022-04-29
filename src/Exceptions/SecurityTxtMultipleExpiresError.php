@@ -15,7 +15,7 @@ class SecurityTxtMultipleExpiresError extends SecurityTxtError
 			'draft-foudil-securitytxt-09',
 			null,
 			'Make sure the `Expires` field is present only once in the file',
-			'3.5.5',
+			'2.5.5',
 			previous: $previous,
 		);
 	}
