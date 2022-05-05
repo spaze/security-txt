@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Expires;
@@ -40,37 +41,68 @@ class SecurityTxtTest extends TestCase
 	}
 
 
-	public function testSetCanonical(): void
+	/**
+	 * @return array<string, array{0: array<string, class-string<SecurityTxtError>|null>, 1: class-string, 2: callable(SecurityTxt):callable, 3: callable(SecurityTxt):callable, 4: callable}>
+	 * @noinspection HttpUrlsUsage
+	 */
+	public function getAddFieldValues(): array
 	{
-		$securityTxt = new SecurityTxt();
-		$securityTxt->addCanonical(new Canonical('ftp://foo.bar.example.net/security.txt'));
-		Assert::throws(function () use ($securityTxt): void {
-			$securityTxt->addCanonical(new Canonical('http://example.com/.well-known/security.txt'));
-		}, SecurityTxtCanonicalNotHttpsError::class);
-		$securityTxt->addCanonical(new Canonical('https://example.com/.well-known/security.txt'));
-		$securityTxt->addCanonical(new Canonical('C:\\security.txt'));
-		Assert::same(
-			[
-				'ftp://foo.bar.example.net/security.txt',
-				'https://example.com/.well-known/security.txt',
-				'C:\\security.txt',
+		return [
+			'canonical' => [
+				[
+					'https://example.com/.well-known/security.txt' => null,
+					'http://example.com/.well-known/security.txt' => SecurityTxtCanonicalNotHttpsError::class,
+					'ftp://foo.bar.example.net/security.txt' => null,
+					'C:\\security.txt' => null,
+				],
+				Canonical::class,
+				function (SecurityTxt $securityTxt): callable {
+					return $securityTxt->addCanonical(...);
+				},
+				function (SecurityTxt $securityTxt): callable {
+					return $securityTxt->getCanonical(...);
+				},
+				function (Canonical $canonical): string {
+					return $canonical->getUri();
+				},
 			],
-			array_map(function (Canonical $canonical): string {
-				return $canonical->getUri();
-			}, $securityTxt->getCanonical()),
-		);
+		];
 	}
 
 
-	public function testSetCanonicalWithInvalidValues(): void
+	/**
+	 * @param array<string, class-string<SecurityTxtError>|null> $values
+	 * @param class-string $fieldClass
+	 * @param callable(SecurityTxt): callable $addFactory
+	 * @param callable(SecurityTxt): callable $getFieldFactory
+	 * @param callable $getValue
+	 * @dataProvider getAddFieldValues
+	 */
+	public function testAddField(array $values, string $fieldClass, callable $addFactory, callable $getFieldFactory, callable $getValue): void
 	{
 		$securityTxt = new SecurityTxt();
-		$securityTxt->allowFieldsWithInvalidValues();
-		$url = 'http://example.com/.well-known/security.txt';
-		Assert::throws(function () use ($securityTxt, $url): void {
-			$securityTxt->addCanonical(new Canonical($url));
-		}, SecurityTxtCanonicalNotHttpsError::class);
-		Assert::equal([new Canonical($url)], $securityTxt->getCanonical());
+		$securityTxtWithInvalidValues = new SecurityTxt();
+		$securityTxtWithInvalidValues->allowFieldsWithInvalidValues();
+		$allValues = $validValues = [];
+
+		foreach ($values as $value => $exception) {
+			$allValues[] = $value;
+			if ($exception) {
+				Assert::throws(function () use ($securityTxt, $value, $fieldClass, $addFactory): void {
+					$addFactory($securityTxt)(new $fieldClass($value));
+				}, $exception);
+				Assert::throws(function () use ($securityTxtWithInvalidValues, $value, $fieldClass, $addFactory): void {
+					$addFactory($securityTxtWithInvalidValues)(new $fieldClass($value));
+				}, $exception);
+			} else {
+				$validValues[] = $value;
+				$addFactory($securityTxt)(new $fieldClass($value));
+				$addFactory($securityTxtWithInvalidValues)(new $fieldClass($value));
+			}
+		}
+
+		Assert::same($validValues, array_map($getValue, $getFieldFactory($securityTxt)()));
+		Assert::same($allValues, array_map($getValue, $getFieldFactory($securityTxtWithInvalidValues)()));
 	}
 
 }
