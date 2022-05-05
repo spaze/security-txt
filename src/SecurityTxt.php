@@ -13,6 +13,7 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 class SecurityTxt
 {
 
+	private bool $allowFieldsWithInvalidValues = false;
 	private ?Expires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
 
@@ -20,6 +21,12 @@ class SecurityTxt
 	 * @var array<int, Canonical>
 	 */
 	private array $canonical = [];
+
+
+	public function allowFieldsWithInvalidValues(): void
+	{
+		$this->allowFieldsWithInvalidValues = true;
+	}
 
 
 	/**
@@ -61,11 +68,17 @@ class SecurityTxt
 	 */
 	public function addCanonical(Canonical $canonical): void
 	{
-		$this->canonical[] = $canonical;
-		$scheme = parse_url($canonical->getUri(), PHP_URL_SCHEME);
-		if ($scheme && strtolower($scheme) === 'http') {
-			throw new SecurityTxtCanonicalNotHttpsError();
-		}
+		$this->setValue(
+			function () use ($canonical): void {
+				$this->canonical[] = $canonical;
+			},
+			function () use ($canonical): void {
+				$scheme = parse_url($canonical->getUri(), PHP_URL_SCHEME);
+				if ($scheme && strtolower($scheme) === 'http') {
+					throw new SecurityTxtCanonicalNotHttpsError();
+				}
+			},
+		);
 	}
 
 
@@ -75,6 +88,23 @@ class SecurityTxt
 	public function getCanonical(): array
 	{
 		return $this->canonical;
+	}
+
+
+	/**
+	 * @param callable(): void $setValue
+	 * @param callable(): void $validator
+	 * @return void
+	 */
+	private function setValue(callable $setValue, callable $validator): void
+	{
+		if ($this->allowFieldsWithInvalidValues) {
+			$setValue();
+			$validator();
+		} else {
+			$validator();
+			$setValue();
+		}
 	}
 
 }

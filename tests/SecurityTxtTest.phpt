@@ -52,7 +52,6 @@ class SecurityTxtTest extends TestCase
 		Assert::same(
 			[
 				'ftp://foo.bar.example.net/security.txt',
-				'http://example.com/.well-known/security.txt',
 				'https://example.com/.well-known/security.txt',
 				'C:\\security.txt',
 			],
@@ -60,6 +59,18 @@ class SecurityTxtTest extends TestCase
 				return $canonical->getUri();
 			}, $securityTxt->getCanonical()),
 		);
+	}
+
+
+	public function testSetCanonicalWithInvalidValues(): void
+	{
+		$securityTxt = new SecurityTxt();
+		$securityTxt->allowFieldsWithInvalidValues();
+		$url = 'http://example.com/.well-known/security.txt';
+		Assert::throws(function () use ($securityTxt, $url): void {
+			$securityTxt->addCanonical(new Canonical($url));
+		}, SecurityTxtCanonicalNotHttpsError::class);
+		Assert::equal([new Canonical($url)], $securityTxt->getCanonical());
 	}
 
 }

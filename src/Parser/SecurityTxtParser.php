@@ -83,6 +83,7 @@ class SecurityTxtParser
 			SecurityTxtField::cases(),
 		);
 		$securityTxt = new SecurityTxt();
+		$securityTxt->allowFieldsWithInvalidValues();
 		for ($lineNumber = 1; $lineNumber <= count($this->lines); $lineNumber++) {
 			$line = $this->lines[$lineNumber - 1];
 			if (str_starts_with($line, '#')) {
