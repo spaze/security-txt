@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Validator;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Validator\Validators\ContactMissingFieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\ExpiresMissingFieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\FieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\SignedButCanonicalMissingFieldValidator;
@@ -22,6 +23,7 @@ class SecurityTxtValidator
 	public function __construct()
 	{
 		$this->fieldValidators = [
+			new ContactMissingFieldValidator(),
 			new ExpiresMissingFieldValidator(),
 			new SignedButCanonicalMissingFieldValidator(),
 		];

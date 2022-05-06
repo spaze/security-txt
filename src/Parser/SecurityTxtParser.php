@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\LineProcessors\CanonicalAddFieldValue;
+use Spaze\SecurityTxt\Parser\LineProcessors\ContactAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\LineProcessor;
@@ -47,6 +48,9 @@ class SecurityTxtParser
 	) {
 		$this->lineProcessors[SecurityTxtField::Canonical->value] = [
 			new CanonicalAddFieldValue(),
+		];
+		$this->lineProcessors[SecurityTxtField::Contact->value] = [
+			new ContactAddFieldValue(),
 		];
 		$this->lineProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),

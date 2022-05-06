@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use DateTimeImmutable;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtNoContactError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignedButNoCanonicalWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
@@ -27,6 +28,13 @@ class SecurityTxtValidatorTest extends TestCase
 	protected function setUp(): void
 	{
 		$this->securityTxtValidator = new SecurityTxtValidator();
+	}
+
+
+	public function testValidateMissingContact(): void
+	{
+		$securityTxt = new SecurityTxt();
+		$this->assertThrowable($securityTxt, SecurityTxtNoContactError::class);
 	}
 
 

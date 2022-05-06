@@ -4,9 +4,12 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Fields\Canonical;
+use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 
@@ -21,6 +24,11 @@ class SecurityTxt
 	 * @var array<int, Canonical>
 	 */
 	private array $canonical = [];
+
+	/**
+	 * @var array<int, Contact>
+	 */
+	private array $contact = [];
 
 
 	public function allowFieldsWithInvalidValues(): void
@@ -88,6 +96,38 @@ class SecurityTxt
 	public function getCanonical(): array
 	{
 		return $this->canonical;
+	}
+
+
+	/**
+	 * @throws SecurityTxtContactNotUriSyntaxError
+	 * @throws SecurityTxtContactNotHttpsError
+	 */
+	public function addContact(Contact $contact): void
+	{
+		$this->setValue(
+			function () use ($contact): void {
+				$this->contact[] = $contact;
+			},
+			function () use ($contact): void {
+				$scheme = parse_url($contact->getUri(), PHP_URL_SCHEME);
+				if ($scheme === null) {
+					throw new SecurityTxtContactNotUriSyntaxError($contact);
+				}
+				if ($scheme === 'http') {
+					throw new SecurityTxtContactNotHttpsError();
+				}
+			},
+		);
+	}
+
+
+	/**
+	 * @return array<int, Contact>
+	 */
+	public function getContact(): array
+	{
+		return $this->contact;
 	}
 
 

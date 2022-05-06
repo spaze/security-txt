@@ -10,7 +10,9 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresOldFormatError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresWrongFormatError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtMultipleExpiresError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtNoContactError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
@@ -87,8 +89,9 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nBar: foo";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		$expiresError = $parseResult->getFileErrors()[0];
-		Assert::type(SecurityTxtNoExpiresError::class, $expiresError);
+		Assert::contains(SecurityTxtNoExpiresError::class, array_map(function (SecurityTxtThrowable $throwable): string {
+			return $throwable::class;
+		}, $parseResult->getFileErrors()));
 	}
 
 
@@ -130,21 +133,16 @@ class SecurityTxtParserTest extends TestCase
 
 	public function testParseMultipleFiles(): void
 	{
-		$expires1 = (new DateTime('+2 months'))->format(DATE_RFC3339);
-		$contents = 'Expires: ' . $expires1;
-		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::same($expires1, $parseResult->getSecurityTxt()->getExpires()->getDateTime()->format(DATE_RFC3339));
-		Assert::count(0, $parseResult->getParseErrors());
-		Assert::count(0, $parseResult->getFileErrors());
-
-		$expires2 = (new DateTime('+3 months'))->format(DATE_RFC3339);
-		$contents = 'Expires: ' . $expires2;
-		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::same($expires2, $parseResult->getSecurityTxt()->getExpires()->getDateTime()->format(DATE_RFC3339));
-		Assert::count(0, $parseResult->getParseErrors());
-		Assert::count(0, $parseResult->getFileErrors());
-
-		Assert::notSame($expires1, $expires2);
+		$assertParsed = function (string $mailto, string $expires): void {
+			$contents = "Contact: {$mailto}\nExpires: {$expires}";
+			$parseResult = $this->securityTxtParser->parseString($contents);
+			Assert::same($mailto, $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+			Assert::same($expires, $parseResult->getSecurityTxt()->getExpires()->getDateTime()->format(DATE_RFC3339));
+			Assert::count(0, $parseResult->getParseErrors());
+			Assert::count(0, $parseResult->getFileErrors());
+		};
+		$assertParsed('mailto:foo@bar.example', (new DateTime('+2 months'))->format(DATE_RFC3339));
+		$assertParsed('mailto:bar@foo.example', (new DateTime('+3 months'))->format(DATE_RFC3339));
 	}
 
 
@@ -168,6 +166,15 @@ class SecurityTxtParserTest extends TestCase
 		Assert::count(1, $parseResult->getParseWarnings());
 		Assert::count(1, $parseResult->getParseWarnings()[2]);
 		Assert::type(SecurityTxtExpiresTooLongWarning::class, $parseResult->getParseWarnings()[2][0]);
+	}
+
+
+	public function testParseStringMissingContact(): void
+	{
+		$contents = "Foo: bar\nBar: foo";
+		$parseResult = $this->securityTxtParser->parseString($contents);
+		$contactError = $parseResult->getFileErrors()[0];
+		Assert::type(SecurityTxtNoContactError::class, $contactError);
 	}
 
 }

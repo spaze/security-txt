@@ -6,9 +6,12 @@ namespace Spaze\SecurityTxt;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Fields\Canonical;
+use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
 use Tester\Assert;
 use Tester\TestCase;
@@ -64,6 +67,27 @@ class SecurityTxtTest extends TestCase
 				},
 				function (Canonical $canonical): string {
 					return $canonical->getUri();
+				},
+			],
+			'contact' => [
+				[
+					'https://example.com/contact' => null,
+					'http://example.com/contact' => SecurityTxtContactNotHttpsError::class,
+					'ftp://foo.example.net/contact.txt' => null,
+					'mailto:foo@example.com' => null,
+					'bar@example.com' => SecurityTxtContactNotUriSyntaxError::class,
+					'tel:+1-201-555-0123' => null,
+					'+1-201-555-01234' => SecurityTxtContactNotUriSyntaxError::class,
+				],
+				Contact::class,
+				function (SecurityTxt $securityTxt): callable {
+					return $securityTxt->addContact(...);
+				},
+				function (SecurityTxt $securityTxt): callable {
+					return $securityTxt->getContact(...);
+				},
+				function (Contact $contact): string {
+					return $contact->getUri();
 				},
 			],
 		];
