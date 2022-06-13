@@ -9,8 +9,4 @@
 	<rule ref="PSR1.Files.SideEffects.FoundWithSymbols">
 		<exclude-pattern>tests/</exclude-pattern>  <!-- Tests require bootstrap.php -->
 	</rule>
-	<rule ref="Generic.WhiteSpace.ScopeIndent">
-		<!-- Sniffer doesn't support enums yet https://github.com/squizlabs/PHP_CodeSniffer/issues/3474 -->
-		<exclude-pattern>src/Fields/SecurityTxtField.php</exclude-pattern>
-	</rule>
 </ruleset>
