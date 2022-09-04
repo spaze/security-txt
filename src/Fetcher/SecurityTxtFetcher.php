@@ -38,18 +38,16 @@ class SecurityTxtFetcher
 
 
 	/**
-	 * @param string $host
-	 * @return SecurityTxtFetchResult
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtCannotReadUrlException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtHostNotFoundException
 	 */
-	public function fetchHost(string $host): SecurityTxtFetchResult
+	public function fetchHost(string $host, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
-		$wellKnown = $this->fetchUrl('https://%s/.well-known/security.txt', $host);
-		$topLevel = $this->fetchUrl('https://%s/security.txt', $host);
+		$wellKnown = $this->fetchUrl('https://%s/.well-known/security.txt', $host, $noIpv6);
+		$topLevel = $this->fetchUrl('https://%s/security.txt', $host, $noIpv6);
 		return $this->getResult($wellKnown, $topLevel);
 	}
 
@@ -61,17 +59,17 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtNotFoundException
 	 */
-	private function fetchUrl(string $urlTemplate, string $host): SecurityTxtFetcherFetchHostResult
+	private function fetchUrl(string $urlTemplate, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
 		$url = $this->buildUrl($urlTemplate, $host);
 		$this->callOnCallback($this->onFetchUrl, $url);
 		try {
 			$this->redirects = [];
-			$records = @dns_get_record($host, DNS_A);  // intentionally @, converted to exception
+			$records = @dns_get_record($host, $noIpv6 ? DNS_A : DNS_A | DNS_AAAA);  // intentionally @, converted to exception
 			if (!$records) {
 				throw new SecurityTxtHostNotFoundException($urlTemplate, $host);
 			}
-			$contents = $this->getContents($this->buildUrl($urlTemplate, $records[0]['ip']), $urlTemplate, $host, true);
+			$contents = $this->getContents($this->buildUrl($urlTemplate, $records[0]['ipv6'] ?? $records[0]['ip']), $urlTemplate, $host, true);
 		} catch (SecurityTxtUrlNotFoundException $e) {
 			$this->callOnCallback($this->onUrlNotFound, $e->getUrl());
 			$contents = null;

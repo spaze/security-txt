@@ -61,11 +61,11 @@ class SecurityTxtCheckHost
 	}
 
 
-	public function check(?string $url = null, ?int $expiresWarningThreshold = null, bool $strictMode = false): never
+	public function check(?string $url = null, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $noIpv6 = false): never
 	{
 		if ($url === null) {
 			$prologue = is_array($_SERVER['argv']) && is_string($_SERVER['argv'][0]) ? "Usage: {$_SERVER['argv'][0]}" : 'Params:';
-			$this->printer->info("{$prologue} <url or hostname> [days] [--colors] [--strict] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
+			$this->printer->info("{$prologue} <url or hostname> [days] [--colors] [--strict] [--no-ipv6] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
 			exit(self::STATUS_NO_FILE);
 		}
 
@@ -78,7 +78,7 @@ class SecurityTxtCheckHost
 		$this->printer->info('Parsing security.txt for ' . $this->printer->colorBold($host));
 
 		try {
-			$parseResult = $this->parser->parseUrl($host);
+			$parseResult = $this->parser->parseUrl($host, $noIpv6);
 		} catch (SecurityTxtFetcherException $e) {
 			$this->printer->error($e->getMessage());
 			exit(self::STATUS_FILE_ERROR);
