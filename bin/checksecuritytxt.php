@@ -34,14 +34,16 @@ $signature = new SecurityTxtSignature();
 $fetcher = new SecurityTxtFetcher();
 $parser = new SecurityTxtParser($validator, $signature, $fetcher);
 $urlParser = new SecurityTxtUrlParser();
+$consolePrinter = new ConsolePrinter();
+$checkFile = new SecurityTxtCheckHost($parser, $urlParser, $consolePrinter);
 /** @var array<int, string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
-$consolePrinter = new ConsolePrinter(in_array('--colors', $args, true));
-$checkFile = new SecurityTxtCheckHost(
-	$parser,
-	$urlParser,
-	$consolePrinter,
-	$args[0],
+$colors = array_search('--colors', $args, true);
+if ($colors) {
+	$consolePrinter->enableColors();
+}
+$checkFile->check(
+	$args[1] ?? null,
+	empty($args[2]) ? null : (int)$args[2],
 	in_array('--strict', $args, true),
 );
-$checkFile->check($args[1] ?? null, empty($args[2]) ? null : (int)$args[2]);

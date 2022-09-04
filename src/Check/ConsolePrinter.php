@@ -9,9 +9,12 @@ namespace Spaze\SecurityTxt\Check;
 class ConsolePrinter
 {
 
-	public function __construct(
-		private readonly bool $colors,
-	) {
+	private bool $colors = false;
+
+
+	public function enableColors(): void
+	{
+		$this->colors = true;
 	}
 
 

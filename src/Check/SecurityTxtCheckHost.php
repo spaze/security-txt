@@ -23,8 +23,6 @@ class SecurityTxtCheckHost
 		private readonly SecurityTxtParser $parser,
 		private readonly SecurityTxtUrlParser $urlParser,
 		private readonly ConsolePrinter $printer,
-		private readonly string $scriptName,
-		private readonly bool $strictMode,
 	) {
 		$fetcher = $this->parser->getFetcher();
 		$fetcher->addOnFetchUrl(
@@ -63,10 +61,11 @@ class SecurityTxtCheckHost
 	}
 
 
-	public function check(?string $url = null, ?int $expiresWarningThreshold = null): never
+	public function check(?string $url = null, ?int $expiresWarningThreshold = null, bool $strictMode = false): never
 	{
 		if ($url === null) {
-			$this->printer->info("Usage: {$this->scriptName} <url or hostname> [days] [--colors] [--strict] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
+			$prologue = is_array($_SERVER['argv']) && is_string($_SERVER['argv'][0]) ? "Usage: {$_SERVER['argv'][0]}" : 'Params:';
+			$this->printer->info("{$prologue} <url or hostname> [days] [--colors] [--strict] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
 			exit(self::STATUS_NO_FILE);
 		}
 
@@ -130,7 +129,7 @@ class SecurityTxtCheckHost
 				$signatureVerifyResult->getDate()->format(DATE_RFC3339),
 			));
 		}
-		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors() || ($this->strictMode && $parseResult->hasWarnings())) {
+		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors() || ($strictMode && $parseResult->hasWarnings())) {
 			$this->printer->error($this->printer->colorRed('Please update the file!'));
 			exit(self::STATUS_ERROR);
 		}
