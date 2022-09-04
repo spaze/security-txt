@@ -41,6 +41,7 @@ $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
 $colors = array_search('--colors', $args, true);
 if ($colors) {
 	$consolePrinter->enableColors();
+	unset($args[$colors]);
 }
 $checkFile->check(
 	$args[1] ?? null,
