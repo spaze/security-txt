@@ -110,17 +110,15 @@ class SecurityTxtParser
 
 
 	/**
-	 * @param string $url
-	 * @return SecurityTxtParseResult
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtCannotReadUrlException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtHostNotFoundException
 	 */
-	public function parseUrl(string $url): SecurityTxtParseResult
+	public function parseUrl(string $url, bool $noIpv6 = false): SecurityTxtParseResult
 	{
-		$fetchResult = $this->fetcher->fetchHost($url);
+		$fetchResult = $this->fetcher->fetchHost($url, $noIpv6);
 		return SecurityTxtParseResult::fromResults(
 			$this->parseString($fetchResult->getContents()),
 			$fetchResult,

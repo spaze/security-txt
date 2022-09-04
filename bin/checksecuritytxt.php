@@ -47,4 +47,5 @@ $checkFile->check(
 	$args[1] ?? null,
 	empty($args[2]) ? null : (int)$args[2],
 	in_array('--strict', $args, true),
+	in_array('--no-ipv6', $args, true),
 );
