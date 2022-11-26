@@ -33,7 +33,11 @@ class SecurityTxtSignature
 	public function verify(string $contents): SecurityTxtSignatureVerifyResult
 	{
 		$this->init();
-		$signature = $this->gnupg->verify($contents, false)[0];
+		$signatures = $this->gnupg->verify($contents, false);
+		if (!$signatures || !isset($signatures[0])) {
+			throw new SecurityTxtSignatureInvalidError();
+		}
+		$signature = $signatures[0];
 		if (!$this->isSignatureKindaOkay($signature['summary'])) {
 			throw new SecurityTxtSignatureInvalidError();
 		}
