@@ -65,7 +65,7 @@ class SecurityTxtFetcher
 		$this->callOnCallback($this->onFetchUrl, $url);
 		try {
 			$this->redirects = [];
-			$records = @dns_get_record($host, $noIpv6 ? DNS_A : DNS_A | DNS_AAAA);  // intentionally @, converted to exception
+			$records = @dns_get_record($host, $noIpv6 ? DNS_A : DNS_A | DNS_AAAA); // intentionally @, converted to exception
 			if (!$records) {
 				throw new SecurityTxtHostNotFoundException($urlTemplate, $host);
 			}
@@ -105,7 +105,7 @@ class SecurityTxtFetcher
 			];
 			$options['http']['header'][] = "Host: {$host}";
 		}
-		$fp = @fopen($url, 'r', context: stream_context_create($options));  // intentionally @, converted to exception
+		$fp = @fopen($url, 'r', context: stream_context_create($options)); // intentionally @, converted to exception
 		if (!$fp) {
 			throw new SecurityTxtCannotOpenUrlException($url);
 		}
@@ -115,8 +115,9 @@ class SecurityTxtFetcher
 		}
 		$metadata = stream_get_meta_data($fp);
 		fclose($fp);
-		/** @var array{wrapper_data: array<int, string>} $metadata */
-		$location = $this->getLocation($url, $metadata['wrapper_data']);
+		/** @var list<string> $wrapperData */
+		$wrapperData = $metadata['wrapper_data'];
+		$location = $this->getLocation($url, $wrapperData);
 		if ($location) {
 			$this->callOnCallback($this->onRedirect, $location);
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
@@ -132,7 +133,7 @@ class SecurityTxtFetcher
 
 	/**
 	 * @param string $url
-	 * @param array<int, string> $headers
+	 * @param list<string> $headers
 	 * @return string|null
 	 * @throws SecurityTxtUrlNotFoundException
 	 */
