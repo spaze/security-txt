@@ -115,8 +115,9 @@ class SecurityTxtFetcher
 		}
 		$metadata = stream_get_meta_data($fp);
 		fclose($fp);
-		/** @var array{wrapper_data: array<int, string>} $metadata */
-		$location = $this->getLocation($url, $metadata['wrapper_data']);
+		/** @var list<string> $wrapperData */
+		$wrapperData = $metadata['wrapper_data'];
+		$location = $this->getLocation($url, $wrapperData);
 		if ($location) {
 			$this->callOnCallback($this->onRedirect, $location);
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
@@ -132,7 +133,7 @@ class SecurityTxtFetcher
 
 	/**
 	 * @param string $url
-	 * @param array<int, string> $headers
+	 * @param list<string> $headers
 	 * @return string|null
 	 * @throws SecurityTxtUrlNotFoundException
 	 */
