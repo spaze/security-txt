@@ -65,7 +65,7 @@ class SecurityTxtFetcher
 		$this->callOnCallback($this->onFetchUrl, $url);
 		try {
 			$this->redirects = [];
-			$records = @dns_get_record($host, $noIpv6 ? DNS_A : DNS_A | DNS_AAAA);  // intentionally @, converted to exception
+			$records = @dns_get_record($host, $noIpv6 ? DNS_A : DNS_A | DNS_AAAA); // intentionally @, converted to exception
 			if (!$records) {
 				throw new SecurityTxtHostNotFoundException($urlTemplate, $host);
 			}
@@ -105,7 +105,7 @@ class SecurityTxtFetcher
 			];
 			$options['http']['header'][] = "Host: {$host}";
 		}
-		$fp = @fopen($url, 'r', context: stream_context_create($options));  // intentionally @, converted to exception
+		$fp = @fopen($url, 'r', context: stream_context_create($options)); // intentionally @, converted to exception
 		if (!$fp) {
 			throw new SecurityTxtCannotOpenUrlException($url);
 		}

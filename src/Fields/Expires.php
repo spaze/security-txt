@@ -28,7 +28,7 @@ class Expires
 
 	public function inDays(): int
 	{
-		$days = (int)$this->interval->days;  // $this->interval is created by diff() so days is always set
+		$days = (int)$this->interval->days; // $this->interval is created by diff() so days is always set
 		return $this->isExpired() ? -$days : $days;
 	}
 
