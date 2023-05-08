@@ -119,8 +119,12 @@ class SecurityTxtParser
 	public function parseUrl(string $url, bool $noIpv6 = false): SecurityTxtParseResult
 	{
 		$fetchResult = $this->fetcher->fetchHost($url, $noIpv6);
-		return SecurityTxtParseResult::fromResults(
-			$this->parseString($fetchResult->getContents()),
+		$parseResult = $this->parseString($fetchResult->getContents());
+		return new SecurityTxtParseResult(
+			$parseResult->getSecurityTxt(),
+			$parseResult->getParseErrors(),
+			$parseResult->getParseWarnings(),
+			$parseResult->getValidateResult(),
 			$fetchResult,
 		);
 	}

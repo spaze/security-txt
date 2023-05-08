@@ -29,20 +29,6 @@ class SecurityTxtParseResult
 	}
 
 
-	public static function fromResults(
-		self $parseResult,
-		SecurityTxtFetchResult $fetchResult,
-	): self {
-		return new self(
-			$parseResult->getSecurityTxt(),
-			$parseResult->getParseErrors(),
-			$parseResult->getParseWarnings(),
-			$parseResult->getValidateResult(),
-			$fetchResult,
-		);
-	}
-
-
 	public function getSecurityTxt(): SecurityTxt
 	{
 		return $this->securityTxt;
