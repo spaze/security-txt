@@ -67,7 +67,7 @@ class SecurityTxtFetcher
 			$this->redirects = [];
 			$records = @dns_get_record($host, $noIpv6 ? DNS_A : DNS_A | DNS_AAAA); // intentionally @, converted to exception
 			if (!$records) {
-				throw new SecurityTxtHostNotFoundException($urlTemplate, $host);
+				throw new SecurityTxtHostNotFoundException($url, $host);
 			}
 			$records = array_merge(...$records);
 			$contents = $this->getContents($this->buildUrl($urlTemplate, $records['ipv6'] ?? $records['ip']), $urlTemplate, $host, true);
