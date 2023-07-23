@@ -7,6 +7,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostnameException;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 
@@ -23,19 +24,19 @@ class SecurityTxtCheckHost
 		private readonly SecurityTxtParser $parser,
 		private readonly SecurityTxtUrlParser $urlParser,
 		private readonly ConsolePrinter $printer,
+		private readonly SecurityTxtFetcher $fetcher,
 	) {
-		$fetcher = $this->parser->getFetcher();
-		$fetcher->addOnFetchUrl(
+		$this->fetcher->addOnFetchUrl(
 			function (string $url): void {
 				$this->printer->info('Loading security.txt from ' . $this->printer->colorBold($url));
 			},
 		);
-		$fetcher->addOnRedirect(
+		$this->fetcher->addOnRedirect(
 			function (string $url): void {
 				$this->printer->info('Redirected to ' . $this->printer->colorBold($url));
 			},
 		);
-		$fetcher->addOnUrlNotFound(
+		$this->fetcher->addOnUrlNotFound(
 			function (string $url): void {
 				$this->printer->info('Not found ' . $this->printer->colorBold($url));
 			},

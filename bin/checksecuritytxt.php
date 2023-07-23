@@ -35,7 +35,7 @@ $fetcher = new SecurityTxtFetcher();
 $parser = new SecurityTxtParser($validator, $signature, $fetcher);
 $urlParser = new SecurityTxtUrlParser();
 $consolePrinter = new ConsolePrinter();
-$checkFile = new SecurityTxtCheckHost($parser, $urlParser, $consolePrinter);
+$checkFile = new SecurityTxtCheckHost($parser, $urlParser, $consolePrinter, $fetcher);
 /** @var array<int, string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
 $colors = array_search('--colors', $args, true);

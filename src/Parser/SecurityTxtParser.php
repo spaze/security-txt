@@ -150,10 +150,4 @@ class SecurityTxtParser
 		return $this->lines[$lineNumber] ?? null;
 	}
 
-
-	public function getFetcher(): SecurityTxtFetcher
-	{
-		return $this->fetcher;
-	}
-
 }
