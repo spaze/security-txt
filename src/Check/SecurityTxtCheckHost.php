@@ -5,20 +5,18 @@ namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostnameException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 
 class SecurityTxtCheckHost
 {
-
-	private const STATUS_OK = 0;
-	private const STATUS_ERROR = 1;
-	private const STATUS_NO_FILE = 2;
-	private const STATUS_FILE_ERROR = 3;
-
 
 	public function __construct(
 		private readonly SecurityTxtParser $parser,
@@ -62,28 +60,19 @@ class SecurityTxtCheckHost
 	}
 
 
-	public function check(?string $url = null, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $noIpv6 = false): never
+	/**
+	 * @throws SecurityTxtHostNotFoundException
+	 * @throws SecurityTxtHostnameException
+	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtNotFoundException
+	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotReadUrlException
+	 */
+	public function check(string $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $noIpv6 = false): bool
 	{
-		if ($url === null) {
-			$prologue = is_array($_SERVER['argv']) && is_string($_SERVER['argv'][0]) ? "Usage: {$_SERVER['argv'][0]}" : 'Params:';
-			$this->printer->info("{$prologue} <url or hostname> [days] [--colors] [--strict] [--no-ipv6] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
-			exit(self::STATUS_NO_FILE);
-		}
-
-		try {
-			$host = $this->urlParser->getHostFromUrl($url);
-		} catch (SecurityTxtHostnameException $e) {
-			$this->printer->error($e->getMessage());
-			exit(self::STATUS_FILE_ERROR);
-		}
+		$host = $this->urlParser->getHostFromUrl($url);
 		$this->printer->info('Parsing security.txt for ' . $this->printer->colorBold($host));
-
-		try {
-			$parseResult = $this->parser->parseUrl($host, $noIpv6);
-		} catch (SecurityTxtFetcherException $e) {
-			$this->printer->error($e->getMessage());
-			exit(self::STATUS_FILE_ERROR);
-		}
+		$parseResult = $this->parser->parseUrl($host, $noIpv6);
 
 		foreach ($parseResult->getFetchErrors() as $error) {
 			$this->printResult($error);
@@ -130,11 +119,7 @@ class SecurityTxtCheckHost
 				$signatureVerifyResult->getDate()->format(DATE_RFC3339),
 			));
 		}
-		if ($expires?->isExpired() || $expiresSoon || $parseResult->hasErrors() || ($strictMode && $parseResult->hasWarnings())) {
-			$this->printer->error($this->printer->colorRed('Please update the file!'));
-			exit(self::STATUS_ERROR);
-		}
-		exit(self::STATUS_OK);
+		return !$expires?->isExpired() && !$expiresSoon && !$parseResult->hasErrors() && (!$strictMode || !$parseResult->hasWarnings());
 	}
 
 }

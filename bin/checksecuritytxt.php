@@ -2,8 +2,10 @@
 <?php
 declare(strict_types = 1);
 
+use Spaze\SecurityTxt\Check\CheckExitStatus;
 use Spaze\SecurityTxt\Check\ConsolePrinter;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHost;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
@@ -43,9 +45,26 @@ if ($colors) {
 	$consolePrinter->enableColors();
 	unset($args[$colors]);
 }
-$checkFile->check(
-	$args[1] ?? null,
-	empty($args[2]) ? null : (int)$args[2],
-	in_array('--strict', $args, true),
-	in_array('--no-ipv6', $args, true),
-);
+if (!isset($args[1])) {
+	$prologue = is_array($_SERVER['argv']) && is_string($_SERVER['argv'][0]) ? "Usage: {$_SERVER['argv'][0]}" : 'Params:';
+	$consolePrinter->info("{$prologue} <url or hostname> [days] [--colors] [--strict] [--no-ipv6] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
+	exit(CheckExitStatus::NoFile->value);
+}
+
+try {
+	$valid = $checkFile->check(
+		$args[1],
+		empty($args[2]) ? null : (int)$args[2],
+		in_array('--strict', $args, true),
+		in_array('--no-ipv6', $args, true),
+	);
+	if (!$valid) {
+		$consolePrinter->error($consolePrinter->colorRed('Please update the file!'));
+		exit(CheckExitStatus::Error->value);
+	} else {
+		exit(CheckExitStatus::Ok->value);
+	}
+} catch (SecurityTxtFetcherException $e) {
+	$consolePrinter->error($e->getMessage());
+	exit(CheckExitStatus::FileError->value);
+}
