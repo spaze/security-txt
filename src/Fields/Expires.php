@@ -5,7 +5,6 @@ namespace Spaze\SecurityTxt\Fields;
 
 use DateInterval;
 use DateTimeImmutable;
-use DateTimeInterface;
 
 class Expires
 {
@@ -14,7 +13,7 @@ class Expires
 
 
 	public function __construct(
-		private readonly DateTimeInterface $dateTime,
+		private readonly DateTimeImmutable $dateTime,
 	) {
 		$this->interval = (new DateTimeImmutable())->diff($this->dateTime);
 	}
@@ -33,7 +32,7 @@ class Expires
 	}
 
 
-	public function getDateTime(): DateTimeInterface
+	public function getDateTime(): DateTimeImmutable
 	{
 		return $this->dateTime;
 	}
