@@ -13,6 +13,7 @@ class SecurityTxtFetcherFetchHostResult
 
 	public function __construct(
 		private readonly string $url,
+		private readonly string $finalUrl,
 		private readonly ?string $contents,
 		private readonly ?SecurityTxtFetcherException $exception,
 	) {
@@ -22,6 +23,12 @@ class SecurityTxtFetcherFetchHostResult
 	public function getUrl(): string
 	{
 		return $this->url;
+	}
+
+
+	public function getFinalUrl(): string
+	{
+		return $this->finalUrl;
 	}
 
 

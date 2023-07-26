@@ -23,14 +23,16 @@ class SecurityTxtFetcher
 	/** @var array<string, array<int, string>> */
 	private array $redirects = [];
 
+	private string $finalUrl;
+
 
 	/**
-	 * @param null|Closure(string): void $onFetchUrl
+	 * @param null|Closure(string): void $onUrl
 	 * @param null|Closure(string): void $onRedirect
 	 * @param null|Closure(string): void $onUrlNotFound
 	 */
 	public function __construct(
-		private ?Closure $onFetchUrl = null,
+		private ?Closure $onUrl = null,
 		private ?Closure $onRedirect = null,
 		private ?Closure $onUrlNotFound = null,
 	) {
@@ -62,9 +64,10 @@ class SecurityTxtFetcher
 	private function fetchUrl(string $urlTemplate, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
 		$url = $this->buildUrl($urlTemplate, $host);
-		$this->callOnCallback($this->onFetchUrl, $url);
+		$this->finalUrl = $url;
+		$this->callOnCallback($this->onUrl, $url);
 		try {
-			$this->redirects = [];
+			$this->redirects[$url] = [];
 			$records = @dns_get_record($host, $noIpv6 ? DNS_A : DNS_A | DNS_AAAA); // intentionally @, converted to exception
 			if (!$records) {
 				throw new SecurityTxtHostNotFoundException($url, $host);
@@ -77,6 +80,7 @@ class SecurityTxtFetcher
 		}
 		return new SecurityTxtFetcherFetchHostResult(
 			$url,
+			$this->finalUrl,
 			$contents,
 			$e ?? null,
 		);
@@ -122,6 +126,7 @@ class SecurityTxtFetcher
 			$this->callOnCallback($this->onRedirect, $location);
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
 			$this->redirects[$originalUrl][] = $location;
+			$this->finalUrl = $location;
 			if (count($this->redirects[$originalUrl]) > self::MAX_ALLOWED_REDIRECTS) {
 				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], self::MAX_ALLOWED_REDIRECTS);
 			}
@@ -188,8 +193,10 @@ class SecurityTxtFetcher
 			throw new LogicException('This should not happen');
 		}
 
+		$result = $wellKnownContents ? $wellKnown : $topLevel;
 		return new SecurityTxtFetchResult(
-			$wellKnownContents ? $wellKnown->getUrl() : $topLevel->getUrl(),
+			$result->getUrl(),
+			$result->getFinalUrl(),
 			$this->redirects,
 			$contents,
 			$errors,
@@ -201,7 +208,7 @@ class SecurityTxtFetcher
 	private function callOnCallback(?Closure $onCallback, string ...$params): void
 	{
 		if ($onCallback) {
-			call_user_func_array($onCallback, $params);
+			$onCallback(...$params);
 		}
 	}
 
@@ -213,11 +220,11 @@ class SecurityTxtFetcher
 
 
 	/**
-	 * @param Closure(string): void $onFetchUrl
+	 * @param Closure(string): void $onUrl
 	 */
-	public function addOnFetchUrl(Closure $onFetchUrl): void
+	public function addOnUrl(Closure $onUrl): void
 	{
-		$this->onFetchUrl = $onFetchUrl;
+		$this->onUrl = $onUrl;
 	}
 
 

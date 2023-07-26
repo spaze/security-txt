@@ -37,7 +37,79 @@ $fetcher = new SecurityTxtFetcher();
 $parser = new SecurityTxtParser($validator, $signature, $fetcher);
 $urlParser = new SecurityTxtUrlParser();
 $consolePrinter = new ConsolePrinter();
-$checkFile = new SecurityTxtCheckHost($parser, $urlParser, $consolePrinter, $fetcher);
+$checkFile = new SecurityTxtCheckHost($parser, $urlParser, $fetcher);
+$checkFile->addOnUrl(
+	function (string $url) use ($consolePrinter): void {
+		$consolePrinter->info('Loading security.txt from ' . $consolePrinter->colorBold($url));
+	},
+);
+$checkFile->addOnRedirect(
+	function (string $url) use ($consolePrinter): void {
+		$consolePrinter->info('Redirected to ' . $consolePrinter->colorBold($url));
+	},
+);
+$checkFile->addOnUrlNotFound(
+	function (string $url) use ($consolePrinter): void {
+		$consolePrinter->info('Not found ' . $consolePrinter->colorBold($url));
+	},
+);
+$checkFile->addOnIsExpired(
+	function (int $daysAgo, DateTimeImmutable $expiryDate) use ($consolePrinter): void {
+		$consolePrinter->error($consolePrinter->colorRed('The file has expired ' . $daysAgo . ' ' . ($daysAgo === 1 ? 'day' : 'days') . ' ago') . " ({$expiryDate->format(DATE_RFC3339)})");
+	},
+);
+$checkFile->addOnExpiresSoon(
+	function (int $inDays, DateTimeImmutable $expiryDate) use ($consolePrinter): void {
+		$consolePrinter->error($consolePrinter->colorRed("The file will expire very soon in {$inDays} " . ($inDays === 1 ? 'day' : 'days')) . " ({$expiryDate->format(DATE_RFC3339)})");
+	},
+);
+$checkFile->addOnExpires(
+	function (int $inDays, DateTimeImmutable $expiryDate) use ($consolePrinter): void {
+		$consolePrinter->info($consolePrinter->colorGreen("The file will expire in {$inDays} " . ($inDays === 1 ? 'day' : 'days')) . " ({$expiryDate->format(DATE_RFC3339)})");
+	},
+);
+$checkFile->addOnHost(
+	function (string $host) use ($consolePrinter): void {
+		$consolePrinter->info('Parsing security.txt for ' . $consolePrinter->colorBold($host));
+	},
+);
+$checkFile->addOnValidSignature(
+	function (string $keyFingerprint, DateTimeImmutable $signatureDate) use ($consolePrinter): void {
+		$consolePrinter->info(sprintf(
+			'%s, key %s, signed on %s',
+			$consolePrinter->colorGreen('Signature valid'),
+			$keyFingerprint,
+			$signatureDate->format(DATE_RFC3339),
+		));
+	},
+);
+$onError = function (?int $line, string $message, string $howToFix, ?string $correctValue) use ($consolePrinter): void {
+	$consolePrinter->error(sprintf(
+		'%s%s%s (How to fix: %s%s)',
+		$line ? 'on line ' : '',
+		$line ? $consolePrinter->colorBold((string)$line) . ': ' : '',
+		$message,
+		$howToFix,
+		$correctValue ? ', e.g. ' . $correctValue : '',
+	));
+};
+$onWarning = function (?int $line, string $message, string $howToFix, ?string $correctValue) use ($consolePrinter): void {
+	$consolePrinter->warning(sprintf(
+		'%s%s%s (How to fix: %s%s)',
+		$line ? 'on line ' : '',
+		$line ? $consolePrinter->colorBold((string)$line) . ': ' : '',
+		$message,
+		$howToFix,
+		$correctValue ? ', e.g. ' . $correctValue : '',
+	));
+};
+$checkFile->addOnFetchError($onError);
+$checkFile->addOnParseError($onError);
+$checkFile->addOnFileError($onError);
+$checkFile->addOnFetchWarning($onWarning);
+$checkFile->addOnParseWarning($onWarning);
+$checkFile->addOnFileWarning($onWarning);
+
 /** @var array<int, string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
 $colors = array_search('--colors', $args, true);
@@ -52,13 +124,13 @@ if (!isset($args[1])) {
 }
 
 try {
-	$valid = $checkFile->check(
+	$checkResult = $checkFile->check(
 		$args[1],
 		empty($args[2]) ? null : (int)$args[2],
 		in_array('--strict', $args, true),
 		in_array('--no-ipv6', $args, true),
 	);
-	if (!$valid) {
+	if (!$checkResult->isValid()) {
 		$consolePrinter->error($consolePrinter->colorRed('Please update the file!'));
 		exit(CheckExitStatus::Error->value);
 	} else {

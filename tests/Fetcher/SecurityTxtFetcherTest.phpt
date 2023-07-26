@@ -126,8 +126,8 @@ class SecurityTxtFetcherTest extends TestCase
 	/** @dataProvider getContents */
 	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownWins): void
 	{
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', $wellKnownContents, null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', $topLevelContents, null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents, null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents, null);
 		Assert::with($this->securityTxtFetcher, function () use ($wellKnown, $topLevel, $wellKnownWins): void {
 			$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
 			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
@@ -141,8 +141,8 @@ class SecurityTxtFetcherTest extends TestCase
 	 */
 	public function testGetResultNotFound(): void
 	{
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', null, new SecurityTxtUrlNotFoundException('foo', 404));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', null, new SecurityTxtUrlNotFoundException('bar', 403));
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
 		Assert::with($this->securityTxtFetcher, function () use ($wellKnown, $topLevel): void {
 			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
 			$this->getResult($wellKnown, $topLevel);

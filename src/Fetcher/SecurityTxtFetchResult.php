@@ -10,14 +10,13 @@ class SecurityTxtFetchResult
 {
 
 	/**
-	 * @param string $url
 	 * @param array<string, array<int, string>> $redirects
-	 * @param string $contents
 	 * @param array<int, SecurityTxtError> $errors
 	 * @param array<int, SecurityTxtWarning> $warnings
 	 */
 	public function __construct(
-		private readonly string $url,
+		private readonly string $constructedUrl,
+		private readonly string $finalUrl,
 		private readonly array $redirects,
 		private readonly string $contents,
 		private readonly array $errors,
@@ -32,9 +31,15 @@ class SecurityTxtFetchResult
 	}
 
 
-	public function getUrl(): string
+	public function getFinalUrl(): string
 	{
-		return $this->url;
+		return $this->finalUrl;
+	}
+
+
+	public function getConstructedUrl(): string
+	{
+		return $this->constructedUrl;
 	}
 
 
