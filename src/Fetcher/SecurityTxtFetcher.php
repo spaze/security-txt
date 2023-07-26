@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
-use Closure;
 use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelDiffersWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelPathOnlyWarning;
@@ -25,18 +24,14 @@ class SecurityTxtFetcher
 
 	private string $finalUrl;
 
+	/** @var list<callable(string): void> */
+	private array $onUrl = [];
 
-	/**
-	 * @param null|Closure(string): void $onUrl
-	 * @param null|Closure(string, string): void $onRedirect
-	 * @param null|Closure(string): void $onUrlNotFound
-	 */
-	public function __construct(
-		private ?Closure $onUrl = null,
-		private ?Closure $onRedirect = null,
-		private ?Closure $onUrlNotFound = null,
-	) {
-	}
+	/** @var list<callable(string, string): void> */
+	private array $onRedirect = [];
+
+	/** @var list<callable(string): void> */
+	private array $onUrlNotFound = [];
 
 
 	/**
@@ -205,9 +200,12 @@ class SecurityTxtFetcher
 	}
 
 
-	private function callOnCallback(?Closure $onCallback, string ...$params): void
+	/**
+	 * @param list<callable> $onCallbacks
+	 */
+	private function callOnCallback(array $onCallbacks, string ...$params): void
 	{
-		if ($onCallback) {
+		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
 		}
 	}
@@ -220,29 +218,29 @@ class SecurityTxtFetcher
 
 
 	/**
-	 * @param Closure(string): void $onUrl
+	 * @param callable(string): void $onUrl
 	 */
-	public function addOnUrl(Closure $onUrl): void
+	public function addOnUrl(callable $onUrl): void
 	{
-		$this->onUrl = $onUrl;
+		$this->onUrl[] = $onUrl;
 	}
 
 
 	/**
-	 * @param Closure(string, string): void $onRedirect
+	 * @param callable(string, string): void $onRedirect
 	 */
-	public function addOnRedirect(Closure $onRedirect): void
+	public function addOnRedirect(callable $onRedirect): void
 	{
-		$this->onRedirect = $onRedirect;
+		$this->onRedirect[] = $onRedirect;
 	}
 
 
 	/**
-	 * @param Closure(string): void $onUrlNotFound
+	 * @param callable(string): void $onUrlNotFound
 	 */
-	public function addOnUrlNotFound(Closure $onUrlNotFound): void
+	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
-		$this->onUrlNotFound = $onUrlNotFound;
+		$this->onUrlNotFound[] = $onUrlNotFound;
 	}
 
 }

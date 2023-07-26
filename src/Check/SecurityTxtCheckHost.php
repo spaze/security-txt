@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Check;
 
-use Closure;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
@@ -20,47 +19,47 @@ use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 class SecurityTxtCheckHost
 {
 
-	/** @var null|Closure(string): void */
-	private ?Closure $onUrl = null;
+	/** @var list<callable(string): void> */
+	private array $onUrl = [];
 
-	/** @var null|Closure(string, string): void */
-	private ?Closure $onRedirect = null;
+	/** @var list<callable(string, string): void> */
+	private array $onRedirect = [];
 
-	/** @var null|Closure(string): void */
-	private ?Closure $onUrlNotFound = null;
+	/** @var list<callable(string): void> */
+	private array $onUrlNotFound = [];
 
-	/** @var null|Closure(positive-int, DateTimeImmutable): void */
-	private ?Closure $onIsExpired = null;
+	/** @var list<callable(positive-int, DateTimeImmutable): void> */
+	private array $onIsExpired = [];
 
-	/** @var null|Closure(positive-int, DateTimeImmutable): void */
-	private ?Closure $onExpiresSoon = null;
+	/** @var list<callable(positive-int, DateTimeImmutable): void> */
+	private array $onExpiresSoon = [];
 
-	/** @var null|Closure(positive-int, DateTimeImmutable): void */
-	private ?Closure $onExpires = null;
+	/** @var list<callable(positive-int, DateTimeImmutable): void> */
+	private array $onExpires = [];
 
-	/** @var null|Closure(string): void */
-	private ?Closure $onHost = null;
+	/** @var list<callable(string): void> */
+	private array $onHost = [];
 
-	/** @var null|Closure(string, DateTimeImmutable): void */
-	private ?Closure $onValidSignature = null;
+	/** @var list<callable(string, DateTimeImmutable): void> */
+	private array $onValidSignature = [];
 
-	/** @var null|Closure(?int, string, string, ?string): void */
-	private ?Closure $onFetchError = null;
+	/** @var list<callable(?int, string, string, ?string): void> */
+	private array $onFetchError = [];
 
-	/** @var null|Closure(?int, string, string, ?string): void */
-	private ?Closure $onParseError = null;
+	/** @var list<callable(?int, string, string, ?string): void> */
+	private array $onParseError = [];
 
-	/** @var null|Closure(?int, string, string, ?string): void */
-	private ?Closure $onFileError = null;
+	/** @var list<callable(?int, string, string, ?string): void> */
+	private array $onFileError = [];
 
-	/** @var null|Closure(?int, string, string, ?string): void */
-	private ?Closure $onFetchWarning = null;
+	/** @var list<callable(?int, string, string, ?string): void> */
+	private array $onFetchWarning = [];
 
-	/** @var null|Closure(?int, string, string, ?string): void */
-	private ?Closure $onParseWarning = null;
+	/** @var list<callable(?int, string, string, ?string): void> */
+	private array $onParseWarning = [];
 
-	/** @var null|Closure(?int, string, string, ?string): void */
-	private ?Closure $onFileWarning = null;
+	/** @var list<callable(?int, string, string, ?string): void> */
+	private array $onFileWarning = [];
 
 
 	public function __construct(
@@ -168,149 +167,158 @@ class SecurityTxtCheckHost
 	}
 
 
-	private function error(?Closure $handler, SecurityTxtError $error, ?int $line = null): void
+	/**
+	 * @param list<callable(?int, string, string, ?string): void> $handlers
+	 */
+	private function error(array $handlers, SecurityTxtError $error, ?int $line = null): void
 	{
-		$this->callOnCallback($handler, $line, $error->getMessage(), $error->getHowToFix(), $error->getCorrectValue());
+		$this->callOnCallback($handlers, $line, $error->getMessage(), $error->getHowToFix(), $error->getCorrectValue());
 	}
 
 
-	private function warning(?Closure $handler, SecurityTxtWarning $warning, ?int $line = null): void
+	/**
+	 * @param list<callable(?int, string, string, ?string): void> $handlers
+	 */
+	private function warning(array $handlers, SecurityTxtWarning $warning, ?int $line = null): void
 	{
-		$this->callOnCallback($handler, $line, $warning->getMessage(), $warning->getHowToFix(), $warning->getCorrectValue());
+		$this->callOnCallback($handlers, $line, $warning->getMessage(), $warning->getHowToFix(), $warning->getCorrectValue());
 	}
 
 
-	private function callOnCallback(?Closure $onCallback, string|int|DateTimeImmutable|null ...$params): void
+	/**
+	 * @param list<callable> $onCallbacks
+	 */
+	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|null ...$params): void
 	{
-		if ($onCallback) {
+		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
 		}
 	}
 
 
 	/**
-	 * @param null|Closure(string $url): void $onUrl
+	 * @param callable(string $url): void $onUrl
 	 */
-	public function addOnUrl(?Closure $onUrl): void
+	public function addOnUrl(callable $onUrl): void
 	{
-		$this->onUrl = $onUrl;
+		$this->onUrl[] = $onUrl;
 	}
 
 
 	/**
-	 * @param null|Closure(string $url, string $destination): void $onRedirect
+	 * @param callable(string $url, string $destination): void $onRedirect
 	 */
-	public function addOnRedirect(?Closure $onRedirect): void
+	public function addOnRedirect(callable $onRedirect): void
 	{
-		$this->onRedirect = $onRedirect;
+		$this->onRedirect[] = $onRedirect;
 	}
 
 
 	/**
-	 * @param null|Closure(string $url): void $onUrlNotFound
+	 * @param callable(string $url): void $onUrlNotFound
 	 */
-	public function addOnUrlNotFound(?Closure $onUrlNotFound): void
+	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
-		$this->onUrlNotFound = $onUrlNotFound;
+		$this->onUrlNotFound[] = $onUrlNotFound;
 	}
 
 
 	/**
-	 * @param null|Closure(positive-int $daysAgo, DateTimeImmutable $expiryDate): void $onIsExpired
+	 * @param callable(positive-int $daysAgo, DateTimeImmutable $expiryDate): void $onIsExpired
 	 */
-	public function addOnIsExpired(?Closure $onIsExpired): void
+	public function addOnIsExpired(callable $onIsExpired): void
 	{
-		$this->onIsExpired = $onIsExpired;
+		$this->onIsExpired[] = $onIsExpired;
 	}
 
 
 	/**
-	 * @param null|Closure(positive-int $inDays, DateTimeImmutable $expiryDate): void $onExpiresSoon
+	 * @param callable(positive-int $inDays, DateTimeImmutable $expiryDate): void $onExpiresSoon
 	 */
-	public function addOnExpiresSoon(?Closure $onExpiresSoon): void
+	public function addOnExpiresSoon(callable $onExpiresSoon): void
 	{
-		$this->onExpiresSoon = $onExpiresSoon;
+		$this->onExpiresSoon[] = $onExpiresSoon;
 	}
 
 
 	/**
-	 * @param null|Closure(positive-int $inDays, DateTimeImmutable $expiryDate): void $onExpires
+	 * @param callable(positive-int $inDays, DateTimeImmutable $expiryDate): void $onExpires
 	 */
-	public function addOnExpires(?Closure $onExpires): void
+	public function addOnExpires(callable $onExpires): void
 	{
-		$this->onExpires = $onExpires;
+		$this->onExpires[] = $onExpires;
 	}
 
 
 	/**
-	 * @param null|Closure(string $host): void $onParse
+	 * @param callable(string $host): void $onParse
 	 */
-	public function addOnHost(?Closure $onParse): void
+	public function addOnHost(callable $onParse): void
 	{
-		$this->onHost = $onParse;
+		$this->onHost[] = $onParse;
 	}
 
 
 	/**
-	 * @param null|Closure(string $keyFingerprint, DateTimeImmutable $signatureDate): void $onValidSignature
+	 * @param callable(string $keyFingerprint, DateTimeImmutable $signatureDate): void $onValidSignature
 	 */
-	public function addOnValidSignature(?Closure $onValidSignature): void
+	public function addOnValidSignature(callable $onValidSignature): void
 	{
-		$this->onValidSignature = $onValidSignature;
+		$this->onValidSignature[] = $onValidSignature;
 	}
 
 
 	/**
-	 * @param null|Closure(?int, string, string, ?string): void $onFetchError
+	 * @param callable(?int, string, string, ?string): void $onFetchError
 	 */
-	public function addOnFetchError(?Closure $onFetchError): void
+	public function addOnFetchError(callable $onFetchError): void
 	{
-		$this->onFetchError = $onFetchError;
+		$this->onFetchError[] = $onFetchError;
 	}
 
 
 	/**
-	 * @param null|Closure(?int, string, string, ?string): void $onParseError
+	 * @param callable(?int, string, string, ?string): void $onParseError
 	 */
-	public function addOnParseError(?Closure $onParseError): void
+	public function addOnParseError(callable $onParseError): void
 	{
-		$this->onParseError = $onParseError;
+		$this->onParseError[] = $onParseError;
 	}
 
 
 	/**
-	 * @param null|Closure(?int, string, string, ?string): void $onFileError
+	 * @param callable(?int, string, string, ?string): void $onFileError
 	 */
-	public function addOnFileError(?Closure $onFileError): void
+	public function addOnFileError(callable $onFileError): void
 	{
-		$this->onFileError = $onFileError;
+		$this->onFileError[] = $onFileError;
 	}
 
 
 	/**
-	 * @param null|Closure(?int, string, string, ?string): void $onFetchWarning
+	 * @param callable(?int, string, string, ?string): void $onFetchWarning
 	 */
-	public function addOnFetchWarning(?Closure $onFetchWarning): void
+	public function addOnFetchWarning(callable $onFetchWarning): void
 	{
-		$this->onFetchWarning = $onFetchWarning;
+		$this->onFetchWarning[] = $onFetchWarning;
 	}
 
 
 	/**
-	 * @param null|Closure(?int, string, string, ?string): void $onParseWarning
+	 * @param callable(?int, string, string, ?string): void $onParseWarning
 	 */
-	public function addOnParseWarning(?Closure $onParseWarning): void
+	public function addOnParseWarning(callable $onParseWarning): void
 	{
-		$this->onParseWarning = $onParseWarning;
+		$this->onParseWarning[] = $onParseWarning;
 	}
 
 
 	/**
-	 * @param null|Closure(?int, string, string, ?string): void $onFileWarning
+	 * @param callable(?int, string, string, ?string): void $onFileWarning
 	 */
-	public function addOnFileWarning(?Closure $onFileWarning): void
+	public function addOnFileWarning(callable $onFileWarning): void
 	{
-		$this->onFileWarning = $onFileWarning;
+		$this->onFileWarning[] = $onFileWarning;
 	}
 
 }
