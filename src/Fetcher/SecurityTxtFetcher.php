@@ -28,7 +28,7 @@ class SecurityTxtFetcher
 
 	/**
 	 * @param null|Closure(string): void $onUrl
-	 * @param null|Closure(string): void $onRedirect
+	 * @param null|Closure(string, string): void $onRedirect
 	 * @param null|Closure(string): void $onUrlNotFound
 	 */
 	public function __construct(
@@ -123,8 +123,8 @@ class SecurityTxtFetcher
 		$wrapperData = $metadata['wrapper_data'];
 		$location = $this->getLocation($url, $wrapperData);
 		if ($location) {
-			$this->callOnCallback($this->onRedirect, $location);
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
+			$this->callOnCallback($this->onRedirect, $originalUrl, $location);
 			$this->redirects[$originalUrl][] = $location;
 			$this->finalUrl = $location;
 			if (count($this->redirects[$originalUrl]) > self::MAX_ALLOWED_REDIRECTS) {
@@ -229,7 +229,7 @@ class SecurityTxtFetcher
 
 
 	/**
-	 * @param Closure(string): void $onRedirect
+	 * @param Closure(string, string): void $onRedirect
 	 */
 	public function addOnRedirect(Closure $onRedirect): void
 	{

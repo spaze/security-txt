@@ -44,8 +44,8 @@ $checkFile->addOnUrl(
 	},
 );
 $checkFile->addOnRedirect(
-	function (string $url) use ($consolePrinter): void {
-		$consolePrinter->info('Redirected to ' . $consolePrinter->colorBold($url));
+	function (string $url, string $destination) use ($consolePrinter): void {
+		$consolePrinter->info('Redirected from ' . $consolePrinter->colorBold($url) . ' to ' . $consolePrinter->colorBold($destination));
 	},
 );
 $checkFile->addOnUrlNotFound(

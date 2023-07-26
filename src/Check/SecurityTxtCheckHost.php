@@ -23,7 +23,7 @@ class SecurityTxtCheckHost
 	/** @var null|Closure(string): void */
 	private ?Closure $onUrl = null;
 
-	/** @var null|Closure(string): void */
+	/** @var null|Closure(string, string): void */
 	private ?Closure $onRedirect = null;
 
 	/** @var null|Closure(string): void */
@@ -156,8 +156,8 @@ class SecurityTxtCheckHost
 			},
 		);
 		$this->fetcher->addOnRedirect(
-			function (string $url): void {
-				$this->callOnCallback($this->onRedirect, $url);
+			function (string $url, string $destination): void {
+				$this->callOnCallback($this->onRedirect, $url, $destination);
 			},
 		);
 		$this->fetcher->addOnUrlNotFound(
@@ -198,7 +198,7 @@ class SecurityTxtCheckHost
 
 
 	/**
-	 * @param null|Closure(string $url): void $onRedirect
+	 * @param null|Closure(string $url, string $destination): void $onRedirect
 	 */
 	public function addOnRedirect(?Closure $onRedirect): void
 	{
