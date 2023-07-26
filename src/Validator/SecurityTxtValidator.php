@@ -15,7 +15,7 @@ class SecurityTxtValidator
 {
 
 	/**
-	 * @var array<int, FieldValidator>
+	 * @var list<FieldValidator>
 	 */
 	private array $fieldValidators;
 

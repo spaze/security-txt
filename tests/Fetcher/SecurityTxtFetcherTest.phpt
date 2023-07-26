@@ -70,7 +70,7 @@ class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
-	 * @param array<int, string> $headers
+	 * @param list<string> $headers
 	 * @param string|null $expected
 	 * @dataProvider getHeaders
 	 */

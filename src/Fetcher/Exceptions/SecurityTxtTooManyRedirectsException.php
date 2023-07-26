@@ -10,7 +10,7 @@ class SecurityTxtTooManyRedirectsException extends SecurityTxtFetcherException
 
 	/**
 	 * @param string $url
-	 * @param array<int, string> $redirects
+	 * @param list<string> $redirects
 	 * @param int $maxAllowed
 	 * @param Throwable|null $previous
 	 */

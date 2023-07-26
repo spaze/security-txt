@@ -110,7 +110,7 @@ $checkFile->addOnFetchWarning($onWarning);
 $checkFile->addOnParseWarning($onWarning);
 $checkFile->addOnFileWarning($onWarning);
 
-/** @var array<int, string> $args */
+/** @var list<string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
 $colors = array_search('--colors', $args, true);
 if ($colors) {

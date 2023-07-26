@@ -26,18 +26,18 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 class SecurityTxtParser
 {
 
-	/** @var array<int, string> */
+	/** @var list<string> */
 	private array $lines = [];
 
 	/**
-	 * @var array<string, array<int, LineProcessor>>
+	 * @var array<string, list<LineProcessor>>
 	 */
 	private array $lineProcessors = [];
 
-	/** @var array<int, array<int, SecurityTxtError>> */
+	/** @var array<int, list<SecurityTxtError>> */
 	private array $parseErrors = [];
 
-	/** @var array<int, array<int, SecurityTxtWarning>> */
+	/** @var array<int, list<SecurityTxtWarning>> */
 	private array $parseWarnings = [];
 
 

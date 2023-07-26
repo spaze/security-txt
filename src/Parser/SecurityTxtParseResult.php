@@ -14,8 +14,8 @@ class SecurityTxtParseResult
 
 	/**
 	 * @param SecurityTxt $securityTxt
-	 * @param array<int, array<int, SecurityTxtError>> $parseErrors
-	 * @param array<int, array<int, SecurityTxtWarning>> $parseWarnings
+	 * @param array<int, list<SecurityTxtError>> $parseErrors
+	 * @param array<int, list<SecurityTxtWarning>> $parseWarnings
 	 * @param SecurityTxtValidateResult $validateResult
 	 * @param SecurityTxtFetchResult|null $fetchResult
 	 */
@@ -36,7 +36,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, SecurityTxtError>
+	 * @return list<SecurityTxtError>
 	 */
 	public function getFetchErrors(): array
 	{
@@ -45,7 +45,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, array<int, SecurityTxtError>>
+	 * @return array<int, list<SecurityTxtError>>
 	 */
 	public function getParseErrors(): array
 	{
@@ -54,7 +54,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, SecurityTxtError>
+	 * @return list<SecurityTxtError>
 	 */
 	public function getFileErrors(): array
 	{
@@ -69,7 +69,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, SecurityTxtWarning>
+	 * @return list<SecurityTxtWarning>
 	 */
 	public function getFetchWarnings(): array
 	{
@@ -78,7 +78,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, array<int, SecurityTxtWarning>>
+	 * @return array<int, list<SecurityTxtWarning>>
 	 */
 	public function getParseWarnings(): array
 	{
@@ -87,7 +87,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, SecurityTxtWarning>
+	 * @return list<SecurityTxtWarning>
 	 */
 	public function getFileWarnings(): array
 	{

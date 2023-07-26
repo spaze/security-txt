@@ -11,13 +11,13 @@ class SecurityTxtCheckHostResult
 {
 
 	/**
-	 * @param array<string, array<int, string>> $redirects
-	 * @param array<int, SecurityTxtError> $fetchErrors
-	 * @param array<int, SecurityTxtWarning> $fetchWarnings
-	 * @param array<int, array<int, SecurityTxtError>> $parseErrors
-	 * @param array<int, array<int, SecurityTxtWarning>> $parseWarnings
-	 * @param array<int, SecurityTxtError> $fileErrors
-	 * @param array<int, SecurityTxtWarning> $fileWarnings
+	 * @param array<string, list<string>> $redirects
+	 * @param list<SecurityTxtError> $fetchErrors
+	 * @param list<SecurityTxtWarning> $fetchWarnings
+	 * @param array<int, list<SecurityTxtError>> $parseErrors
+	 * @param array<int, list<SecurityTxtWarning>> $parseWarnings
+	 * @param list<SecurityTxtError> $fileErrors
+	 * @param list<SecurityTxtWarning> $fileWarnings
 	 */
 	public function __construct(
 		private readonly string $host,
@@ -47,7 +47,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<string, array<int, string>>|null
+	 * @return array<string, list<string>>|null
 	 */
 	public function getRedirects(): ?array
 	{
@@ -68,7 +68,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, SecurityTxtError>
+	 * @return list<SecurityTxtError>
 	 */
 	public function getFetchErrors(): array
 	{
@@ -77,7 +77,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, SecurityTxtWarning>
+	 * @return list<SecurityTxtWarning>
 	 */
 	public function getFetchWarnings(): array
 	{
@@ -86,7 +86,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, array<int, SecurityTxtError>>
+	 * @return array<int, list<SecurityTxtError>>
 	 */
 	public function getParseErrors(): array
 	{
@@ -95,7 +95,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, array<int, SecurityTxtWarning>>
+	 * @return array<int, list<SecurityTxtWarning>>
 	 */
 	public function getParseWarnings(): array
 	{
@@ -104,7 +104,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, SecurityTxtError>
+	 * @return list<SecurityTxtError>
 	 */
 	public function getFileErrors(): array
 	{
@@ -113,7 +113,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, SecurityTxtWarning>
+	 * @return list<SecurityTxtWarning>
 	 */
 	public function getFileWarnings(): array
 	{

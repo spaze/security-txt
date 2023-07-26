@@ -15,7 +15,7 @@ abstract class SecurityTxtThrowable extends Exception
 	 * @param string|null $correctValue
 	 * @param string $howToFix
 	 * @param string|null $specSection
-	 * @param array<int, string> $seeAlsoSections
+	 * @param list<string> $seeAlsoSections
 	 * @param Throwable|null $previous
 	 */
 	public function __construct(
@@ -56,7 +56,7 @@ abstract class SecurityTxtThrowable extends Exception
 
 
 	/**
-	 * @return array<int, string>
+	 * @return list<string>
 	 */
 	public function getSeeAlsoSections(): array
 	{

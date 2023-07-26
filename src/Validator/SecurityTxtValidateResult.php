@@ -10,8 +10,8 @@ class SecurityTxtValidateResult
 {
 
 	/**
-	 * @param array<int, SecurityTxtError> $errors
-	 * @param array<int, SecurityTxtWarning> $warnings
+	 * @param list<SecurityTxtError> $errors
+	 * @param list<SecurityTxtWarning> $warnings
 	 */
 	public function __construct(
 		private readonly array $errors,
@@ -21,7 +21,7 @@ class SecurityTxtValidateResult
 
 
 	/**
-	 * @return array<int, SecurityTxtError>
+	 * @return list<SecurityTxtError>
 	 */
 	public function getErrors(): array
 	{
@@ -30,7 +30,7 @@ class SecurityTxtValidateResult
 
 
 	/**
-	 * @return array<int, SecurityTxtWarning>
+	 * @return list<SecurityTxtWarning>
 	 */
 	public function getWarnings(): array
 	{

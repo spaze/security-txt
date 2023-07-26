@@ -21,12 +21,12 @@ class SecurityTxt
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
 
 	/**
-	 * @var array<int, Canonical>
+	 * @var list<Canonical>
 	 */
 	private array $canonical = [];
 
 	/**
-	 * @var array<int, Contact>
+	 * @var list<Contact>
 	 */
 	private array $contact = [];
 
@@ -91,7 +91,7 @@ class SecurityTxt
 
 
 	/**
-	 * @return array<int, Canonical>
+	 * @return list<Canonical>
 	 */
 	public function getCanonical(): array
 	{
@@ -123,7 +123,7 @@ class SecurityTxt
 
 
 	/**
-	 * @return array<int, Contact>
+	 * @return list<Contact>
 	 */
 	public function getContact(): array
 	{

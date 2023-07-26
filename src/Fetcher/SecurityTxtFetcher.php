@@ -20,7 +20,7 @@ class SecurityTxtFetcher
 
 	private const MAX_ALLOWED_REDIRECTS = 5;
 
-	/** @var array<string, array<int, string>> */
+	/** @var array<string, list<string>> */
 	private array $redirects = [];
 
 	private string $finalUrl;

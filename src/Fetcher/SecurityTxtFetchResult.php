@@ -10,9 +10,9 @@ class SecurityTxtFetchResult
 {
 
 	/**
-	 * @param array<string, array<int, string>> $redirects
-	 * @param array<int, SecurityTxtError> $errors
-	 * @param array<int, SecurityTxtWarning> $warnings
+	 * @param array<string, list<string>> $redirects
+	 * @param list<SecurityTxtError> $errors
+	 * @param list<SecurityTxtWarning> $warnings
 	 */
 	public function __construct(
 		private readonly string $constructedUrl,
@@ -44,7 +44,7 @@ class SecurityTxtFetchResult
 
 
 	/**
-	 * @return array<string, array<int, string>>
+	 * @return array<string, list<string>>
 	 */
 	public function getRedirects(): array
 	{
@@ -53,7 +53,7 @@ class SecurityTxtFetchResult
 
 
 	/**
-	 * @return array<int, SecurityTxtError>
+	 * @return list<SecurityTxtError>
 	 */
 	public function getErrors(): array
 	{
@@ -62,7 +62,7 @@ class SecurityTxtFetchResult
 
 
 	/**
-	 * @return array<int, SecurityTxtWarning>
+	 * @return list<SecurityTxtWarning>
 	 */
 	public function getWarnings(): array
 	{
