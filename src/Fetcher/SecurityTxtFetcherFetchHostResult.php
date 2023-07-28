@@ -38,6 +38,12 @@ class SecurityTxtFetcherFetchHostResult
 	}
 
 
+	public function getContentTypeHeader(): ?string
+	{
+		return $this->response?->getHeader('Content-Type');
+	}
+
+
 	public function getHttpCode(): int
 	{
 		return $this->exception?->getCode() ?? 200;

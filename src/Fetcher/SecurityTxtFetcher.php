@@ -4,6 +4,8 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher;
 
 use LogicException;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContentTypeError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContentTypeWrongCharsetError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelDiffersWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelPathOnlyWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWellKnownPathOnlyWarning;
@@ -171,24 +173,36 @@ class SecurityTxtFetcher
 			]);
 		} elseif ($wellKnownContents && $topLevelContents === null) {
 			$warnings[] = new SecurityTxtWellKnownPathOnlyWarning();
+			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} elseif ($wellKnownContents === null && $topLevelContents) {
 			$warnings[] = new SecurityTxtTopLevelPathOnlyWarning();
+			$result = $topLevel;
 			$contents = $topLevelContents;
 		} elseif ($wellKnownContents !== $topLevelContents) {
 			if ($wellKnownContents === null || $topLevelContents === null) {
 				throw new LogicException('This should not happen');
 			}
 			$warnings[] = new SecurityTxtTopLevelDiffersWarning($wellKnownContents, $topLevelContents);
+			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} else {
+			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		}
 		if ($contents === null) {
 			throw new LogicException('This should not happen');
 		}
 
-		$result = $wellKnownContents ? $wellKnown : $topLevel;
+		$contentTypeHeader = $result->getContentTypeHeader();
+		$headerParts = $contentTypeHeader ? explode(';', $contentTypeHeader, 2) : [];
+		$contentType = isset($headerParts[0]) ? trim($headerParts[0]) : null;
+		$charset = isset($headerParts[1]) ? trim($headerParts[1]) : null;
+		if (!$contentType || strtolower($contentType) !== 'text/plain') {
+			$errors[] = new SecurityTxtContentTypeError($result->getUrl(), $contentType);
+		} elseif (!$charset || strtolower($charset) !== 'charset=utf-8') {
+			$errors[] = new SecurityTxtContentTypeWrongCharsetError($result->getUrl(), $contentType, $charset);
+		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),
 			$result->getFinalUrl(),
