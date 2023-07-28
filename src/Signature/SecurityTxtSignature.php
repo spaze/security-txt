@@ -14,6 +14,12 @@ class SecurityTxtSignature
 	private gnupg $gnupg;
 
 
+	public function __construct(
+		private readonly ?string $homeDir = null,
+	) {
+	}
+
+
 	/**
 	 * @throws SecurityTxtSignatureExtensionNotLoadedWarning
 	 */
@@ -22,7 +28,8 @@ class SecurityTxtSignature
 		if (!extension_loaded('gnupg')) {
 			throw new SecurityTxtSignatureExtensionNotLoadedWarning();
 		}
-		$this->gnupg = new gnupg();
+		$options = ['home_dir' => $this->homeDir];
+		$this->gnupg = new gnupg(array_filter($options));
 	}
 
 
