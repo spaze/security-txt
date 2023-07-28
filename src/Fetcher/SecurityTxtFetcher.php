@@ -274,7 +274,8 @@ class SecurityTxtFetcher
 			throw new SecurityTxtFetcherNoLocationException($url, $response);
 		} else {
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
-			$this->callOnCallback($this->onRedirect, $originalUrl, $location);
+			$previousUrl = $this->redirects[$originalUrl][array_key_last($this->redirects[$originalUrl])] ?? $originalUrl;
+			$this->callOnCallback($this->onRedirect, $previousUrl, $location);
 			$this->redirects[$originalUrl][] = $location;
 			$this->finalUrl = $location;
 			if (count($this->redirects[$originalUrl]) > self::MAX_ALLOWED_REDIRECTS) {
