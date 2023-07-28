@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpUnhandledExceptionInspection */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
@@ -31,7 +32,7 @@ class ExpiresTest extends TestCase
 	{
 		$expiresObject = new Expires($expires);
 		Assert::with($expiresObject, function () use ($now, $expires): void {
-			/** @noinspection PhpUndefinedFieldInspection Closure bound to $expiresObject */
+			/** @noinspection PhpDynamicFieldDeclarationInspection Closure bound to $expiresObject */
 			$this->interval = $now->diff($expires);
 		});
 		Assert::same($isExpired, $expiresObject->isExpired());
