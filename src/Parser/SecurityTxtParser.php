@@ -120,9 +120,9 @@ class SecurityTxtParser
 	 * @throws SecurityTxtFetcherNoHttpCodeException
 	 * @throws SecurityTxtFetcherNoLocationException
 	 */
-	public function parseUrl(string $url, bool $noIpv6 = false): SecurityTxtParseResult
+	public function parseHost(string $host, bool $noIpv6 = false): SecurityTxtParseResult
 	{
-		$fetchResult = $this->fetcher->fetchHost($url, $noIpv6);
+		$fetchResult = $this->fetcher->fetchHost($host, $noIpv6);
 		$parseResult = $this->parseString($fetchResult->getContents());
 		return new SecurityTxtParseResult(
 			$parseResult->getSecurityTxt(),

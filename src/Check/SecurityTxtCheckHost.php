@@ -88,7 +88,7 @@ class SecurityTxtCheckHost
 
 		$host = $this->urlParser->getHostFromUrl($url);
 		$this->callOnCallback($this->onHost, $host);
-		$parseResult = $this->parser->parseUrl($host, $noIpv6);
+		$parseResult = $this->parser->parseHost($host, $noIpv6);
 
 		foreach ($parseResult->getFetchErrors() as $error) {
 			$this->error($this->onFetchError, $error);
