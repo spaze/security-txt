@@ -9,6 +9,8 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelPathOnlyWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWellKnownPathOnlyWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoHttpCodeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoLocationException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
@@ -40,6 +42,8 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtHostNotFoundException
+	 * @throws SecurityTxtFetcherNoHttpCodeException
+	 * @throws SecurityTxtFetcherNoLocationException
 	 */
 	public function fetchHost(string $host, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
@@ -55,6 +59,8 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotReadUrlException
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtNotFoundException
+	 * @throws SecurityTxtFetcherNoHttpCodeException
+	 * @throws SecurityTxtFetcherNoLocationException
 	 */
 	private function fetchUrl(string $urlTemplate, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
@@ -68,15 +74,15 @@ class SecurityTxtFetcher
 				throw new SecurityTxtHostNotFoundException($url, $host);
 			}
 			$records = array_merge(...$records);
-			$contents = $this->getContents($this->buildUrl($urlTemplate, $records['ipv6'] ?? $records['ip']), $urlTemplate, $host, true);
+			$response = $this->getResponse($this->buildUrl($urlTemplate, $records['ipv6'] ?? $records['ip']), $urlTemplate, $host, true);
 		} catch (SecurityTxtUrlNotFoundException $e) {
 			$this->callOnCallback($this->onUrlNotFound, $e->getUrl());
-			$contents = null;
+			$response = null;
 		}
 		return new SecurityTxtFetcherFetchHostResult(
 			$url,
 			$this->finalUrl,
-			$contents,
+			$response,
 			$e ?? null,
 		);
 	}
@@ -88,8 +94,10 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtUrlNotFoundException
+	 * @throws SecurityTxtFetcherNoHttpCodeException
+	 * @throws SecurityTxtFetcherNoLocationException
 	 */
-	private function getContents(string $url, string $urlTemplate, string $host, bool $useHostForContextHost): string
+	private function getResponse(string $url, string $urlTemplate, string $host, bool $useHostForContextHost): SecurityTxtFetcherResponse
 	{
 		$options = [
 			'http' => [
@@ -116,43 +124,35 @@ class SecurityTxtFetcher
 		fclose($fp);
 		/** @var list<string> $wrapperData */
 		$wrapperData = $metadata['wrapper_data'];
-		$location = $this->getLocation($url, $wrapperData);
-		if ($location) {
-			$originalUrl = $this->buildUrl($urlTemplate, $host);
-			$this->callOnCallback($this->onRedirect, $originalUrl, $location);
-			$this->redirects[$originalUrl][] = $location;
-			$this->finalUrl = $location;
-			if (count($this->redirects[$originalUrl]) > self::MAX_ALLOWED_REDIRECTS) {
-				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], self::MAX_ALLOWED_REDIRECTS);
-			}
-			return $this->getContents($location, $urlTemplate, $host, false);
+		$response = $this->getHttpResponse($url, $wrapperData, $contents);
+		if ($response->getHttpCode() >= 400) {
+			throw new SecurityTxtUrlNotFoundException($url, $response->getHttpCode());
 		}
-		return $contents;
+		if ($response->getHttpCode() >= 300) {
+			return $this->redirect($url, $response, $urlTemplate, $host);
+		}
+		return $response;
 	}
 
 
 	/**
-	 * @param string $url
-	 * @param list<string> $headers
-	 * @return string|null
-	 * @throws SecurityTxtUrlNotFoundException
+	 * @param list<string> $metadata
+	 * @throws SecurityTxtFetcherNoHttpCodeException
 	 */
-	private function getLocation(string $url, array $headers): ?string
+	private function getHttpResponse(string $url, array $metadata, string $contents): SecurityTxtFetcherResponse
 	{
-		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $headers[0], $matches)) {
+		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $metadata[0], $matches)) {
 			$code = (int)$matches[1];
-			if ($code >= 400) {
-				throw new SecurityTxtUrlNotFoundException($url, $code);
-			}
-			if ($code >= 300) {
-				foreach ($headers as $header) {
-					if (preg_match('~^Location:\s*(.*)$~i', $header, $matches)) {
-						return $matches[1];
-					}
-				}
-			}
+		} else {
+			throw new SecurityTxtFetcherNoHttpCodeException($url);
 		}
-		return null;
+
+		$headers = [];
+		for ($i = 1; $i < count($metadata); $i++) {
+			$parts = explode(':', $metadata[$i], 2);
+			$headers[strtolower(trim($parts[0]))] = trim($parts[1]);
+		}
+		return new SecurityTxtFetcherResponse($code, $headers, $contents);
 	}
 
 
@@ -241,6 +241,33 @@ class SecurityTxtFetcher
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
 		$this->onUrlNotFound[] = $onUrlNotFound;
+	}
+
+
+	/**
+	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotReadUrlException
+	 * @throws SecurityTxtFetcherNoHttpCodeException
+	 * @throws SecurityTxtFetcherNoLocationException
+	 * @throws SecurityTxtNotFoundException
+	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtUrlNotFoundException
+	 */
+	private function redirect(string $url, SecurityTxtFetcherResponse $response, string $urlTemplate, string $host): SecurityTxtFetcherResponse
+	{
+		$location = $response->getHeader('Location');
+		if (!$location) {
+			throw new SecurityTxtFetcherNoLocationException($url, $response);
+		} else {
+			$originalUrl = $this->buildUrl($urlTemplate, $host);
+			$this->callOnCallback($this->onRedirect, $originalUrl, $location);
+			$this->redirects[$originalUrl][] = $location;
+			$this->finalUrl = $location;
+			if (count($this->redirects[$originalUrl]) > self::MAX_ALLOWED_REDIRECTS) {
+				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], self::MAX_ALLOWED_REDIRECTS);
+			}
+			return $this->getResponse($location, $urlTemplate, $host, false);
+		}
 	}
 
 }

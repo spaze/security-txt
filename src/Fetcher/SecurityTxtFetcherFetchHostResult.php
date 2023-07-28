@@ -14,7 +14,7 @@ class SecurityTxtFetcherFetchHostResult
 	public function __construct(
 		private readonly string $url,
 		private readonly string $finalUrl,
-		private readonly ?string $contents,
+		private readonly ?SecurityTxtFetcherResponse $response,
 		private readonly ?SecurityTxtFetcherException $exception,
 	) {
 	}
@@ -34,7 +34,7 @@ class SecurityTxtFetcherFetchHostResult
 
 	public function getContents(): ?string
 	{
-		return $this->contents;
+		return $this->response?->getContents();
 	}
 
 

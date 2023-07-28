@@ -6,6 +6,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Tester\Assert;
 use Tester\TestCase;
@@ -34,14 +35,16 @@ class SecurityTxtFetcherTest extends TestCase
 					'Foo: bar',
 					'Location: https://example.example/example',
 				],
+				301,
 				'https://example.example/example',
 			],
-			'301 redirect with LOCATION' => [
+			'302 redirect with LOCATION' => [
 				[
 					'HTTP/123.4 302',
 					'Foo: bar',
 					'LOCATION: https://example.net/example',
 				],
+				302,
 				'https://example.net/example',
 			],
 			'Random redirect with location' => [
@@ -50,12 +53,14 @@ class SecurityTxtFetcherTest extends TestCase
 					'Foo: bar',
 					'location: https://example.org/example',
 				],
+				399,
 				'https://example.org/example',
 			],
 			'Success' => [
 				[
 					'HTTP/123.4 200',
 				],
+				200,
 				null,
 			],
 			'Random success with nonsensical Location' => [
@@ -64,51 +69,35 @@ class SecurityTxtFetcherTest extends TestCase
 					'Foo: bar',
 					'Location: https://example.org/example',
 				],
-				null,
+				299,
+				'https://example.org/example',
 			],
 		];
 	}
 
 
 	/**
-	 * @param list<string> $headers
-	 * @param string|null $expected
+	 * @param list<string> $metadata
 	 * @dataProvider getHeaders
 	 */
-	public function testGetLocation(array $headers, ?string $expected): void
+	public function testGetHttpResponse(array $metadata, int $expectedHttpCode, ?string $expectedLocation): void
 	{
-		Assert::with($this->securityTxtFetcher, function () use ($headers, $expected): void {
+		Assert::with($this->securityTxtFetcher, function () use ($metadata, $expectedHttpCode, $expectedLocation): void {
 			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
-			Assert::same($expected, $this->getLocation('https://example.com/foo', $headers));
+			$headers = $this->getHttpResponse('https://example.com/foo', $metadata, 'contents');
+			Assert::same($expectedHttpCode, $headers->getHttpCode());
+			Assert::same($expectedLocation, $headers->getHeader('location'));
 		});
 	}
 
 
-	public function getStatusCodes(): array
+	public function testGetHttpResponseNoHttpCode(): void
 	{
-		return [
-			'400' => [400],
-			'401' => [401],
-			'403' => [403],
-			'404' => [404],
-			'500' => [500],
-			'503' => [503],
-			'999' => [999],
-			'1234' => [1234],
-		];
-	}
-
-
-	/**
-	 * @param int $statusCode
-	 * @dataProvider getStatusCodes
-	 * @throws \Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException
-	 */
-	public function testGetLocationException(int $statusCode): void
-	{
-		Assert::with($this->securityTxtFetcher, function () use ($statusCode): void {
-			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
-			$this->getLocation('https://example.com/foo', ["HTTP/1.1 {$statusCode} Something"]);
+		Assert::with($this->securityTxtFetcher, function (): void {
+			Assert::throws(function (): void {
+				/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
+				$this->getHttpResponse('https://example.com/foo', ['Foo/303 808'], 'contents');
+			}, SecurityTxtFetcherNoHttpCodeException::class, 'Missing HTTP code when fetching https://example.com/foo');
 		});
 	}
 
@@ -127,8 +116,8 @@ class SecurityTxtFetcherTest extends TestCase
 	/** @dataProvider getContents */
 	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownWins): void
 	{
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents, null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents, null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
 		Assert::with($this->securityTxtFetcher, function () use ($wellKnown, $topLevel, $wellKnownWins): void {
 			$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
 			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
