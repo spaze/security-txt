@@ -24,6 +24,9 @@ class SecurityTxtCheckHost
 	/** @var list<callable(string): void> */
 	private array $onUrl = [];
 
+	/** @var list<callable(string): void> */
+	private array $onFinalUrl = [];
+
 	/** @var list<callable(string, string): void> */
 	private array $onRedirect = [];
 
@@ -158,6 +161,11 @@ class SecurityTxtCheckHost
 				$this->callOnCallback($this->onUrl, $url);
 			},
 		);
+		$this->fetcher->addOnFinalUrl(
+			function (string $url): void {
+				$this->callOnCallback($this->onFinalUrl, $url);
+			},
+		);
 		$this->fetcher->addOnRedirect(
 			function (string $url, string $destination): void {
 				$this->callOnCallback($this->onRedirect, $url, $destination);
@@ -206,6 +214,15 @@ class SecurityTxtCheckHost
 	public function addOnUrl(callable $onUrl): void
 	{
 		$this->onUrl[] = $onUrl;
+	}
+
+
+	/**
+	 * @param callable(string $url): void $onFinalUrl
+	 */
+	public function addOnFinalUrl(callable $onFinalUrl): void
+	{
+		$this->onFinalUrl[] = $onFinalUrl;
 	}
 
 

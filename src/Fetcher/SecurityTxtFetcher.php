@@ -33,6 +33,9 @@ class SecurityTxtFetcher
 	/** @var list<callable(string): void> */
 	private array $onUrl = [];
 
+	/** @var list<callable(string): void> */
+	private array $onFinalUrl = [];
+
 	/** @var list<callable(string, string): void> */
 	private array $onRedirect = [];
 
@@ -155,6 +158,7 @@ class SecurityTxtFetcher
 		if ($contents === null) {
 			throw new LogicException('This should not happen');
 		}
+		$this->callOnCallback($this->onFinalUrl, $result->getFinalUrl());
 
 		$contentTypeHeader = $result->getContentTypeHeader();
 		$headerParts = $contentTypeHeader ? explode(';', $contentTypeHeader, 2) : [];
@@ -203,6 +207,15 @@ class SecurityTxtFetcher
 	public function addOnUrl(callable $onUrl): void
 	{
 		$this->onUrl[] = $onUrl;
+	}
+
+
+	/**
+	 * @param callable(string): void $onFinalUrl
+	 */
+	public function addOnFinalUrl(callable $onFinalUrl): void
+	{
+		$this->onFinalUrl[] = $onFinalUrl;
 	}
 
 

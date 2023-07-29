@@ -23,6 +23,11 @@ class SecurityTxtCheckHostCli
 				$this->consolePrinter->info('Loading security.txt from ' . $this->consolePrinter->colorBold($url));
 			},
 		);
+		$this->checkHost->addOnFinalUrl(
+			function (string $url): void {
+				$this->consolePrinter->info('Selecting security.txt located at ' . $this->consolePrinter->colorBold($url) . ' for further tests');
+			},
+		);
 		$this->checkHost->addOnRedirect(
 			function (string $url, string $destination): void {
 				$this->consolePrinter->info('Redirected from ' . $this->consolePrinter->colorBold($url) . ' to ' . $this->consolePrinter->colorBold($destination));
