@@ -18,6 +18,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
+use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 
 class SecurityTxtFetcher
 {
@@ -37,6 +38,12 @@ class SecurityTxtFetcher
 
 	/** @var list<callable(string): void> */
 	private array $onUrlNotFound = [];
+
+
+	public function __construct(
+		private readonly SecurityTxtFetcherHttpClient $httpClient,
+	) {
+	}
 
 
 	/**
@@ -102,32 +109,7 @@ class SecurityTxtFetcher
 	 */
 	private function getResponse(string $url, string $urlTemplate, string $host, bool $useHostForContextHost): SecurityTxtFetcherResponse
 	{
-		$options = [
-			'http' => [
-				'follow_location' => false,
-				'ignore_errors' => true,
-				'user_agent' => 'spaze/security-txt',
-			],
-		];
-		if ($useHostForContextHost) {
-			$options['ssl'] = [
-				'peer_name' => $host,
-			];
-			$options['http']['header'][] = "Host: {$host}";
-		}
-		$fp = @fopen($url, 'r', context: stream_context_create($options)); // intentionally @, converted to exception
-		if (!$fp) {
-			throw new SecurityTxtCannotOpenUrlException($url);
-		}
-		$contents = stream_get_contents($fp);
-		if ($contents === false) {
-			throw new SecurityTxtCannotReadUrlException($url);
-		}
-		$metadata = stream_get_meta_data($fp);
-		fclose($fp);
-		/** @var list<string> $wrapperData */
-		$wrapperData = $metadata['wrapper_data'];
-		$response = $this->getHttpResponse($url, $wrapperData, $contents);
+		$response = $this->httpClient->getResponse($url, $useHostForContextHost ? $host : null);
 		if ($response->getHttpCode() >= 400) {
 			throw new SecurityTxtUrlNotFoundException($url, $response->getHttpCode());
 		}
@@ -135,27 +117,6 @@ class SecurityTxtFetcher
 			return $this->redirect($url, $response, $urlTemplate, $host);
 		}
 		return $response;
-	}
-
-
-	/**
-	 * @param list<string> $metadata
-	 * @throws SecurityTxtFetcherNoHttpCodeException
-	 */
-	private function getHttpResponse(string $url, array $metadata, string $contents): SecurityTxtFetcherResponse
-	{
-		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $metadata[0], $matches)) {
-			$code = (int)$matches[1];
-		} else {
-			throw new SecurityTxtFetcherNoHttpCodeException($url);
-		}
-
-		$headers = [];
-		for ($i = 1; $i < count($metadata); $i++) {
-			$parts = explode(':', $metadata[$i], 2);
-			$headers[strtolower(trim($parts[0]))] = trim($parts[1]);
-		}
-		return new SecurityTxtFetcherResponse($code, $headers, $contents);
 	}
 
 

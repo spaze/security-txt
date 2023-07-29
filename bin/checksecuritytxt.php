@@ -5,6 +5,7 @@ declare(strict_types = 1);
 use Spaze\SecurityTxt\Check\ConsolePrinter;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHost;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostCli;
+use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
@@ -32,7 +33,8 @@ if (!$autoloadLoaded) {
 
 $validator = new SecurityTxtValidator();
 $signature = new SecurityTxtSignature();
-$fetcher = new SecurityTxtFetcher();
+$fopenClient = new SecurityTxtFetcherFopenClient();
+$fetcher = new SecurityTxtFetcher($fopenClient);
 $parser = new SecurityTxtParser($validator, $signature, $fetcher);
 $urlParser = new SecurityTxtUrlParser();
 $consolePrinter = new ConsolePrinter();

@@ -6,8 +6,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoHttpCodeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoLocationException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
+use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -18,11 +21,29 @@ class SecurityTxtFetcherTest extends TestCase
 {
 
 	private SecurityTxtFetcher $securityTxtFetcher;
+	private SecurityTxtFetcherHttpClient $httpClient;
 
 
 	protected function setUp(): void
 	{
-		$this->securityTxtFetcher = new SecurityTxtFetcher();
+		$this->httpClient = new class () implements SecurityTxtFetcherHttpClient {
+
+			private SecurityTxtFetcherResponse $fetcherResponse;
+
+
+			public function getResponse(string $url, ?string $contextHost): SecurityTxtFetcherResponse
+			{
+				return $this->fetcherResponse;
+			}
+
+
+			public function setFetcherResponse(SecurityTxtFetcherResponse $fetcherResponse): void
+			{
+				$this->fetcherResponse = $fetcherResponse;
+			}
+
+		};
+		$this->securityTxtFetcher = new SecurityTxtFetcher($this->httpClient);
 	}
 
 
@@ -30,74 +51,83 @@ class SecurityTxtFetcherTest extends TestCase
 	{
 		return [
 			'301 redirect with Location' => [
+				301,
 				[
-					'HTTP/123.4 301',
-					'Foo: bar',
-					'Location: https://example.example/example',
+					'Foo' => 'bar',
+					'Location' => 'https://example.example/example',
 				],
 				301,
-				'https://example.example/example',
+				null,
+				SecurityTxtTooManyRedirectsException::class, // The only way to test redirects is to catch en exception
 			],
-			'302 redirect with LOCATION' => [
+			'302 redirect with no Location' => [
+				302,
 				[
-					'HTTP/123.4 302',
-					'Foo: bar',
-					'LOCATION: https://example.net/example',
+					'Foo' => 'bar',
 				],
 				302,
-				'https://example.net/example',
+				null,
+				SecurityTxtFetcherNoLocationException::class,
 			],
 			'Random redirect with location' => [
+				399,
 				[
-					'HTTP/123.4 399',
-					'Foo: bar',
-					'location: https://example.org/example',
+					'Foo' => 'bar',
+					'location' => 'https://example.org/example',
 				],
 				399,
-				'https://example.org/example',
+				null,
+				SecurityTxtTooManyRedirectsException::class, // The only way to test redirects is to catch en exception
 			],
 			'Success' => [
-				[
-					'HTTP/123.4 200',
-				],
 				200,
+				[],
+				200,
+				null,
 				null,
 			],
 			'Random success with nonsensical Location' => [
+				299,
 				[
-					'HTTP/123.4 299',
-					'Foo: bar',
-					'Location: https://example.org/example',
+					'Foo' => 'bar',
+					'Location' => 'https://example.org/example',
 				],
 				299,
 				'https://example.org/example',
+				null,
 			],
 		];
 	}
 
 
 	/**
-	 * @param list<string> $metadata
+	 * @param array<string, string> $headers
+	 * @param class-string<SecurityTxtFetcherException>|null $expectedException
 	 * @dataProvider getHeaders
+	 * @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher
+	 * @noinspection PhpUndefinedFieldInspection Closure bound to $this->securityTxtFetcher
 	 */
-	public function testGetHttpResponse(array $metadata, int $expectedHttpCode, ?string $expectedLocation): void
+	public function testGetResponse(int $httpCode, array $headers, int $expectedHttpCode, ?string $expectedLocation, ?string $expectedException): void
 	{
-		Assert::with($this->securityTxtFetcher, function () use ($metadata, $expectedHttpCode, $expectedLocation): void {
-			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
-			$headers = $this->getHttpResponse('https://example.com/foo', $metadata, 'contents');
-			Assert::same($expectedHttpCode, $headers->getHttpCode());
-			Assert::same($expectedLocation, $headers->getHeader('location'));
-		});
-	}
-
-
-	public function testGetHttpResponseNoHttpCode(): void
-	{
-		Assert::with($this->securityTxtFetcher, function (): void {
-			Assert::throws(function (): void {
-				/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
-				$this->getHttpResponse('https://example.com/foo', ['Foo/303 808'], 'contents');
-			}, SecurityTxtFetcherNoHttpCodeException::class, 'Missing HTTP code when fetching https://example.com/foo');
+		$lowercaseHeaders = [];
+		foreach ($headers as $key => $value) {
+			$lowercaseHeaders[strtolower($key)] = $value;
+		}
+		/** @noinspection PhpPossiblePolymorphicInvocationInspection Using an anonymous class with the extra method */
+		$this->httpClient->setFetcherResponse(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents'));
+		Assert::with($this->securityTxtFetcher, function () use ($headers, $expectedHttpCode, $expectedLocation, $expectedException): void {
+			$template = 'https://%s/foo';
+			$host = 'host';
+			$this->redirects[$this->buildUrl($template, $host)] = [];
+			if ($expectedException) {
+				Assert::throws(function () use ($template, $host): void {
+					$this->getResponse('https://example.com/foo', $template, $host, true);
+				}, $expectedException);
+			} else {
+				$response = $this->getResponse('https://example.com/foo', $template, $host, true);
+				Assert::same($expectedHttpCode, $response->getHttpCode());
+				Assert::same($expectedLocation, $response->getHeader('location'));
+			}
 		});
 	}
 

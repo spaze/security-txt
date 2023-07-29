@@ -13,6 +13,8 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtMultipleExpiresError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoContactError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
+use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
+use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
@@ -29,13 +31,15 @@ class SecurityTxtParserTest extends TestCase
 	private SecurityTxtValidator $securityTxtValidator;
 	private SecurityTxtSignature $securityTxtSignature;
 	private SecurityTxtFetcher $securityTxtFetcher;
+	private SecurityTxtFetcherHttpClient $securityTxtFetcherHttpClient;
 
 
 	protected function setUp(): void
 	{
 		$this->securityTxtValidator = new SecurityTxtValidator();
 		$this->securityTxtSignature = new SecurityTxtSignature();
-		$this->securityTxtFetcher = new SecurityTxtFetcher();
+		$this->securityTxtFetcherHttpClient = new SecurityTxtFetcherFopenClient();
+		$this->securityTxtFetcher = new SecurityTxtFetcher($this->securityTxtFetcherHttpClient);
 		$this->securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $this->securityTxtSignature, $this->securityTxtFetcher);
 	}
 
