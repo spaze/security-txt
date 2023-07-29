@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContentTypeError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContentTypeWrongCharsetError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtSchemeNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelDiffersWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelPathOnlyWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWellKnownPathOnlyWarning;
@@ -202,6 +203,10 @@ class SecurityTxtFetcher
 			$errors[] = new SecurityTxtContentTypeError($result->getUrl(), $contentType);
 		} elseif (!$charset || strtolower($charset) !== 'charset=utf-8') {
 			$errors[] = new SecurityTxtContentTypeWrongCharsetError($result->getUrl(), $contentType, $charset);
+		}
+		$scheme = parse_url($result->getUrl(), PHP_URL_SCHEME);
+		if ($scheme !== 'https') {
+			$errors[] = new SecurityTxtSchemeNotHttpsError($result->getUrl());
 		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),
