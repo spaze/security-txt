@@ -3,7 +3,9 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
+use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtLineNoEolError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureExtensionNotLoadedWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureInvalidError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
@@ -78,10 +80,11 @@ class SecurityTxtParser
 	public function parseString(string $contents): SecurityTxtParseResult
 	{
 		$this->parseErrors = [];
-		$lines = explode("\n", $contents);
-		$this->lines = array_map(function (string $line): string {
-			return trim($line);
-		}, $lines);
+		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
+		if (!$lines) {
+			throw new LogicException('This should not happen');
+		}
+		$this->lines = $lines;
 		$securityTxtFields = array_combine(
 			array_map(function (SecurityTxtField $securityTxtField): string {
 				return strtolower($securityTxtField->value);
@@ -91,7 +94,10 @@ class SecurityTxtParser
 		$securityTxt = new SecurityTxt();
 		$securityTxt->allowFieldsWithInvalidValues();
 		for ($lineNumber = 1; $lineNumber <= count($this->lines); $lineNumber++) {
-			$line = $this->lines[$lineNumber - 1];
+			$line = trim($this->lines[$lineNumber - 1]);
+			if (!str_ends_with($this->lines[$lineNumber - 1], "\n")) {
+				$this->parseErrors[$lineNumber][] = new SecurityTxtLineNoEolError($line);
+			}
 			if (str_starts_with($line, '#')) {
 				continue;
 			}
