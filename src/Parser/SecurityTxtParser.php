@@ -23,6 +23,8 @@ use Spaze\SecurityTxt\Parser\LineProcessors\ContactAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\LineProcessor;
+use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesCheckMultipleFields;
+use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
@@ -59,6 +61,10 @@ class SecurityTxtParser
 		$this->lineProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),
 			new ExpiresSetFieldValue(),
+		];
+		$this->lineProcessors[SecurityTxtField::PreferredLanguages->value] = [
+			new PreferredLanguagesCheckMultipleFields(),
+			new PreferredLanguagesSetFieldValue(),
 		];
 	}
 

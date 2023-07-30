@@ -11,8 +11,11 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresWrongFormatError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtLineNoEolError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtMultipleExpiresError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtMultiplePreferredLanguagesError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoContactError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesSeparatorNotCommaError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
@@ -190,6 +193,50 @@ class SecurityTxtParserTest extends TestCase
 		Assert::count(1, $parseResult->getParseErrors());
 		Assert::count(1, $parseResult->getParseErrors()[2]);
 		Assert::type(SecurityTxtLineNoEolError::class, $parseResult->getParseErrors()[2][0]);
+	}
+
+
+	public function testParseStringPreferredLanguages(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en,CS\n");
+		Assert::count(0, $parseResult->getParseErrors());
+		Assert::same(['en', 'CS'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
+	}
+
+
+	public function testParseStringMultiplePreferredLanguages(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en\nPreferred-Languages: cs\n");
+		Assert::count(1, $parseResult->getParseErrors());
+		Assert::type(SecurityTxtMultiplePreferredLanguagesError::class, $parseResult->getParseErrors()[2][0]);
+	}
+
+
+	public function testParseStringPreferredLanguagesBadSeparator(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en, cs;fi; nl\n");
+		$error = $parseResult->getParseErrors()[1][0];
+		Assert::count(1, $parseResult->getParseErrors());
+		Assert::type(SecurityTxtPreferredLanguagesSeparatorNotCommaError::class, $error);
+		Assert::same('The `Preferred-Languages` field uses a wrong separator (`;` at positions 6, 9 characters from the start), separate multiple values with a comma (`,`)', $error->getMessage());
+		Assert::same('en, cs, fi, nl', $error->getCorrectValue());
+	}
+
+
+	public function testParseStringPreferredLanguagesCommonMistake(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: CZ,en\n");
+		$error = $parseResult->getParseErrors()[1][0];
+		Assert::count(1, $parseResult->getParseErrors());
+		Assert::type(SecurityTxtPreferredLanguagesCommonMistakeError::class, $error);
+		Assert::same('The language tag #1 `CZ` in the `Preferred-Languages` field is not correct, the code for Czech language is `cs`, not `cz`', $error->getMessage());
+		Assert::same(['CZ', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
+
+		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: CZ-Czechia,en\n");
+		$error = $parseResult->getParseErrors()[1][0];
+		Assert::type(SecurityTxtPreferredLanguagesCommonMistakeError::class, $error);
+		Assert::same('cs-Czechia', $error->getCorrectValue());
+		Assert::same(['CZ-Czechia', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
 	}
 
 }
