@@ -8,9 +8,13 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
+use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 
 class SecurityTxt
@@ -19,6 +23,7 @@ class SecurityTxt
 	private bool $allowFieldsWithInvalidValues = false;
 	private ?Expires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
+	private ?PreferredLanguages $preferredLanguages = null;
 
 	/**
 	 * @var list<Canonical>
@@ -128,6 +133,51 @@ class SecurityTxt
 	public function getContact(): array
 	{
 		return $this->contact;
+	}
+
+
+	/**
+	 * @throws SecurityTxtPreferredLanguagesEmptyError
+	 * @throws SecurityTxtPreferredLanguagesWrongLanguageTagsError
+	 * @throws SecurityTxtPreferredLanguagesCommonMistakeError
+	 */
+	public function setPreferredLanguages(PreferredLanguages $preferredLanguages): void
+	{
+		$this->setValue(
+			function () use ($preferredLanguages): void {
+				$this->preferredLanguages = $preferredLanguages;
+			},
+			function () use ($preferredLanguages): void {
+				if (!$preferredLanguages->getLanguages()) {
+					throw new SecurityTxtPreferredLanguagesEmptyError();
+				}
+				$wrongLanguages = [];
+				foreach ($preferredLanguages->getLanguages() as $key => $value) {
+					if (!preg_match('/^([a-z]{2,3}(-[a-z0-9]+)*|[xi]-[a-z0-9]+)$/i', $value)) {
+						$wrongLanguages[$key + 1] = $value;
+					}
+				}
+				if ($wrongLanguages) {
+					throw new SecurityTxtPreferredLanguagesWrongLanguageTagsError($wrongLanguages);
+				}
+				foreach ($preferredLanguages->getLanguages() as $key => $value) {
+					if (preg_match('/^cz-?/i', $value)) {
+						throw new SecurityTxtPreferredLanguagesCommonMistakeError(
+							$key + 1,
+							$value,
+							preg_replace('/^cz$|cz(-)/i', 'cs$1', $value),
+							'the code for Czech language is `cs`, not `cz`',
+						);
+					}
+				}
+			},
+		);
+	}
+
+
+	public function getPreferredLanguages(): ?PreferredLanguages
+	{
+		return $this->preferredLanguages;
 	}
 
 

@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
 /** @noinspection PhpUnhandledExceptionInspection */
 declare(strict_types = 1);
 
@@ -10,9 +11,13 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
+use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -127,6 +132,54 @@ class SecurityTxtTest extends TestCase
 
 		Assert::same($validValues, array_map($getValue, $getFieldFactory($securityTxt)()));
 		Assert::same($allValues, array_map($getValue, $getFieldFactory($securityTxtWithInvalidValues)()));
+	}
+
+
+	/**
+	 * @return array<string, array{0: list<string>, 1: class-string<SecurityTxtError>}>
+	 */
+	public function getPreferredLanguageValues(): array
+	{
+		return [
+			'no language' => [[], SecurityTxtPreferredLanguagesEmptyError::class],
+			'empty language' => [[''], SecurityTxtPreferredLanguagesWrongLanguageTagsError::class],
+			'wrong language' => [['a'], SecurityTxtPreferredLanguagesWrongLanguageTagsError::class],
+			'one wrong language' => [['en', 'cs', 'E', 'CS'], SecurityTxtPreferredLanguagesWrongLanguageTagsError::class],
+			'common mistake' => [['en', 'cz'], SecurityTxtPreferredLanguagesCommonMistakeError::class],
+			'alright languages' => [['en', 'cs', 'EN', 'CS'], null],
+		];
+	}
+
+
+	/**
+	 * @param list<string> $languages
+	 * @param class-string<SecurityTxtError>|null $exceptionClass
+	 * @dataProvider getPreferredLanguageValues
+	 */
+	public function testSetPreferredLanguages(array $languages, ?string $exceptionClass): void
+	{
+		$securityTxt = new SecurityTxt();
+		$securityTxtWithInvalidValues = new SecurityTxt();
+		$securityTxtWithInvalidValues->allowFieldsWithInvalidValues();
+
+		if ($exceptionClass) {
+			Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
+				$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
+			}, $exceptionClass);
+			Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
+				$securityTxtWithInvalidValues->setPreferredLanguages(new PreferredLanguages($languages));
+			}, $exceptionClass);
+		} else {
+			$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
+			$securityTxtWithInvalidValues->setPreferredLanguages(new PreferredLanguages($languages));
+		}
+
+		if ($exceptionClass) {
+			Assert::null($securityTxt->getPreferredLanguages());
+		} else {
+			Assert::same($languages, $securityTxt->getPreferredLanguages()->getLanguages());
+		}
+		Assert::same($languages, $securityTxtWithInvalidValues->getPreferredLanguages()->getLanguages());
 	}
 
 }
