@@ -18,12 +18,11 @@ abstract class SecurityTxtFieldNotUriError extends SecurityTxtError
 		?string $specSection,
 		?Throwable $previous = null,
 	) {
-		$isEmail = (bool)filter_var($uri, FILTER_VALIDATE_EMAIL);
 		parent::__construct(
-			"The `{$field->value}` value doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+			"The `{$field->value}` value (`{$uri}`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 			$since,
 			$correctValue,
-			$howToFix ?? 'Use an URI as the value',
+			$howToFix ?? 'Use a URI as the value',
 			$specSection,
 			previous: $previous,
 		);
