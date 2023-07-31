@@ -8,7 +8,7 @@ namespace Spaze\SecurityTxt;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriSyntaxError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
@@ -80,9 +80,9 @@ class SecurityTxtTest extends TestCase
 					'http://example.com/contact' => SecurityTxtContactNotHttpsError::class,
 					'ftp://foo.example.net/contact.txt' => null,
 					'mailto:foo@example.com' => null,
-					'bar@example.com' => SecurityTxtContactNotUriSyntaxError::class,
+					'bar@example.com' => SecurityTxtContactNotUriError::class,
 					'tel:+1-201-555-0123' => null,
-					'+1-201-555-01234' => SecurityTxtContactNotUriSyntaxError::class,
+					'+1-201-555-01234' => SecurityTxtContactNotUriError::class,
 				],
 				Contact::class,
 				function (SecurityTxt $securityTxt): callable {
