@@ -13,7 +13,7 @@ class SecurityTxtSchemeNotHttpsError extends SecurityTxtError
 		parent::__construct(
 			"The file at `{$url}` must use HTTPS",
 			'draft-foudil-securitytxt-06',
-			str_starts_with('http://', $url) ? str_replace('http://', 'https://', $url) : null,
+			preg_replace('~^http://~', 'https://', $url),
 			'Use HTTPS to serve the `security.txt` file',
 			'3',
 			previous: $previous,
