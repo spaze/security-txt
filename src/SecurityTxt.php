@@ -4,10 +4,13 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriSyntaxError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldNotUriError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldUriNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
@@ -77,7 +80,8 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtCanonicalNotHttpsError
+	 * @throws SecurityTxtCanonicalNotUriError|SecurityTxtFieldNotUriError
+	 * @throws SecurityTxtCanonicalNotHttpsError|SecurityTxtFieldUriNotHttpsError
 	 */
 	public function addCanonical(Canonical $canonical): void
 	{
@@ -86,10 +90,7 @@ class SecurityTxt
 				$this->canonical[] = $canonical;
 			},
 			function () use ($canonical): void {
-				$scheme = parse_url($canonical->getUri(), PHP_URL_SCHEME);
-				if ($scheme && strtolower($scheme) === 'http') {
-					throw new SecurityTxtCanonicalNotHttpsError();
-				}
+				$this->checkUri($canonical->getUri(), SecurityTxtCanonicalNotUriError::class, SecurityTxtCanonicalNotHttpsError::class);
 			},
 		);
 	}
@@ -105,8 +106,8 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtContactNotUriSyntaxError
-	 * @throws SecurityTxtContactNotHttpsError
+	 * @throws SecurityTxtContactNotUriError|SecurityTxtFieldNotUriError
+	 * @throws SecurityTxtContactNotHttpsError|SecurityTxtFieldUriNotHttpsError
 	 */
 	public function addContact(Contact $contact): void
 	{
@@ -115,13 +116,7 @@ class SecurityTxt
 				$this->contact[] = $contact;
 			},
 			function () use ($contact): void {
-				$scheme = parse_url($contact->getUri(), PHP_URL_SCHEME);
-				if ($scheme === null) {
-					throw new SecurityTxtContactNotUriSyntaxError($contact);
-				}
-				if ($scheme === 'http') {
-					throw new SecurityTxtContactNotHttpsError();
-				}
+				$this->checkUri($contact->getUri(), SecurityTxtContactNotUriError::class, SecurityTxtContactNotHttpsError::class);
 			},
 		);
 	}
@@ -194,6 +189,26 @@ class SecurityTxt
 		} else {
 			$validator();
 			$setValue();
+		}
+	}
+
+
+	/**
+	 * @template TNotUri of SecurityTxtFieldNotUriError
+	 * @template TNotHttps of SecurityTxtFieldUriNotHttpsError
+	 * @param class-string<TNotUri> $notUriError
+	 * @param class-string<TNotHttps> $notHttpsError
+	 * @throws TNotUri
+	 * @throws TNotHttps
+	 */
+	private function checkUri(string $uri, string $notUriError, string $notHttpsError): void
+	{
+		$scheme = parse_url($uri, PHP_URL_SCHEME);
+		if (!$scheme) {
+			throw new $notUriError($uri);
+		}
+		if (strtolower($scheme) === 'http') {
+			throw new $notHttpsError($uri);
 		}
 	}
 
