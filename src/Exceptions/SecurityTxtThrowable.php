@@ -10,17 +10,11 @@ abstract class SecurityTxtThrowable extends Exception
 {
 
 	/**
-	 * @param string $message
-	 * @param string $since
-	 * @param string|null $correctValue
-	 * @param string $howToFix
-	 * @param string|null $specSection
 	 * @param list<string> $seeAlsoSections
-	 * @param Throwable|null $previous
 	 */
 	public function __construct(
 		string $message,
-		private readonly string $since,
+		private readonly ?string $since,
 		private readonly ?string $correctValue,
 		private readonly string $howToFix,
 		private readonly ?string $specSection,
@@ -31,7 +25,7 @@ abstract class SecurityTxtThrowable extends Exception
 	}
 
 
-	public function getSince(): string
+	public function getSince(): ?string
 	{
 		return $this->since;
 	}

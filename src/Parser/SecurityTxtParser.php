@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Parser;
 use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtLineNoEolError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPossibelFieldTypoWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureExtensionNotLoadedWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureInvalidError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
@@ -120,6 +121,11 @@ class SecurityTxtParser
 			$fieldValue = trim($field[1]);
 			if (isset($securityTxtFields[$fieldName])) {
 				$this->processLine($lineNumber, $fieldValue, $securityTxtFields[$fieldName], $securityTxt);
+			} else {
+				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
+				if ($suggestion) {
+					$this->parseWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypoWarning($field[0], $suggestion, $line);
+				}
 			}
 		}
 		$validateResult = $this->validator->validate($securityTxt);
@@ -168,6 +174,25 @@ class SecurityTxtParser
 	public function getLine(int $lineNumber): ?string
 	{
 		return $this->lines[$lineNumber] ?? null;
+	}
+
+
+	/**
+	 * @see https://github.com/nette/utils/blob/c7ec4476eff478e6eec4263171ae0e3b0e2b4e55/src/Utils/Helpers.php#L72 Algorithm taken from nette/utils under the terms of the New BSD License
+	 * @param array<string, SecurityTxtField> $securityTxtFields
+	 */
+	public function getSuggestion(array $securityTxtFields, string $lowercaseName): ?SecurityTxtField
+	{
+		$best = null;
+		$min = (strlen($lowercaseName) / 4 + 1) * 10 + .1;
+		foreach ($securityTxtFields as $lowercaseSecurityTxtFieldName => $securityTxtField) {
+			$len = levenshtein($lowercaseSecurityTxtFieldName, $lowercaseName, 10, 11, 10);
+			if ($lowercaseSecurityTxtFieldName !== $lowercaseName && $len < $min) {
+				$min = $len;
+				$best = $securityTxtField;
+			}
+		}
+		return $best;
 	}
 
 }

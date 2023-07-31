@@ -14,6 +14,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtMultipleExpiresError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtMultiplePreferredLanguagesError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoContactError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPossibelFieldTypoWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesSeparatorNotCommaError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
@@ -246,6 +247,20 @@ class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseString("Acknowledgments: {$uri}\n");
 		Assert::count(0, $parseResult->getParseErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getAcknowledgments()[0]->getUri());
+	}
+
+
+	public function testParseStringAcknowledgementsTypo(): void
+	{
+		$uri1 = "https://example.example/whole-of-fame";
+		$uri2 = 'https://example.com/ack.gif';
+		$parseResult = $this->securityTxtParser->parseString("Acknowledgments: {$uri1}\nAcknowledgements: {$uri2}\n");
+		Assert::count(0, $parseResult->getParseErrors());
+		$warning = $parseResult->getParseWarnings()[2][0];
+		Assert::type(SecurityTxtPossibelFieldTypoWarning::class, $warning);
+		Assert::same("Acknowledgments: {$uri2}", $warning->getCorrectValue());
+		Assert::count(1, $parseResult->getSecurityTxt()->getAcknowledgments());
+		Assert::same($uri1, $parseResult->getSecurityTxt()->getAcknowledgments()[0]->getUri());
 	}
 
 }
