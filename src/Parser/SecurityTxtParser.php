@@ -18,6 +18,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
+use Spaze\SecurityTxt\Parser\LineProcessors\AcknowledgmentsAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\CanonicalAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ContactAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
@@ -52,6 +53,9 @@ class SecurityTxtParser
 		private readonly SecurityTxtSignature $signature,
 		private readonly SecurityTxtFetcher $fetcher,
 	) {
+		$this->lineProcessors[SecurityTxtField::Acknowledgments->value] = [
+			new AcknowledgmentsAddFieldValue(),
+		];
 		$this->lineProcessors[SecurityTxtField::Canonical->value] = [
 			new CanonicalAddFieldValue(),
 		];

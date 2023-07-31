@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Fields;
 enum SecurityTxtField: string
 {
 
+	case Acknowledgments = 'Acknowledgments';
 	case Canonical = 'Canonical';
 	case Contact = 'Contact';
 	case Expires = 'Expires';
