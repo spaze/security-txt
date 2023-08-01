@@ -281,6 +281,15 @@ class SecurityTxtParserTest extends TestCase
 		Assert::same($uri, $parseResult->getSecurityTxt()->getPolicy()[0]->getUri());
 	}
 
+
+	public function testParseStringEncryption(): void
+	{
+		$uri = 'https://example.com/keys.ico';
+		$parseResult = $this->securityTxtParser->parseString("Encryption: {$uri}\n");
+		Assert::count(0, $parseResult->getParseErrors());
+		Assert::same($uri, $parseResult->getSecurityTxt()->getEncryption()[0]->getUri());
+	}
+
 }
 
 (new SecurityTxtParserTest())->run();

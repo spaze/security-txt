@@ -9,6 +9,8 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtEncryptionNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtEncryptionNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldNotUriError;
@@ -23,6 +25,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsE
 use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
+use Spaze\SecurityTxt\Fields\Encryption;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\Hiring;
 use Spaze\SecurityTxt\Fields\Policy;
@@ -61,6 +64,11 @@ class SecurityTxt
 	 * @var list<Policy>
 	 */
 	private array $policy = [];
+
+	/**
+	 * @var list<Encryption>
+	 */
+	private array $encryption = [];
 
 
 	public function allowFieldsWithInvalidValues(): void
@@ -275,6 +283,32 @@ class SecurityTxt
 	public function getPolicy(): array
 	{
 		return $this->policy;
+	}
+
+
+	/**
+	 * @throws SecurityTxtEncryptionNotUriSyntaxError|SecurityTxtFieldNotUriError
+	 * @throws SecurityTxtEncryptionNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 */
+	public function addEncryption(Encryption $encryption): void
+	{
+		$this->setValue(
+			function () use ($encryption): void {
+				$this->encryption[] = $encryption;
+			},
+			function () use ($encryption): void {
+				$this->checkUri($encryption->getUri(), SecurityTxtEncryptionNotUriSyntaxError::class, SecurityTxtEncryptionNotHttpsError::class);
+			},
+		);
+	}
+
+
+	/**
+	 * @return list<Encryption>
+	 */
+	public function getEncryption(): array
+	{
+		return $this->encryption;
 	}
 
 
