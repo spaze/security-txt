@@ -215,11 +215,11 @@ class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringPreferredLanguagesBadSeparator(): void
 	{
-		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en, cs;fi; nl\n");
+		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en, cs;fi. nl\n");
 		$error = $parseResult->getParseErrors()[1][0];
 		Assert::count(1, $parseResult->getParseErrors());
 		Assert::type(SecurityTxtPreferredLanguagesSeparatorNotComma::class, $error);
-		Assert::same('The `Preferred-Languages` field uses a wrong separator (`;` at positions 6, 9 characters from the start), separate multiple values with a comma (`,`)', $error->getMessage());
+		Assert::same('The `Preferred-Languages` field uses wrong separators (#2 `;`, #3 `.`), separate multiple values with a comma (`,`)', $error->getMessage());
 		Assert::same('en, cs, fi, nl', $error->getCorrectValue());
 	}
 

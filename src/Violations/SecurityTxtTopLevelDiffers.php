@@ -12,9 +12,11 @@ class SecurityTxtTopLevelDiffers extends SecurityTxtSpecViolation
 	) {
 		parent::__construct(
 			'The file at the top-level path is different than the one in the `/.well-known/` path',
+			[],
 			'draft-foudil-securitytxt-09',
 			null,
 			'Redirect the top-level file to the one under the `/.well-known/` path',
+			[],
 			'3',
 		);
 	}

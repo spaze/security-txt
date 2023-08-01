@@ -15,16 +15,16 @@ class PreferredLanguagesSetFieldValue implements LineProcessor
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
 		$regexp = '/\s*([,.;:])\s*/';
-		$separators = preg_match_all($regexp, $value, $matches, flags: PREG_OFFSET_CAPTURE);
+		$separators = preg_match_all($regexp, $value, $matches);
 		$languages = @preg_split($regexp, $value); // intentionally @, converted to exception
 		if (!$languages) {
 			throw new LogicException('This should not happen');
 		}
 		if ($separators) {
 			$wrongSeparators = [];
-			foreach ($matches[1] as $match) {
-				if ($match[0] !== ',') {
-					$wrongSeparators[$match[0]][] = $match[1];
+			foreach ($matches[1] as $key => $separator) {
+				if ($separator !== ',') {
+					$wrongSeparators[$key + 1] = $separator;
 				}
 			}
 			if ($wrongSeparators) {
