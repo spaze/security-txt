@@ -3,6 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
 
+use Spaze\SecurityTxt\Exceptions\SecurityTxtAcknowledgmentsNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtAcknowledgmentsNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
@@ -14,6 +16,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldUriNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
+use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
@@ -37,6 +40,11 @@ class SecurityTxt
 	 * @var list<Contact>
 	 */
 	private array $contact = [];
+
+	/**
+	 * @var list<Acknowledgments>
+	 */
+	private array $acknowledgments = [];
 
 
 	public function allowFieldsWithInvalidValues(): void
@@ -173,6 +181,32 @@ class SecurityTxt
 	public function getPreferredLanguages(): ?PreferredLanguages
 	{
 		return $this->preferredLanguages;
+	}
+
+
+	/**
+	 * @throws SecurityTxtAcknowledgmentsNotUriSyntaxError|SecurityTxtFieldNotUriError
+	 * @throws SecurityTxtAcknowledgmentsNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 */
+	public function addAcknowledgments(Acknowledgments $acknowledgments): void
+	{
+		$this->setValue(
+			function () use ($acknowledgments): void {
+				$this->acknowledgments[] = $acknowledgments;
+			},
+			function () use ($acknowledgments): void {
+				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUriSyntaxError::class, SecurityTxtAcknowledgmentsNotHttpsError::class);
+			},
+		);
+	}
+
+
+	/**
+	 * @return list<Acknowledgments>
+	 */
+	public function getAcknowledgments(): array
+	{
+		return $this->acknowledgments;
 	}
 
 

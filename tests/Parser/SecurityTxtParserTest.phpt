@@ -239,6 +239,15 @@ class SecurityTxtParserTest extends TestCase
 		Assert::same(['CZ-Czechia', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
 	}
 
+
+	public function testParseStringAcknowledgments(): void
+	{
+		$uri = 'https://example.com/ack.gif';
+		$parseResult = $this->securityTxtParser->parseString("Acknowledgments: {$uri}\n");
+		Assert::count(0, $parseResult->getParseErrors());
+		Assert::same($uri, $parseResult->getSecurityTxt()->getAcknowledgments()[0]->getUri());
+	}
+
 }
 
 (new SecurityTxtParserTest())->run();
