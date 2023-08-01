@@ -15,6 +15,8 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldUriNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotHttpsError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotUriSyntaxError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPolicyNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtPolicyNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
@@ -23,6 +25,7 @@ use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\Hiring;
+use Spaze\SecurityTxt\Fields\Policy;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 
@@ -53,6 +56,11 @@ class SecurityTxt
 	 * @var list<Hiring>
 	 */
 	private array $hiring = [];
+
+	/**
+	 * @var list<Policy>
+	 */
+	private array $policy = [];
 
 
 	public function allowFieldsWithInvalidValues(): void
@@ -241,6 +249,32 @@ class SecurityTxt
 	public function getHiring(): array
 	{
 		return $this->hiring;
+	}
+
+
+	/**
+	 * @throws SecurityTxtPolicyNotUriSyntaxError|SecurityTxtFieldNotUriError
+	 * @throws SecurityTxtPolicyNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 */
+	public function addPolicy(Policy $policy): void
+	{
+		$this->setValue(
+			function () use ($policy): void {
+				$this->policy[] = $policy;
+			},
+			function () use ($policy): void {
+				$this->checkUri($policy->getUri(), SecurityTxtPolicyNotUriSyntaxError::class, SecurityTxtPolicyNotHttpsError::class);
+			},
+		);
+	}
+
+
+	/**
+	 * @return list<Policy>
+	 */
+	public function getPolicy(): array
+	{
+		return $this->policy;
 	}
 
 
