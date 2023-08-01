@@ -6,9 +6,9 @@ namespace Spaze\SecurityTxt\Fetcher;
 use LogicException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoHttpCodeException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoLocationException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
@@ -55,8 +55,8 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtHostNotFoundException
-	 * @throws SecurityTxtFetcherNoHttpCodeException
-	 * @throws SecurityTxtFetcherNoLocationException
+	 * @throws SecurityTxtNoHttpCodeException
+	 * @throws SecurityTxtNoLocationHeaderException
 	 */
 	public function fetchHost(string $host, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
@@ -72,8 +72,8 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotReadUrlException
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtNotFoundException
-	 * @throws SecurityTxtFetcherNoHttpCodeException
-	 * @throws SecurityTxtFetcherNoLocationException
+	 * @throws SecurityTxtNoHttpCodeException
+	 * @throws SecurityTxtNoLocationHeaderException
 	 */
 	private function fetchUrl(string $urlTemplate, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
@@ -107,8 +107,8 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtUrlNotFoundException
-	 * @throws SecurityTxtFetcherNoHttpCodeException
-	 * @throws SecurityTxtFetcherNoLocationException
+	 * @throws SecurityTxtNoHttpCodeException
+	 * @throws SecurityTxtNoLocationHeaderException
 	 */
 	private function getResponse(string $url, string $urlTemplate, string $host, bool $useHostForContextHost): SecurityTxtFetcherResponse
 	{
@@ -240,8 +240,8 @@ class SecurityTxtFetcher
 	/**
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtCannotReadUrlException
-	 * @throws SecurityTxtFetcherNoHttpCodeException
-	 * @throws SecurityTxtFetcherNoLocationException
+	 * @throws SecurityTxtNoHttpCodeException
+	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtUrlNotFoundException
@@ -250,7 +250,7 @@ class SecurityTxtFetcher
 	{
 		$location = $response->getHeader('Location');
 		if (!$location) {
-			throw new SecurityTxtFetcherNoLocationException($url, $response);
+			throw new SecurityTxtNoLocationHeaderException($url, $response);
 		} else {
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
 			$previousUrl = $this->redirects[$originalUrl][array_key_last($this->redirects[$originalUrl])] ?? $originalUrl;

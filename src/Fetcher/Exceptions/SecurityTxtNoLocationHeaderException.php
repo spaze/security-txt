@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Throwable;
 
-class SecurityTxtFetcherNoLocationException extends SecurityTxtFetcherException
+class SecurityTxtNoLocationHeaderException extends SecurityTxtFetcherException
 {
 
 	public function __construct(string $url, SecurityTxtFetcherResponse $response, ?Throwable $previous = null)

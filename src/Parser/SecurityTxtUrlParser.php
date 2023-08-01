@@ -3,13 +3,13 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostnameException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 
 class SecurityTxtUrlParser
 {
 
 	/**
-	 * @throws SecurityTxtHostnameException
+	 * @throws SecurityTxtCannotParseHostnameException
 	 */
 	public function getHostFromUrl(string $url): string
 	{
@@ -33,7 +33,7 @@ class SecurityTxtUrlParser
 			return $components;
 		}
 
-		throw new SecurityTxtHostnameException($url);
+		throw new SecurityTxtCannotParseHostnameException($url);
 	}
 
 }

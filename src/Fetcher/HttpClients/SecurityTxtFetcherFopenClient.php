@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\HttpClients;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoHttpCodeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 
 class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
@@ -14,7 +14,7 @@ class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 	/**
 	 * @throws SecurityTxtCannotReadUrlException
 	 * @throws SecurityTxtCannotOpenUrlException
-	 * @throws SecurityTxtFetcherNoHttpCodeException
+	 * @throws SecurityTxtNoHttpCodeException
 	 */
 	public function getResponse(string $url, ?string $contextHost): SecurityTxtFetcherResponse
 	{
@@ -47,7 +47,7 @@ class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $wrapperData[0], $matches)) {
 			$code = (int)$matches[1];
 		} else {
-			throw new SecurityTxtFetcherNoHttpCodeException($url);
+			throw new SecurityTxtNoHttpCodeException($url);
 		}
 
 		$headers = [];
