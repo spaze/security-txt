@@ -263,6 +263,15 @@ class SecurityTxtParserTest extends TestCase
 		Assert::same($uri1, $parseResult->getSecurityTxt()->getAcknowledgments()[0]->getUri());
 	}
 
+
+	public function testParseStringHiring(): void
+	{
+		$uri = 'https://example.com/cv.psd';
+		$parseResult = $this->securityTxtParser->parseString("Hiring: {$uri}\n");
+		Assert::count(0, $parseResult->getParseErrors());
+		Assert::same($uri, $parseResult->getSecurityTxt()->getHiring()[0]->getUri());
+	}
+
 }
 
 (new SecurityTxtParserTest())->run();
