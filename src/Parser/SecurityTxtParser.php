@@ -22,6 +22,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\LineProcessors\AcknowledgmentsAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\CanonicalAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ContactAddFieldValue;
+use Spaze\SecurityTxt\Parser\LineProcessors\EncryptionAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\HiringAddFieldValue;
@@ -69,6 +70,9 @@ class SecurityTxtParser
 		];
 		$this->lineProcessors[SecurityTxtField::Contact->value] = [
 			new ContactAddFieldValue(),
+		];
+		$this->lineProcessors[SecurityTxtField::Encryption->value] = [
+			new EncryptionAddFieldValue(),
 		];
 		$this->lineProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),
