@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotHttps;
-use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUriSyntax;
+use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUri;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -40,7 +40,7 @@ class AcknowledgmentsAddFieldValueTest extends TestCase
 		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('no.scheme', $securityTxt);
 		}, SecurityTxtError::class);
-		Assert::type(SecurityTxtAcknowledgmentsNotUriSyntax::class, $e->getViolation());
+		Assert::type(SecurityTxtAcknowledgmentsNotUri::class, $e->getViolation());
 	}
 
 }

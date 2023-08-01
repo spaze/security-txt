@@ -15,7 +15,7 @@ use Spaze\SecurityTxt\Fields\Policy;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotHttps;
-use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUriSyntax;
+use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
@@ -216,7 +216,7 @@ class SecurityTxt
 				$this->acknowledgments[] = $acknowledgments;
 			},
 			function () use ($acknowledgments): void {
-				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUriSyntax::class, SecurityTxtAcknowledgmentsNotHttps::class);
+				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUri::class, SecurityTxtAcknowledgmentsNotHttps::class);
 			},
 		);
 	}
