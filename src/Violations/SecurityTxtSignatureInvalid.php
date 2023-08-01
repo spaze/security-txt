@@ -10,9 +10,11 @@ class SecurityTxtSignatureInvalid extends SecurityTxtSpecViolation
 	{
 		parent::__construct(
 			'The file is digitally signed using an OpenPGP cleartext signature but the signature is not valid',
+			[],
 			'draft-foudil-securitytxt-01',
 			null,
 			'Sign the file again',
+			[],
 			'2.3',
 		);
 	}

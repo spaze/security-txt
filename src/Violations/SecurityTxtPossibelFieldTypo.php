@@ -11,10 +11,12 @@ class SecurityTxtPossibelFieldTypo extends SecurityTxtSpecViolation
 	public function __construct(string $fieldName, SecurityTxtField $suggestion, string $line)
 	{
 		parent::__construct(
-			"Field `{$fieldName}` may be a typo, did you mean `{$suggestion->value}`?",
+			'Field `%s` may be a typo, did you mean `%s`?',
+			[$fieldName, $suggestion->value],
 			null,
 			str_replace($fieldName, $suggestion->value, $line),
-			"Change `{$fieldName}` to `{$suggestion->value}`",
+			"Change `%s` to `%s`",
+			[$fieldName, $suggestion->value],
 			null,
 		);
 	}

@@ -10,9 +10,11 @@ class SecurityTxtSignatureExtensionNotLoaded extends SecurityTxtSpecViolation
 	{
 		parent::__construct(
 			'The `gnupg` extension is not available, cannot verify or create signatures',
+			[],
 			'draft-foudil-securitytxt-01',
 			null,
 			'Load the `gnupg` extension',
+			[],
 			'2.3',
 		);
 	}
