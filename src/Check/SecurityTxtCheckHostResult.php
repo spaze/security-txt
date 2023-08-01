@@ -3,21 +3,20 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Check;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
 class SecurityTxtCheckHostResult
 {
 
 	/**
 	 * @param array<string, list<string>> $redirects
-	 * @param list<SecurityTxtError> $fetchErrors
-	 * @param list<SecurityTxtWarning> $fetchWarnings
-	 * @param array<int, list<SecurityTxtError>> $parseErrors
-	 * @param array<int, list<SecurityTxtWarning>> $parseWarnings
-	 * @param list<SecurityTxtError> $fileErrors
-	 * @param list<SecurityTxtWarning> $fileWarnings
+	 * @param list<SecurityTxtSpecViolation> $fetchErrors
+	 * @param list<SecurityTxtSpecViolation> $fetchWarnings
+	 * @param array<int, list<SecurityTxtSpecViolation>> $parseErrors
+	 * @param array<int, list<SecurityTxtSpecViolation>> $parseWarnings
+	 * @param list<SecurityTxtSpecViolation> $fileErrors
+	 * @param list<SecurityTxtSpecViolation> $fileWarnings
 	 */
 	public function __construct(
 		private readonly string $host,
@@ -68,7 +67,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return list<SecurityTxtError>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFetchErrors(): array
 	{
@@ -77,7 +76,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return list<SecurityTxtWarning>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFetchWarnings(): array
 	{
@@ -86,7 +85,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtError>>
+	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
 	public function getParseErrors(): array
 	{
@@ -95,7 +94,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtWarning>>
+	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
 	public function getParseWarnings(): array
 	{
@@ -104,7 +103,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return list<SecurityTxtError>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFileErrors(): array
 	{
@@ -113,7 +112,7 @@ class SecurityTxtCheckHostResult
 
 
 	/**
-	 * @return list<SecurityTxtWarning>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFileWarnings(): array
 	{

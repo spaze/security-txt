@@ -3,16 +3,15 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
 class SecurityTxtFetchResult
 {
 
 	/**
 	 * @param array<string, list<string>> $redirects
-	 * @param list<SecurityTxtError> $errors
-	 * @param list<SecurityTxtWarning> $warnings
+	 * @param list<SecurityTxtSpecViolation> $errors
+	 * @param list<SecurityTxtSpecViolation> $warnings
 	 */
 	public function __construct(
 		private readonly string $constructedUrl,
@@ -53,7 +52,7 @@ class SecurityTxtFetchResult
 
 
 	/**
-	 * @return list<SecurityTxtError>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getErrors(): array
 	{
@@ -62,7 +61,7 @@ class SecurityTxtFetchResult
 
 
 	/**
-	 * @return list<SecurityTxtWarning>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getWarnings(): array
 	{

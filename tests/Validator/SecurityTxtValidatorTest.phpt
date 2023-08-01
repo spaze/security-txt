@@ -5,14 +5,14 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtNoContactError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtNoExpiresError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtSignedButNoCanonicalWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtThrowable;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
+use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignedButNoCanonical;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -34,14 +34,14 @@ class SecurityTxtValidatorTest extends TestCase
 	public function testValidateMissingContact(): void
 	{
 		$securityTxt = new SecurityTxt();
-		$this->assertThrowable($securityTxt, SecurityTxtNoContactError::class);
+		$this->assertThrowable($securityTxt, SecurityTxtNoContact::class);
 	}
 
 
 	public function testValidateMissingExpires(): void
 	{
 		$securityTxt = new SecurityTxt();
-		$this->assertThrowable($securityTxt, SecurityTxtNoExpiresError::class);
+		$this->assertThrowable($securityTxt, SecurityTxtNoExpires::class);
 	}
 
 
@@ -50,7 +50,7 @@ class SecurityTxtValidatorTest extends TestCase
 		$securityTxt = new SecurityTxt();
 		$securityTxt->setExpires(new Expires(new DateTimeImmutable('+1 month')));
 		$securityTxt->setSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('fingerprint', new DateTimeImmutable('-1 week')));
-		$this->assertThrowable($securityTxt, SecurityTxtSignedButNoCanonicalWarning::class);
+		$this->assertThrowable($securityTxt, SecurityTxtSignedButNoCanonical::class);
 	}
 
 
@@ -62,7 +62,7 @@ class SecurityTxtValidatorTest extends TestCase
 	private function assertThrowable(SecurityTxt $securityTxt, string $throwableClass): void
 	{
 		$result = $this->securityTxtValidator->validate($securityTxt);
-		Assert::contains($throwableClass, array_map(function (SecurityTxtThrowable $throwable): string {
+		Assert::contains($throwableClass, array_map(function (SecurityTxtSpecViolation $throwable): string {
 			return $throwable::class;
 		}, array_merge($result->getErrors(), $result->getWarnings())));
 	}

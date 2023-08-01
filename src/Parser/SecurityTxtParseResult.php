@@ -3,19 +3,18 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
 class SecurityTxtParseResult
 {
 
 	/**
 	 * @param SecurityTxt $securityTxt
-	 * @param array<int, list<SecurityTxtError>> $parseErrors
-	 * @param array<int, list<SecurityTxtWarning>> $parseWarnings
+	 * @param array<int, list<SecurityTxtSpecViolation>> $parseErrors
+	 * @param array<int, list<SecurityTxtSpecViolation>> $parseWarnings
 	 * @param SecurityTxtValidateResult $validateResult
 	 * @param SecurityTxtFetchResult|null $fetchResult
 	 */
@@ -36,7 +35,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return list<SecurityTxtError>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFetchErrors(): array
 	{
@@ -45,7 +44,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtError>>
+	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
 	public function getParseErrors(): array
 	{
@@ -54,7 +53,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return list<SecurityTxtError>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFileErrors(): array
 	{
@@ -69,7 +68,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return list<SecurityTxtWarning>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFetchWarnings(): array
 	{
@@ -78,7 +77,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtWarning>>
+	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
 	public function getParseWarnings(): array
 	{
@@ -87,7 +86,7 @@ class SecurityTxtParseResult
 
 
 	/**
-	 * @return list<SecurityTxtWarning>
+	 * @return list<SecurityTxtSpecViolation>
 	 */
 	public function getFileWarnings(): array
 	{

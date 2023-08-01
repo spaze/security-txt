@@ -5,10 +5,6 @@ namespace Spaze\SecurityTxt\Parser;
 
 use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtLineNoEolError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPossibelFieldTypoWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureExtensionNotLoadedWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureInvalidError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
@@ -33,6 +29,9 @@ use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
 class SecurityTxtParser
 {
@@ -45,10 +44,10 @@ class SecurityTxtParser
 	 */
 	private array $lineProcessors = [];
 
-	/** @var array<int, list<SecurityTxtError>> */
+	/** @var array<int, list<SecurityTxtSpecViolation>> */
 	private array $parseErrors = [];
 
-	/** @var array<int, list<SecurityTxtWarning>> */
+	/** @var array<int, list<SecurityTxtSpecViolation>> */
 	private array $parseWarnings = [];
 
 
@@ -98,9 +97,9 @@ class SecurityTxtParser
 			try {
 				$processor->process($value, $securityTxt);
 			} catch (SecurityTxtError $e) {
-				$this->parseErrors[$lineNumber][] = $e;
+				$this->parseErrors[$lineNumber][] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {
-				$this->parseWarnings[$lineNumber][] = $e;
+				$this->parseWarnings[$lineNumber][] = $e->getViolation();
 			}
 		}
 	}
@@ -125,7 +124,7 @@ class SecurityTxtParser
 		for ($lineNumber = 1; $lineNumber <= count($this->lines); $lineNumber++) {
 			$line = trim($this->lines[$lineNumber - 1]);
 			if (!str_ends_with($this->lines[$lineNumber - 1], "\n")) {
-				$this->parseErrors[$lineNumber][] = new SecurityTxtLineNoEolError($line);
+				$this->parseErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
 			}
 			if (str_starts_with($line, '#')) {
 				continue;
@@ -142,7 +141,7 @@ class SecurityTxtParser
 			} else {
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
 				if ($suggestion) {
-					$this->parseWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypoWarning($field[0], $suggestion, $line);
+					$this->parseWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion, $line);
 				}
 			}
 		}
@@ -180,10 +179,10 @@ class SecurityTxtParser
 			try {
 				$result = $this->signature->verify($contents);
 				$securityTxt->setSignatureVerifyResult($result);
-			} catch (SecurityTxtSignatureInvalidError $e) {
-				$this->parseErrors[$lineNumber][] = $e;
-			} catch (SecurityTxtSignatureExtensionNotLoadedWarning $e) {
-				$this->parseWarnings[$lineNumber][] = $e;
+			} catch (SecurityTxtError $e) {
+				$this->parseErrors[$lineNumber][] = $e->getViolation();
+			} catch (SecurityTxtWarning $e) {
+				$this->parseWarnings[$lineNumber][] = $e->getViolation();
 			}
 		}
 	}

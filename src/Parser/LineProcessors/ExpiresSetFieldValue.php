@@ -5,21 +5,19 @@ namespace Spaze\SecurityTxt\Parser\LineProcessors;
 
 use DateTimeImmutable;
 use Exception;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresOldFormatError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresWrongFormatError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 
 class ExpiresSetFieldValue implements LineProcessor
 {
 
 	/**
-	 * @throws SecurityTxtExpiresOldFormatError
-	 * @throws SecurityTxtExpiresWrongFormatError
-	 * @throws SecurityTxtExpiredError
-	 * @throws SecurityTxtExpiresTooLongWarning
+	 * @throws SecurityTxtError
+	 * @throws SecurityTxtWarning
 	 * @throws Exception
 	 */
 	public function process(string $value, SecurityTxt $securityTxt): void
@@ -30,14 +28,14 @@ class ExpiresSetFieldValue implements LineProcessor
 			if (!$expiresValue) {
 				$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC2822, $value);
 				if ($expiresValue) {
-					throw new SecurityTxtExpiresOldFormatError($expiresValue);
+					throw new SecurityTxtError(new SecurityTxtExpiresOldFormat($expiresValue));
 				} else {
 					try {
 						$expiresValue = new DateTimeImmutable($value);
 					} catch (Exception) {
 						$expiresValue = null;
 					}
-					throw new SecurityTxtExpiresWrongFormatError($expiresValue);
+					throw new SecurityTxtError(new SecurityTxtExpiresWrongFormat($expiresValue));
 				}
 			}
 		}

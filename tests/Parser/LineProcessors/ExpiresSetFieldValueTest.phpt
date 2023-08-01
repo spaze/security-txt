@@ -5,9 +5,10 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser\LineProcessors;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresOldFormatError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresWrongFormatError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -29,17 +30,20 @@ class ExpiresSetFieldValueTest extends TestCase
 		$processor->process($expires->format(DATE_RFC3339_EXTENDED), $securityTxt);
 		Assert::same($expires->format(DATE_RFC3339), $securityTxt->getExpires()->getDateTime()->format(DATE_RFC3339));
 
-		Assert::throws(function () use ($processor, $expires, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $expires, $securityTxt): void {
 			$processor->process($expires->format(DATE_RFC2822), $securityTxt);
-		}, SecurityTxtExpiresOldFormatError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtExpiresOldFormat::class, $e->getViolation());
 
-		Assert::throws(function () use ($processor, $expires, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $expires, $securityTxt): void {
 			$processor->process($expires->format(DATE_RFC850), $securityTxt);
-		}, SecurityTxtExpiresWrongFormatError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtExpiresWrongFormat::class, $e->getViolation());
 
-		Assert::throws(function () use ($processor, $expires, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $expires, $securityTxt): void {
 			$processor->process($expires->format('Y-m-d H:i:s'), $securityTxt);
-		}, SecurityTxtExpiresWrongFormatError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtExpiresWrongFormat::class, $e->getViolation());
 	}
 
 }

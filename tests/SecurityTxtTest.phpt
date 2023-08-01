@@ -6,18 +6,20 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
+use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -42,15 +44,16 @@ class SecurityTxtTest extends TestCase
 	{
 		$securityTxt = new SecurityTxt();
 		$future = new Expires(new DateTimeImmutable('+1 year +1 month'));
-		Assert::throws(function () use ($securityTxt, $future): void {
+		$e = Assert::throws(function () use ($securityTxt, $future): void {
 			$securityTxt->setExpires($future);
-		}, SecurityTxtExpiresTooLongWarning::class);
+		}, SecurityTxtWarning::class);
+		Assert::type(SecurityTxtExpiresTooLong::class, $e->getViolation());
 		Assert::equal($future, $securityTxt->getExpires());
 	}
 
 
 	/**
-	 * @return array<string, array{0: array<string, class-string<SecurityTxtError>|null>, 1: class-string, 2: callable(SecurityTxt):callable, 3: callable(SecurityTxt):callable, 4: callable}>
+	 * @return array<string, array{0: array<string, class-string<SecurityTxtSpecViolation>|null>, 1: class-string, 2: callable(SecurityTxt):callable, 3: callable(SecurityTxt):callable, 4: callable}>
 	 * @noinspection HttpUrlsUsage
 	 */
 	public function getAddFieldValues(): array
@@ -59,7 +62,7 @@ class SecurityTxtTest extends TestCase
 			'canonical' => [
 				[
 					'https://example.com/.well-known/security.txt' => null,
-					'http://example.com/.well-known/security.txt' => SecurityTxtCanonicalNotHttpsError::class,
+					'http://example.com/.well-known/security.txt' => SecurityTxtCanonicalNotHttps::class,
 					'ftp://foo.bar.example.net/security.txt' => null,
 					'C:\\security.txt' => null,
 				],
@@ -77,12 +80,12 @@ class SecurityTxtTest extends TestCase
 			'contact' => [
 				[
 					'https://example.com/contact' => null,
-					'http://example.com/contact' => SecurityTxtContactNotHttpsError::class,
+					'http://example.com/contact' => SecurityTxtContactNotHttps::class,
 					'ftp://foo.example.net/contact.txt' => null,
 					'mailto:foo@example.com' => null,
-					'bar@example.com' => SecurityTxtContactNotUriError::class,
+					'bar@example.com' => SecurityTxtContactNotUri::class,
 					'tel:+1-201-555-0123' => null,
-					'+1-201-555-01234' => SecurityTxtContactNotUriError::class,
+					'+1-201-555-01234' => SecurityTxtContactNotUri::class,
 				],
 				Contact::class,
 				function (SecurityTxt $securityTxt): callable {
@@ -100,7 +103,7 @@ class SecurityTxtTest extends TestCase
 
 
 	/**
-	 * @param array<string, class-string<SecurityTxtError>|null> $values
+	 * @param array<string, class-string<SecurityTxtSpecViolation>|null> $values
 	 * @param class-string $fieldClass
 	 * @param callable(SecurityTxt): callable $addFactory
 	 * @param callable(SecurityTxt): callable $getFieldFactory
@@ -114,15 +117,17 @@ class SecurityTxtTest extends TestCase
 		$securityTxtWithInvalidValues->allowFieldsWithInvalidValues();
 		$allValues = $validValues = [];
 
-		foreach ($values as $value => $exception) {
+		foreach ($values as $value => $violation) {
 			$allValues[] = $value;
-			if ($exception) {
-				Assert::throws(function () use ($securityTxt, $value, $fieldClass, $addFactory): void {
+			if ($violation) {
+				$e = Assert::throws(function () use ($securityTxt, $value, $fieldClass, $addFactory): void {
 					$addFactory($securityTxt)(new $fieldClass($value));
-				}, $exception);
-				Assert::throws(function () use ($securityTxtWithInvalidValues, $value, $fieldClass, $addFactory): void {
+				}, SecurityTxtError::class);
+				Assert::type($violation, $e->getViolation());
+				$e = Assert::throws(function () use ($securityTxtWithInvalidValues, $value, $fieldClass, $addFactory): void {
 					$addFactory($securityTxtWithInvalidValues)(new $fieldClass($value));
-				}, $exception);
+				}, SecurityTxtError::class);
+				Assert::type($violation, $e->getViolation());
 			} else {
 				$validValues[] = $value;
 				$addFactory($securityTxt)(new $fieldClass($value));
@@ -136,16 +141,16 @@ class SecurityTxtTest extends TestCase
 
 
 	/**
-	 * @return array<string, array{0: list<string>, 1: class-string<SecurityTxtError>}>
+	 * @return array<string, array{0: list<string>, 1: class-string<SecurityTxtSpecViolation>}>
 	 */
 	public function getPreferredLanguageValues(): array
 	{
 		return [
-			'no language' => [[], SecurityTxtPreferredLanguagesEmptyError::class],
-			'empty language' => [[''], SecurityTxtPreferredLanguagesWrongLanguageTagsError::class],
-			'wrong language' => [['a'], SecurityTxtPreferredLanguagesWrongLanguageTagsError::class],
-			'one wrong language' => [['en', 'cs', 'E', 'CS'], SecurityTxtPreferredLanguagesWrongLanguageTagsError::class],
-			'common mistake' => [['en', 'cz'], SecurityTxtPreferredLanguagesCommonMistakeError::class],
+			'no language' => [[], SecurityTxtPreferredLanguagesEmpty::class],
+			'empty language' => [[''], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
+			'wrong language' => [['a'], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
+			'one wrong language' => [['en', 'cs', 'E', 'CS'], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
+			'common mistake' => [['en', 'cz'], SecurityTxtPreferredLanguagesCommonMistake::class],
 			'alright languages' => [['en', 'cs', 'EN', 'CS'], null],
 		];
 	}
@@ -153,28 +158,30 @@ class SecurityTxtTest extends TestCase
 
 	/**
 	 * @param list<string> $languages
-	 * @param class-string<SecurityTxtError>|null $exceptionClass
+	 * @param class-string<SecurityTxtSpecViolation>|null $violation
 	 * @dataProvider getPreferredLanguageValues
 	 */
-	public function testSetPreferredLanguages(array $languages, ?string $exceptionClass): void
+	public function testSetPreferredLanguages(array $languages, ?string $violation): void
 	{
 		$securityTxt = new SecurityTxt();
 		$securityTxtWithInvalidValues = new SecurityTxt();
 		$securityTxtWithInvalidValues->allowFieldsWithInvalidValues();
 
-		if ($exceptionClass) {
-			Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
+		if ($violation) {
+			$e = Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
 				$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
-			}, $exceptionClass);
-			Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
+			}, SecurityTxtError::class);
+			Assert::type($violation, $e->getViolation());
+			$e = Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
 				$securityTxtWithInvalidValues->setPreferredLanguages(new PreferredLanguages($languages));
-			}, $exceptionClass);
+			}, SecurityTxtError::class);
+			Assert::type($violation, $e->getViolation());
 		} else {
 			$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
 			$securityTxtWithInvalidValues->setPreferredLanguages(new PreferredLanguages($languages));
 		}
 
-		if ($exceptionClass) {
+		if ($violation) {
 			Assert::null($securityTxt->getPreferredLanguages());
 		} else {
 			Assert::same($languages, $securityTxt->getPreferredLanguages()->getLanguages());

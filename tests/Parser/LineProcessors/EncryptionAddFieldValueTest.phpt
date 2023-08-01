@@ -4,10 +4,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser\LineProcessors;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtEncryptionNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtEncryptionNotUriSyntaxError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\Encryption;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotUri;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -31,13 +32,15 @@ class EncryptionAddFieldValueTest extends TestCase
 		$actual = array_map(fn(Encryption $field): string => $field->getUri(), $securityTxt->getEncryption());
 		Assert::equal([$uri1, $uri2, $uri3], $actual);
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('http://no.https.example', $securityTxt);
-		}, SecurityTxtEncryptionNotHttpsError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtEncryptionNotHttps::class, $e->getViolation());
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('no.scheme', $securityTxt);
-		}, SecurityTxtEncryptionNotUriSyntaxError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtEncryptionNotUri::class, $e->getViolation());
 	}
 
 }
