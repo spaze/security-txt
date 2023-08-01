@@ -11,6 +11,7 @@ enum SecurityTxtField: string
 	case Contact = 'Contact';
 	case Expires = 'Expires';
 	case Hiring = 'Hiring';
+	case Policy = 'Policy';
 	case PreferredLanguages = 'Preferred-Languages';
 
 }

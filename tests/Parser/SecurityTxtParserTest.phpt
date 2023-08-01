@@ -272,6 +272,15 @@ class SecurityTxtParserTest extends TestCase
 		Assert::same($uri, $parseResult->getSecurityTxt()->getHiring()[0]->getUri());
 	}
 
+
+	public function testParseStringPolicy(): void
+	{
+		$uri = 'https://example.com/policy.pcx';
+		$parseResult = $this->securityTxtParser->parseString("Policy: {$uri}\n");
+		Assert::count(0, $parseResult->getParseErrors());
+		Assert::same($uri, $parseResult->getSecurityTxt()->getPolicy()[0]->getUri());
+	}
+
 }
 
 (new SecurityTxtParserTest())->run();

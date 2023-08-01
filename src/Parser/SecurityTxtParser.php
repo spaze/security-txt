@@ -26,6 +26,7 @@ use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\HiringAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\LineProcessor;
+use Spaze\SecurityTxt\Parser\LineProcessors\PolicyAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -75,6 +76,9 @@ class SecurityTxtParser
 		];
 		$this->lineProcessors[SecurityTxtField::Hiring->value] = [
 			new HiringAddFieldValue(),
+		];
+		$this->lineProcessors[SecurityTxtField::Policy->value] = [
+			new PolicyAddFieldValue(),
 		];
 		$this->lineProcessors[SecurityTxtField::PreferredLanguages->value] = [
 			new PreferredLanguagesCheckMultipleFields(),
