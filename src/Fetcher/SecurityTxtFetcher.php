@@ -4,12 +4,6 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher;
 
 use LogicException;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContentTypeError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContentTypeWrongCharsetError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtSchemeNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelDiffersWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtTopLevelPathOnlyWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtWellKnownPathOnlyWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoHttpCodeException;
@@ -19,6 +13,12 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
+use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 
 class SecurityTxtFetcher
 {
@@ -137,18 +137,18 @@ class SecurityTxtFetcher
 				$topLevel->getUrl() => $topLevel->getHttpCode(),
 			]);
 		} elseif ($wellKnownContents && $topLevelContents === null) {
-			$warnings[] = new SecurityTxtWellKnownPathOnlyWarning();
+			$warnings[] = new SecurityTxtWellKnownPathOnly();
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} elseif ($wellKnownContents === null && $topLevelContents) {
-			$warnings[] = new SecurityTxtTopLevelPathOnlyWarning();
+			$warnings[] = new SecurityTxtTopLevelPathOnly();
 			$result = $topLevel;
 			$contents = $topLevelContents;
 		} elseif ($wellKnownContents !== $topLevelContents) {
 			if ($wellKnownContents === null || $topLevelContents === null) {
 				throw new LogicException('This should not happen');
 			}
-			$warnings[] = new SecurityTxtTopLevelDiffersWarning($wellKnownContents, $topLevelContents);
+			$warnings[] = new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents);
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} else {
@@ -165,13 +165,13 @@ class SecurityTxtFetcher
 		$contentType = isset($headerParts[0]) ? trim($headerParts[0]) : null;
 		$charset = isset($headerParts[1]) ? trim($headerParts[1]) : null;
 		if (!$contentType || strtolower($contentType) !== 'text/plain') {
-			$errors[] = new SecurityTxtContentTypeError($result->getUrl(), $contentType);
+			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl(), $contentType);
 		} elseif (!$charset || strtolower($charset) !== 'charset=utf-8') {
-			$errors[] = new SecurityTxtContentTypeWrongCharsetError($result->getUrl(), $contentType, $charset);
+			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentType, $charset);
 		}
 		$scheme = parse_url($result->getUrl(), PHP_URL_SCHEME);
 		if ($scheme !== 'https') {
-			$errors[] = new SecurityTxtSchemeNotHttpsError($result->getUrl());
+			$errors[] = new SecurityTxtSchemeNotHttps($result->getUrl());
 		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),

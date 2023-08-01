@@ -5,8 +5,10 @@ namespace Spaze\SecurityTxt\Signature;
 
 use DateTimeImmutable;
 use gnupg;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureExtensionNotLoadedWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtSignatureInvalidError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 
 class SecurityTxtSignature
 {
@@ -21,12 +23,12 @@ class SecurityTxtSignature
 
 
 	/**
-	 * @throws SecurityTxtSignatureExtensionNotLoadedWarning
+	 * @throws SecurityTxtWarning
 	 */
 	public function init(): void
 	{
 		if (!extension_loaded('gnupg')) {
-			throw new SecurityTxtSignatureExtensionNotLoadedWarning();
+			throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
 		}
 		$options = ['home_dir' => $this->homeDir];
 		$this->gnupg = new gnupg(array_filter($options));
@@ -34,19 +36,19 @@ class SecurityTxtSignature
 
 
 	/**
-	 * @throws SecurityTxtSignatureExtensionNotLoadedWarning
-	 * @throws SecurityTxtSignatureInvalidError
+	 * @throws SecurityTxtError
+	 * @throws SecurityTxtWarning
 	 */
 	public function verify(string $contents): SecurityTxtSignatureVerifyResult
 	{
 		$this->init();
 		$signatures = $this->gnupg->verify($contents, false);
 		if (!$signatures || !isset($signatures[0])) {
-			throw new SecurityTxtSignatureInvalidError();
+			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
 		$signature = $signatures[0];
 		if (!$this->isSignatureKindaOkay($signature['summary'])) {
-			throw new SecurityTxtSignatureInvalidError();
+			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
 		return new SecurityTxtSignatureVerifyResult($signature['fingerprint'], (new DateTimeImmutable())->setTimestamp($signature['timestamp']));
 	}

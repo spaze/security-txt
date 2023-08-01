@@ -3,25 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtAcknowledgmentsNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtAcknowledgmentsNotUriSyntaxError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtCanonicalNotUriError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtContactNotUriError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtEncryptionNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtEncryptionNotUriSyntaxError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldNotUriError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldUriNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotUriSyntaxError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPolicyNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPolicyNotUriSyntaxError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
@@ -31,6 +14,25 @@ use Spaze\SecurityTxt\Fields\Hiring;
 use Spaze\SecurityTxt\Fields\Policy;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
+use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUriSyntax;
+use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldUriNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
 
 class SecurityTxt
 {
@@ -78,17 +80,17 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtExpiredError
-	 * @throws SecurityTxtExpiresTooLongWarning
+	 * @throws SecurityTxtError
+	 * @throws SecurityTxtWarning
 	 */
 	public function setExpires(Expires $expires): void
 	{
 		$this->expires = $expires;
 		if ($expires->isExpired()) {
-			throw new SecurityTxtExpiredError();
+			throw new SecurityTxtError(new SecurityTxtExpired());
 		}
 		if ($expires->inDays() > 366) {
-			throw new SecurityTxtExpiresTooLongWarning();
+			throw new SecurityTxtWarning(new SecurityTxtExpiresTooLong());
 		}
 	}
 
@@ -112,8 +114,7 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtCanonicalNotUriError|SecurityTxtFieldNotUriError
-	 * @throws SecurityTxtCanonicalNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 * @throws SecurityTxtError
 	 */
 	public function addCanonical(Canonical $canonical): void
 	{
@@ -122,7 +123,7 @@ class SecurityTxt
 				$this->canonical[] = $canonical;
 			},
 			function () use ($canonical): void {
-				$this->checkUri($canonical->getUri(), SecurityTxtCanonicalNotUriError::class, SecurityTxtCanonicalNotHttpsError::class);
+				$this->checkUri($canonical->getUri(), SecurityTxtCanonicalNotUri::class, SecurityTxtCanonicalNotHttps::class);
 			},
 		);
 	}
@@ -138,8 +139,7 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtContactNotUriError|SecurityTxtFieldNotUriError
-	 * @throws SecurityTxtContactNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 * @throws SecurityTxtError
 	 */
 	public function addContact(Contact $contact): void
 	{
@@ -148,7 +148,7 @@ class SecurityTxt
 				$this->contact[] = $contact;
 			},
 			function () use ($contact): void {
-				$this->checkUri($contact->getUri(), SecurityTxtContactNotUriError::class, SecurityTxtContactNotHttpsError::class);
+				$this->checkUri($contact->getUri(), SecurityTxtContactNotUri::class, SecurityTxtContactNotHttps::class);
 			},
 		);
 	}
@@ -164,9 +164,7 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtPreferredLanguagesEmptyError
-	 * @throws SecurityTxtPreferredLanguagesWrongLanguageTagsError
-	 * @throws SecurityTxtPreferredLanguagesCommonMistakeError
+	 * @throws SecurityTxtError
 	 */
 	public function setPreferredLanguages(PreferredLanguages $preferredLanguages): void
 	{
@@ -176,7 +174,7 @@ class SecurityTxt
 			},
 			function () use ($preferredLanguages): void {
 				if (!$preferredLanguages->getLanguages()) {
-					throw new SecurityTxtPreferredLanguagesEmptyError();
+					throw new SecurityTxtError(new SecurityTxtPreferredLanguagesEmpty());
 				}
 				$wrongLanguages = [];
 				foreach ($preferredLanguages->getLanguages() as $key => $value) {
@@ -185,16 +183,16 @@ class SecurityTxt
 					}
 				}
 				if ($wrongLanguages) {
-					throw new SecurityTxtPreferredLanguagesWrongLanguageTagsError($wrongLanguages);
+					throw new SecurityTxtError(new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages));
 				}
 				foreach ($preferredLanguages->getLanguages() as $key => $value) {
 					if (preg_match('/^cz-?/i', $value)) {
-						throw new SecurityTxtPreferredLanguagesCommonMistakeError(
+						throw new SecurityTxtError(new SecurityTxtPreferredLanguagesCommonMistake(
 							$key + 1,
 							$value,
 							preg_replace('/^cz$|cz(-)/i', 'cs$1', $value),
 							'the code for Czech language is `cs`, not `cz`',
-						);
+						));
 					}
 				}
 			},
@@ -209,8 +207,7 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtAcknowledgmentsNotUriSyntaxError|SecurityTxtFieldNotUriError
-	 * @throws SecurityTxtAcknowledgmentsNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 * @throws SecurityTxtError
 	 */
 	public function addAcknowledgments(Acknowledgments $acknowledgments): void
 	{
@@ -219,7 +216,7 @@ class SecurityTxt
 				$this->acknowledgments[] = $acknowledgments;
 			},
 			function () use ($acknowledgments): void {
-				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUriSyntaxError::class, SecurityTxtAcknowledgmentsNotHttpsError::class);
+				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUriSyntax::class, SecurityTxtAcknowledgmentsNotHttps::class);
 			},
 		);
 	}
@@ -235,8 +232,7 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtHiringNotUriSyntaxError|SecurityTxtFieldNotUriError
-	 * @throws SecurityTxtHiringNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 * @throws SecurityTxtError
 	 */
 	public function addHiring(Hiring $hiring): void
 	{
@@ -245,7 +241,7 @@ class SecurityTxt
 				$this->hiring[] = $hiring;
 			},
 			function () use ($hiring): void {
-				$this->checkUri($hiring->getUri(), SecurityTxtHiringNotUriSyntaxError::class, SecurityTxtHiringNotHttpsError::class);
+				$this->checkUri($hiring->getUri(), SecurityTxtHiringNotUri::class, SecurityTxtHiringNotHttps::class);
 			},
 		);
 	}
@@ -261,8 +257,7 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtPolicyNotUriSyntaxError|SecurityTxtFieldNotUriError
-	 * @throws SecurityTxtPolicyNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 * @throws SecurityTxtError
 	 */
 	public function addPolicy(Policy $policy): void
 	{
@@ -271,7 +266,7 @@ class SecurityTxt
 				$this->policy[] = $policy;
 			},
 			function () use ($policy): void {
-				$this->checkUri($policy->getUri(), SecurityTxtPolicyNotUriSyntaxError::class, SecurityTxtPolicyNotHttpsError::class);
+				$this->checkUri($policy->getUri(), SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class);
 			},
 		);
 	}
@@ -287,8 +282,7 @@ class SecurityTxt
 
 
 	/**
-	 * @throws SecurityTxtEncryptionNotUriSyntaxError|SecurityTxtFieldNotUriError
-	 * @throws SecurityTxtEncryptionNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 * @throws SecurityTxtError
 	 */
 	public function addEncryption(Encryption $encryption): void
 	{
@@ -297,7 +291,7 @@ class SecurityTxt
 				$this->encryption[] = $encryption;
 			},
 			function () use ($encryption): void {
-				$this->checkUri($encryption->getUri(), SecurityTxtEncryptionNotUriSyntaxError::class, SecurityTxtEncryptionNotHttpsError::class);
+				$this->checkUri($encryption->getUri(), SecurityTxtEncryptionNotUri::class, SecurityTxtEncryptionNotHttps::class);
 			},
 		);
 	}
@@ -330,21 +324,18 @@ class SecurityTxt
 
 
 	/**
-	 * @template TNotUri of SecurityTxtFieldNotUriError
-	 * @template TNotHttps of SecurityTxtFieldUriNotHttpsError
-	 * @param class-string<TNotUri> $notUriError
-	 * @param class-string<TNotHttps> $notHttpsError
-	 * @throws TNotUri
-	 * @throws TNotHttps
+	 * @param class-string<SecurityTxtFieldNotUri> $notUriError
+	 * @param class-string<SecurityTxtFieldUriNotHttps> $notHttpsError
+	 * @throws SecurityTxtError
 	 */
 	private function checkUri(string $uri, string $notUriError, string $notHttpsError): void
 	{
 		$scheme = parse_url($uri, PHP_URL_SCHEME);
 		if (!$scheme) {
-			throw new $notUriError($uri);
+			throw new SecurityTxtError(new $notUriError($uri));
 		}
 		if (strtolower($scheme) === 'http') {
-			throw new $notHttpsError($uri);
+			throw new SecurityTxtError(new $notHttpsError($uri));
 		}
 	}
 

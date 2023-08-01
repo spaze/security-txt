@@ -4,8 +4,6 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoHttpCodeException;
@@ -17,6 +15,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
 class SecurityTxtCheckHost
 {
@@ -182,7 +181,7 @@ class SecurityTxtCheckHost
 	/**
 	 * @param list<callable(?int, string, string, ?string): void> $handlers
 	 */
-	private function error(array $handlers, SecurityTxtError $error, ?int $line = null): void
+	private function error(array $handlers, SecurityTxtSpecViolation $error, ?int $line = null): void
 	{
 		$this->callOnCallback($handlers, $line, $error->getMessage(), $error->getHowToFix(), $error->getCorrectValue());
 	}
@@ -191,7 +190,7 @@ class SecurityTxtCheckHost
 	/**
 	 * @param list<callable(?int, string, string, ?string): void> $handlers
 	 */
-	private function warning(array $handlers, SecurityTxtWarning $warning, ?int $line = null): void
+	private function warning(array $handlers, SecurityTxtSpecViolation $warning, ?int $line = null): void
 	{
 		$this->callOnCallback($handlers, $line, $warning->getMessage(), $warning->getHowToFix(), $warning->getCorrectValue());
 	}

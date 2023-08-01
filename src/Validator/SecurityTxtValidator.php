@@ -37,9 +37,9 @@ class SecurityTxtValidator
 			try {
 				$validator->validate($securityTxt);
 			} catch (SecurityTxtError $e) {
-				$errors[] = $e;
+				$errors[] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {
-				$warnings[] = $e;
+				$warnings[] = $e->getViolation();
 			}
 		}
 		return new SecurityTxtValidateResult($errors, $warnings);

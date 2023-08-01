@@ -4,10 +4,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser\LineProcessors;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPolicyNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPolicyNotUriSyntaxError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\Policy;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotUri;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -31,13 +32,15 @@ class PolicyAddFieldValueTest extends TestCase
 		$actual = array_map(fn(Policy $field): string => $field->getUri(), $securityTxt->getPolicy());
 		Assert::equal([$uri1, $uri2, $uri3], $actual);
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('http://no.https.example', $securityTxt);
-		}, SecurityTxtPolicyNotHttpsError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtPolicyNotHttps::class, $e->getViolation());
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('no.scheme', $securityTxt);
-		}, SecurityTxtPolicyNotUriSyntaxError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtPolicyNotUri::class, $e->getViolation());
 	}
 
 }

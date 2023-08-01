@@ -4,9 +4,10 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser\LineProcessors;
 
 use LogicException;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesSeparatorNotCommaError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 
 class PreferredLanguagesSetFieldValue implements LineProcessor
 {
@@ -27,7 +28,7 @@ class PreferredLanguagesSetFieldValue implements LineProcessor
 				}
 			}
 			if ($wrongSeparators) {
-				throw new SecurityTxtPreferredLanguagesSeparatorNotCommaError($wrongSeparators, $languages);
+				throw new SecurityTxtError(new SecurityTxtPreferredLanguagesSeparatorNotComma($wrongSeparators, $languages));
 			}
 		}
 		$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));

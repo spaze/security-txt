@@ -4,10 +4,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser\LineProcessors;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtAcknowledgmentsNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtAcknowledgmentsNotUriSyntaxError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUriSyntax;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -31,13 +32,15 @@ class AcknowledgmentsAddFieldValueTest extends TestCase
 		$actual = array_map(fn(Acknowledgments $field): string => $field->getUri(), $securityTxt->getAcknowledgments());
 		Assert::equal([$uri1, $uri2, $uri3], $actual);
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('http://no.https.example', $securityTxt);
-		}, SecurityTxtAcknowledgmentsNotHttpsError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtAcknowledgmentsNotHttps::class, $e->getViolation());
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('no.scheme', $securityTxt);
-		}, SecurityTxtAcknowledgmentsNotUriSyntaxError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtAcknowledgmentsNotUriSyntax::class, $e->getViolation());
 	}
 
 }

@@ -4,10 +4,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser\LineProcessors;
 
-use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotHttpsError;
-use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotUriSyntaxError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\Hiring;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotUri;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -31,13 +32,15 @@ class HiringAddFieldValueTest extends TestCase
 		$actual = array_map(fn(Hiring $field): string => $field->getUri(), $securityTxt->getHiring());
 		Assert::equal([$uri1, $uri2, $uri3], $actual);
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('http://no.https.example', $securityTxt);
-		}, SecurityTxtHiringNotHttpsError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtHiringNotHttps::class, $e->getViolation());
 
-		Assert::throws(function () use ($processor, $securityTxt): void {
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('no.scheme', $securityTxt);
-		}, SecurityTxtHiringNotUriSyntaxError::class);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtHiringNotUri::class, $e->getViolation());
 	}
 
 }
