@@ -54,7 +54,7 @@ class SecurityTxtUrlParserTest extends TestCase
 
 	/**
 	 * @dataProvider getBadHosts
-	 * @throws \Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostnameException
+	 * @throws \Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException
 	 */
 	public function testGetHostFromUrlBad(string $input): void
 	{

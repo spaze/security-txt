@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtHostnameException extends SecurityTxtFetcherException
+class SecurityTxtCannotParseHostnameException extends SecurityTxtFetcherException
 {
 
 	public function __construct(string $url, ?Throwable $previous = null)

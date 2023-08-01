@@ -7,7 +7,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherNoLocationException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
@@ -67,7 +67,7 @@ class SecurityTxtFetcherTest extends TestCase
 				],
 				302,
 				null,
-				SecurityTxtFetcherNoLocationException::class,
+				SecurityTxtNoLocationHeaderException::class,
 			],
 			'Random redirect with location' => [
 				399,
