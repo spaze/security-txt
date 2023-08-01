@@ -13,6 +13,8 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiredError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtExpiresTooLongWarning;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldNotUriError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtFieldUriNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotHttpsError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtHiringNotUriSyntaxError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesCommonMistakeError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesEmptyError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtPreferredLanguagesWrongLanguageTagsError;
@@ -20,6 +22,7 @@ use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
+use Spaze\SecurityTxt\Fields\Hiring;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 
@@ -45,6 +48,11 @@ class SecurityTxt
 	 * @var list<Acknowledgments>
 	 */
 	private array $acknowledgments = [];
+
+	/**
+	 * @var list<Hiring>
+	 */
+	private array $hiring = [];
 
 
 	public function allowFieldsWithInvalidValues(): void
@@ -207,6 +215,32 @@ class SecurityTxt
 	public function getAcknowledgments(): array
 	{
 		return $this->acknowledgments;
+	}
+
+
+	/**
+	 * @throws SecurityTxtHiringNotUriSyntaxError|SecurityTxtFieldNotUriError
+	 * @throws SecurityTxtHiringNotHttpsError|SecurityTxtFieldUriNotHttpsError
+	 */
+	public function addHiring(Hiring $hiring): void
+	{
+		$this->setValue(
+			function () use ($hiring): void {
+				$this->hiring[] = $hiring;
+			},
+			function () use ($hiring): void {
+				$this->checkUri($hiring->getUri(), SecurityTxtHiringNotUriSyntaxError::class, SecurityTxtHiringNotHttpsError::class);
+			},
+		);
+	}
+
+
+	/**
+	 * @return list<Hiring>
+	 */
+	public function getHiring(): array
+	{
+		return $this->hiring;
 	}
 
 
