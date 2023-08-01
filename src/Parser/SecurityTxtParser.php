@@ -54,6 +54,11 @@ class SecurityTxtParser
 		private readonly SecurityTxtSignature $signature,
 		private readonly SecurityTxtFetcher $fetcher,
 	) {
+	}
+
+
+	private function initLineProcessors(): void
+	{
 		$this->lineProcessors[SecurityTxtField::Acknowledgments->value] = [
 			new AcknowledgmentsAddFieldValue(),
 		];
@@ -76,6 +81,7 @@ class SecurityTxtParser
 
 	private function processLine(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt): void
 	{
+		$this->initLineProcessors();
 		foreach ($this->lineProcessors[$field->value] as $processor) {
 			try {
 				$processor->process($value, $securityTxt);
