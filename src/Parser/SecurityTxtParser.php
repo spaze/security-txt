@@ -105,7 +105,7 @@ class SecurityTxtParser
 	}
 
 
-	public function parseString(string $contents): SecurityTxtParseResult
+	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
 	{
 		$this->parseErrors = [];
 		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
@@ -146,7 +146,18 @@ class SecurityTxtParser
 			}
 		}
 		$validateResult = $this->validator->validate($securityTxt);
-		return new SecurityTxtParseResult($securityTxt, $this->parseErrors, $this->parseWarnings, $validateResult);
+		$expires = $securityTxt->getExpires();
+		$expiresSoon = $expiresWarningThreshold !== null && $expires?->inDays() < $expiresWarningThreshold;
+		$hasErrors = $this->parseErrors || $validateResult->getErrors();
+		$hasWarnings = $this->parseWarnings || $validateResult->getWarnings();
+		return new SecurityTxtParseResult(
+			$securityTxt,
+			!$expires?->isExpired() && !$expiresSoon && !$hasErrors && (!$strictMode || !$hasWarnings),
+			$expiresSoon,
+			$this->parseErrors,
+			$this->parseWarnings,
+			$validateResult,
+		);
 	}
 
 
@@ -159,12 +170,14 @@ class SecurityTxtParser
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 */
-	public function parseHost(string $host, bool $noIpv6 = false): SecurityTxtParseResult
+	public function parseHost(string $host, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $noIpv6 = false): SecurityTxtParseResult
 	{
 		$fetchResult = $this->fetcher->fetchHost($host, $noIpv6);
-		$parseResult = $this->parseString($fetchResult->getContents());
+		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
 		return new SecurityTxtParseResult(
 			$parseResult->getSecurityTxt(),
+			$parseResult->isValid() && !$fetchResult->getErrors() && (!$strictMode || !$fetchResult->getWarnings()),
+			$parseResult->isExpiresSoon(),
 			$parseResult->getParseErrors(),
 			$parseResult->getParseWarnings(),
 			$parseResult->getValidateResult(),

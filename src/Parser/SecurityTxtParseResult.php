@@ -12,14 +12,13 @@ class SecurityTxtParseResult
 {
 
 	/**
-	 * @param SecurityTxt $securityTxt
 	 * @param array<int, list<SecurityTxtSpecViolation>> $parseErrors
 	 * @param array<int, list<SecurityTxtSpecViolation>> $parseWarnings
-	 * @param SecurityTxtValidateResult $validateResult
-	 * @param SecurityTxtFetchResult|null $fetchResult
 	 */
 	public function __construct(
 		private readonly SecurityTxt $securityTxt,
+		private readonly bool $isValid,
+		private readonly bool $expiresSoon,
 		private readonly array $parseErrors,
 		private readonly array $parseWarnings,
 		private readonly SecurityTxtValidateResult $validateResult,
@@ -31,6 +30,18 @@ class SecurityTxtParseResult
 	public function getSecurityTxt(): SecurityTxt
 	{
 		return $this->securityTxt;
+	}
+
+
+	public function isValid(): bool
+	{
+		return $this->isValid;
+	}
+
+
+	public function isExpiresSoon(): bool
+	{
+		return $this->expiresSoon;
 	}
 
 

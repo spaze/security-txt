@@ -90,7 +90,7 @@ class SecurityTxtCheckHost
 
 		$host = $this->urlParser->getHostFromUrl($url);
 		$this->callOnCallback($this->onHost, $host);
-		$parseResult = $this->parser->parseHost($host, $noIpv6);
+		$parseResult = $this->parser->parseHost($host, $expiresWarningThreshold, $strictMode, $noIpv6);
 
 		foreach ($parseResult->getFetchErrors() as $error) {
 			$this->error($this->onFetchError, $error);
@@ -116,12 +116,11 @@ class SecurityTxtCheckHost
 		}
 
 		$expires = $parseResult->getSecurityTxt()->getExpires();
-		$expiresSoon = $expiresWarningThreshold !== null && $expires?->inDays() < $expiresWarningThreshold;
 		if ($expires !== null) {
 			$days = $expires->inDays();
 			if ($expires->isExpired()) {
 				$this->callOnCallback($this->onIsExpired, abs($days), $expires->getDateTime());
-			} elseif ($expiresSoon) {
+			} elseif ($parseResult->isExpiresSoon()) {
 				$this->callOnCallback($this->onExpiresSoon, $days, $expires->getDateTime());
 			} else {
 				$this->callOnCallback($this->onExpires, $days, $expires->getDateTime());
@@ -144,10 +143,10 @@ class SecurityTxtCheckHost
 			$parseResult->getFileErrors(),
 			$parseResult->getFileWarnings(),
 			$parseResult->getSecurityTxt(),
-			$expiresSoon,
+			$parseResult->isExpiresSoon(),
 			$expires?->isExpired(),
 			$days ?? null,
-			!$expires?->isExpired() && !$expiresSoon && !$parseResult->hasErrors() && (!$strictMode || !$parseResult->hasWarnings()),
+			$parseResult->isValid(),
 			$strictMode,
 		);
 	}
