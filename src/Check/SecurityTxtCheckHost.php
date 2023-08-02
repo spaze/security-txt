@@ -147,7 +147,8 @@ class SecurityTxtCheckHost
 			$expires?->isExpired(),
 			$days ?? null,
 			$parseResult->isValid(),
-			$strictMode,
+			$parseResult->isStrictMode(),
+			$parseResult->getExpiresWarningThreshold(),
 		);
 	}
 

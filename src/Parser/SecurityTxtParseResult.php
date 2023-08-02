@@ -18,6 +18,8 @@ class SecurityTxtParseResult
 	public function __construct(
 		private readonly SecurityTxt $securityTxt,
 		private readonly bool $isValid,
+		private readonly bool $strictMode,
+		private readonly ?int $expiresWarningThreshold,
 		private readonly bool $expiresSoon,
 		private readonly array $parseErrors,
 		private readonly array $parseWarnings,
@@ -36,6 +38,18 @@ class SecurityTxtParseResult
 	public function isValid(): bool
 	{
 		return $this->isValid;
+	}
+
+
+	public function isStrictMode(): bool
+	{
+		return $this->strictMode;
+	}
+
+
+	public function getExpiresWarningThreshold(): ?int
+	{
+		return $this->expiresWarningThreshold;
 	}
 
 

@@ -35,6 +35,7 @@ class SecurityTxtCheckHostResult
 		private readonly ?int $expiryDays,
 		private readonly bool $isValid,
 		private readonly bool $strictMode,
+		private readonly ?int $expiresWarningThreshold,
 	) {
 	}
 
@@ -153,6 +154,12 @@ class SecurityTxtCheckHostResult
 	public function isStrictMode(): bool
 	{
 		return $this->strictMode;
+	}
+
+
+	public function getExpiresWarningThreshold(): ?int
+	{
+		return $this->expiresWarningThreshold;
 	}
 
 }

@@ -153,6 +153,8 @@ class SecurityTxtParser
 		return new SecurityTxtParseResult(
 			$securityTxt,
 			!$expires?->isExpired() && (!$strictMode || !$expiresSoon) && !$hasErrors && (!$strictMode || !$hasWarnings),
+			$strictMode,
+			$expiresWarningThreshold,
 			$expiresSoon,
 			$this->parseErrors,
 			$this->parseWarnings,
@@ -177,6 +179,8 @@ class SecurityTxtParser
 		return new SecurityTxtParseResult(
 			$parseResult->getSecurityTxt(),
 			$parseResult->isValid() && !$fetchResult->getErrors() && (!$strictMode || !$fetchResult->getWarnings()),
+			$parseResult->isStrictMode(),
+			$parseResult->getExpiresWarningThreshold(),
 			$parseResult->isExpiresSoon(),
 			$parseResult->getParseErrors(),
 			$parseResult->getParseWarnings(),
