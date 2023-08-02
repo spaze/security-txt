@@ -152,7 +152,7 @@ class SecurityTxtParser
 		$hasWarnings = $this->parseWarnings || $validateResult->getWarnings();
 		return new SecurityTxtParseResult(
 			$securityTxt,
-			!$expires?->isExpired() && !$expiresSoon && !$hasErrors && (!$strictMode || !$hasWarnings),
+			!$expires?->isExpired() && (!$strictMode || !$expiresSoon) && !$hasErrors && (!$strictMode || !$hasWarnings),
 			$expiresSoon,
 			$this->parseErrors,
 			$this->parseWarnings,

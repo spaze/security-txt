@@ -44,8 +44,13 @@ class SecurityTxtCheckHostCli
 			},
 		);
 		$this->checkHost->addOnExpiresSoon(
-			function (int $inDays, DateTimeImmutable $expiryDate): void {
-				$this->consolePrinter->error($this->consolePrinter->colorRed("The file will expire very soon in {$inDays} " . ($inDays === 1 ? 'day' : 'days')) . " ({$expiryDate->format(DATE_RFC3339)})");
+			function (int $inDays, DateTimeImmutable $expiryDate) use ($strictMode): void {
+				$message = $this->consolePrinter->colorRed("The file will expire very soon in {$inDays} " . ($inDays === 1 ? 'day' : 'days')) . " ({$expiryDate->format(DATE_RFC3339)})";
+				if ($strictMode) {
+					$this->consolePrinter->error($message);
+				} else {
+					$this->consolePrinter->warning($message);
+				}
 			},
 		);
 		$this->checkHost->addOnExpires(
