@@ -11,6 +11,7 @@ class SecurityTxtPossibelFieldTypo extends SecurityTxtSpecViolation
 	public function __construct(string $fieldName, SecurityTxtField $suggestion, string $line)
 	{
 		parent::__construct(
+			func_get_args(),
 			'Field `%s` may be a typo, did you mean `%s`?',
 			[$fieldName, $suggestion->value],
 			null,

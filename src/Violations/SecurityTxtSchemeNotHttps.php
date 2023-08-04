@@ -9,6 +9,7 @@ class SecurityTxtSchemeNotHttps extends SecurityTxtSpecViolation
 	public function __construct(string $url)
 	{
 		parent::__construct(
+			func_get_args(),
 			"The file at `%s` must use HTTPS",
 			[$url],
 			'draft-foudil-securitytxt-06',

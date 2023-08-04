@@ -17,6 +17,7 @@ abstract class SecurityTxtFieldNotUri extends SecurityTxtSpecViolation
 		?string $specSection,
 	) {
 		parent::__construct(
+			func_get_args(),
 			"The `%s` value (`%s`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 			[$field->value, $uri],
 			$since,

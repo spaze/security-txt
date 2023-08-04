@@ -9,6 +9,7 @@ class SecurityTxtMultiplePreferredLanguages extends SecurityTxtSpecViolation
 	public function __construct()
 	{
 		parent::__construct(
+			func_get_args(),
 			'The `Preferred-Languages` field must not appear more than once',
 			[],
 			'draft-foudil-securitytxt-05',

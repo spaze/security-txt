@@ -11,6 +11,7 @@ abstract class SecurityTxtFieldUriNotHttps extends SecurityTxtSpecViolation
 	public function __construct(SecurityTxtField $field, string $uri, string $specSection)
 	{
 		parent::__construct(
+			func_get_args(),
 			'If the `%s` field indicates a web URI, then it must begin with "https://"',
 			[$field->value],
 			'draft-foudil-securitytxt-06',

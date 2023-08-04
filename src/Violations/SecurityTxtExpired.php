@@ -11,6 +11,7 @@ class SecurityTxtExpired extends SecurityTxtSpecViolation
 	public function __construct()
 	{
 		parent::__construct(
+			func_get_args(),
 			'The file is considered stale and should not be used',
 			[],
 			'draft-foudil-securitytxt-09',

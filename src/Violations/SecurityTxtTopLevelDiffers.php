@@ -11,6 +11,7 @@ class SecurityTxtTopLevelDiffers extends SecurityTxtSpecViolation
 		private readonly string $topLevelContents,
 	) {
 		parent::__construct(
+			func_get_args(),
 			'The file at the top-level path is different than the one in the `/.well-known/` path',
 			[],
 			'draft-foudil-securitytxt-09',

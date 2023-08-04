@@ -20,6 +20,7 @@ class SecurityTxtPreferredLanguagesSeparatorNotComma extends SecurityTxtSpecViol
 			? 'The `Preferred-Languages` field uses wrong separators (%s), separate multiple values with a comma (`,`)'
 			: 'The `Preferred-Languages` field uses a wrong separator (%s), separate multiple values with a comma (`,`)';
 		parent::__construct(
+			func_get_args(),
 			$message,
 			[implode(', ', $separators)],
 			'draft-foudil-securitytxt-05',

@@ -11,6 +11,7 @@ class SecurityTxtNoExpires extends SecurityTxtSpecViolation
 	public function __construct()
 	{
 		parent::__construct(
+			func_get_args(),
 			'The `Expires` field must always be present',
 			[],
 			'draft-foudil-securitytxt-10',

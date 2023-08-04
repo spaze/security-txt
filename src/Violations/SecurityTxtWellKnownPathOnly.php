@@ -9,6 +9,7 @@ class SecurityTxtWellKnownPathOnly extends SecurityTxtSpecViolation
 	public function __construct()
 	{
 		parent::__construct(
+			func_get_args(),
 			"`security.txt` not found at the top-level path",
 			[],
 			'draft-foudil-securitytxt-02',

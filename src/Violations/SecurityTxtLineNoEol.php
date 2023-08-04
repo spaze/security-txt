@@ -9,6 +9,7 @@ class SecurityTxtLineNoEol extends SecurityTxtSpecViolation
 	public function __construct(string $line)
 	{
 		parent::__construct(
+			func_get_args(),
 			"The line (`%s`) doesn't end with neither <CRLF> nor <LF>",
 			[$line],
 			'draft-foudil-securitytxt-03',

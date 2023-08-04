@@ -19,6 +19,7 @@ class SecurityTxtPreferredLanguagesWrongLanguageTags extends SecurityTxtSpecViol
 			? 'The language tags %s seem invalid, the `Preferred-Languages` field must contain one or more language tags as defined in RFC 5646'
 			: 'The language tag %s seems invalid, the `Preferred-Languages` field must contain one or more language tags as defined in RFC 5646';
 		parent::__construct(
+			func_get_args(),
 			$format,
 			[implode(', ', $tags)],
 			'draft-foudil-securitytxt-05',

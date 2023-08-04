@@ -9,6 +9,7 @@ class SecurityTxtMultipleExpires extends SecurityTxtSpecViolation
 	public function __construct()
 	{
 		parent::__construct(
+			func_get_args(),
 			'The `Expires` field must not appear more than once',
 			[],
 			'draft-foudil-securitytxt-09',

@@ -9,6 +9,7 @@ class SecurityTxtPreferredLanguagesCommonMistake extends SecurityTxtSpecViolatio
 	public function __construct(int $position, string $mistake, ?string $correctValue, string $reason)
 	{
 		parent::__construct(
+			func_get_args(),
 			'The language tag #%s `%s` in the `Preferred-Languages` field is not correct, %s',
 			[(string)$position, $mistake, $reason],
 			'draft-foudil-securitytxt-05',

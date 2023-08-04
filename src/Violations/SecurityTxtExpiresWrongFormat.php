@@ -13,6 +13,7 @@ class SecurityTxtExpiresWrongFormat extends SecurityTxtSpecViolation
 	{
 		$correctValue = $expires ? $expires->format(DATE_RFC3339) : (new DateTimeImmutable('+1 year midnight -1 sec'))->format(DATE_RFC3339);
 		parent::__construct(
+			func_get_args(),
 			'The format of the value of the `Expires` field is wrong',
 			[],
 			'draft-foudil-securitytxt-09',

@@ -12,6 +12,7 @@ class SecurityTxtExpiresTooLong extends SecurityTxtSpecViolation
 	{
 		$correctValue = (new DateTimeImmutable('+1 year midnight -1 sec'))->format(DATE_RFC3339);
 		parent::__construct(
+			func_get_args(),
 			'The value of the `Expires` should be less than a year into the future to avoid staleness',
 			[],
 			'draft-foudil-securitytxt-10',

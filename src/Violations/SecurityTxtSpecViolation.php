@@ -9,11 +9,13 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 {
 
 	/**
+	 * @param list<mixed> $constructorParams
 	 * @param list<string> $messageValues
 	 * @param list<string> $howToFixValues
 	 * @param list<string> $seeAlsoSections
 	 */
 	public function __construct(
+		private readonly array $constructorParams,
 		private readonly string $messageFormat,
 		private readonly array $messageValues,
 		private readonly ?string $since,
@@ -101,6 +103,8 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 	public function jsonSerialize(): array
 	{
 		return [
+			'class' => static::class,
+			'constructorParams' => $this->constructorParams,
 			'message' => $this->getMessage(),
 			'messageFormat' => $this->getMessageFormat(),
 			'messageValues' => $this->getMessageValues(),

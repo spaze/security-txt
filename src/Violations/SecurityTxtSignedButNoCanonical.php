@@ -9,6 +9,7 @@ class SecurityTxtSignedButNoCanonical extends SecurityTxtSpecViolation
 	public function __construct()
 	{
 		parent::__construct(
+			func_get_args(),
 			'When digital signatures are used, it is also recommended that organizations use the `Canonical` field',
 			[],
 			'draft-foudil-securitytxt-05',

@@ -12,6 +12,7 @@ class SecurityTxtExpiresOldFormat extends SecurityTxtSpecViolation
 	{
 		$correctValue = $this->expires->format(DATE_RFC3339);
 		parent::__construct(
+			func_get_args(),
 			"The value of the `Expires` field follows the format defined in section 3.3 of RFC 5322 but it should be formatted according to the Internet profile of ISO 8601 as defined in RFC 3339",
 			[],
 			'draft-foudil-securitytxt-12',
