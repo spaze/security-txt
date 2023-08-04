@@ -136,6 +136,7 @@ class SecurityTxtCheckHost
 			$parseResult->getFetchResult()?->getRedirects() ?? [],
 			$parseResult->getFetchResult()?->getConstructedUrl() ?? null,
 			$parseResult->getFetchResult()?->getFinalUrl() ?? null,
+			$parseResult->getFetchResult()?->getContents() ?? null,
 			$parseResult->getFetchErrors(),
 			$parseResult->getFetchWarnings(),
 			$parseResult->getParseErrors(),

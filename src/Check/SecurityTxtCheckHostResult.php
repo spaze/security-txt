@@ -24,6 +24,7 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 		private readonly ?array $redirects,
 		private readonly ?string $constructedUrl,
 		private readonly ?string $finalUrl,
+		private readonly ?string $contents,
 		private readonly array $fetchErrors,
 		private readonly array $fetchWarnings,
 		private readonly array $parseErrors,
@@ -65,6 +66,12 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 	public function getFinalUrl(): ?string
 	{
 		return $this->finalUrl;
+	}
+
+
+	public function getContents(): ?string
+	{
+		return $this->contents;
 	}
 
 
@@ -174,6 +181,7 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 			'redirects' => $this->getRedirects(),
 			'constructedUrl' => $this->getConstructedUrl(),
 			'finalUrl' => $this->getFinalUrl(),
+			'contents' => $this->getContents(),
 			'fetchErrors' => $this->getFetchErrors(),
 			'fetchWarnings' => $this->getFetchWarnings(),
 			'parseErrors' => $this->getParseErrors(),
