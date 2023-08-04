@@ -3,7 +3,9 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
-class SecurityTxtFetcherResponse
+use JsonSerializable;
+
+class SecurityTxtFetcherResponse implements JsonSerializable
 {
 
 	/**
@@ -23,6 +25,15 @@ class SecurityTxtFetcherResponse
 	}
 
 
+	/**
+	 * @return array<string, string>
+	 */
+	public function getHeaders(): array
+	{
+		return $this->headers;
+	}
+
+
 	public function getHeader(string $header): ?string
 	{
 		return $this->headers[strtolower($header)] ?? null;
@@ -32,6 +43,19 @@ class SecurityTxtFetcherResponse
 	public function getContents(): string
 	{
 		return $this->contents;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'httpCode' => $this->getHttpCode(),
+			'headers' => $this->getHeaders(),
+			'contents' => $this->getContents(),
+		];
 	}
 
 }

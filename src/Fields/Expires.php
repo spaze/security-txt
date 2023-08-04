@@ -5,8 +5,9 @@ namespace Spaze\SecurityTxt\Fields;
 
 use DateInterval;
 use DateTimeImmutable;
+use JsonSerializable;
 
-class Expires
+class Expires implements JsonSerializable
 {
 
 	private DateInterval $interval;
@@ -35,6 +36,17 @@ class Expires
 	public function getDateTime(): DateTimeImmutable
 	{
 		return $this->dateTime;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'dateTime' => $this->getDateTime()->format(DATE_RFC3339),
+		];
 	}
 
 }

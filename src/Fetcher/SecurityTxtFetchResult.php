@@ -3,9 +3,10 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use JsonSerializable;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtFetchResult
+class SecurityTxtFetchResult implements JsonSerializable
 {
 
 	/**
@@ -66,6 +67,22 @@ class SecurityTxtFetchResult
 	public function getWarnings(): array
 	{
 		return $this->warnings;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'constructedUrl' => $this->getConstructedUrl(),
+			'finalUrl' => $this->getFinalUrl(),
+			'redirects' => $this->getRedirects(),
+			'contents' => $this->getContents(),
+			'errors' => $this->getErrors(),
+			'warnings' => $this->getWarnings(),
+		];
 	}
 
 }

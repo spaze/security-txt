@@ -3,7 +3,9 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-abstract class SecurityTxtSpecViolation
+use JsonSerializable;
+
+abstract class SecurityTxtSpecViolation implements JsonSerializable
 {
 
 	/**
@@ -90,6 +92,26 @@ abstract class SecurityTxtSpecViolation
 	public function getSeeAlsoSections(): array
 	{
 		return $this->seeAlsoSections;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'message' => $this->getMessage(),
+			'messageFormat' => $this->getMessageFormat(),
+			'messageValues' => $this->getMessageValues(),
+			'since' => $this->getSince(),
+			'correctValue' => $this->getCorrectValue(),
+			'howToFix' => $this->getHowToFix(),
+			'howToFixFormat' => $this->getHowToFixFormat(),
+			'howToFixValues' => $this->getHowToFixValues(),
+			'specSection' => $this->getSpecSection(),
+			'seeAlsoSections' => $this->getSeeAlsoSections(),
+		];
 	}
 
 }

@@ -3,7 +3,9 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
 
-class Hiring
+use JsonSerializable;
+
+class Hiring implements JsonSerializable
 {
 
 	public function __construct(
@@ -15,6 +17,17 @@ class Hiring
 	public function getUri(): string
 	{
 		return $this->uri;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'uri' => $this->getUri(),
+		];
 	}
 
 }

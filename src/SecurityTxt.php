@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
 
+use JsonSerializable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\Acknowledgments;
@@ -34,7 +35,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
 
-class SecurityTxt
+class SecurityTxt implements JsonSerializable
 {
 
 	private bool $allowFieldsWithInvalidValues = false;
@@ -337,6 +338,25 @@ class SecurityTxt
 		if (strtolower($scheme) === 'http') {
 			throw new SecurityTxtError(new $notHttpsError($uri));
 		}
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'expires' => $this->getExpires(),
+			'signatureVerifyResult' => $this->getSignatureVerifyResult(),
+			'preferredLanguages' => $this->getPreferredLanguages(),
+			'canonical' => $this->getCanonical(),
+			'contact' => $this->getContact(),
+			'acknowledgments' => $this->getAcknowledgments(),
+			'hiring' => $this->getHiring(),
+			'policy' => $this->getPolicy(),
+			'encryption' => $this->getEncryption(),
+		];
 	}
 
 }

@@ -3,12 +3,13 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use JsonSerializable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 
 /**
  * @internal
  */
-class SecurityTxtFetcherFetchHostResult
+class SecurityTxtFetcherFetchHostResult implements JsonSerializable
 {
 
 	public function __construct(
@@ -47,6 +48,20 @@ class SecurityTxtFetcherFetchHostResult
 	public function getHttpCode(): int
 	{
 		return $this->exception?->getCode() ?? 200;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'url' => $this->getUrl(),
+			'finalUrl' => $this->getFinalUrl(),
+			'contents' => $this->getContents(),
+			'httpCode' => $this->getHttpCode(),
+		];
 	}
 
 }

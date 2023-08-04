@@ -3,10 +3,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Check;
 
+use JsonSerializable;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtCheckHostResult
+class SecurityTxtCheckHostResult implements JsonSerializable
 {
 
 	/**
@@ -160,6 +161,33 @@ class SecurityTxtCheckHostResult
 	public function getExpiresWarningThreshold(): ?int
 	{
 		return $this->expiresWarningThreshold;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'host' => $this->getHost(),
+			'redirects' => $this->getRedirects(),
+			'constructedUrl' => $this->getConstructedUrl(),
+			'finalUrl' => $this->getFinalUrl(),
+			'fetchErrors' => $this->getFetchErrors(),
+			'fetchWarnings' => $this->getFetchWarnings(),
+			'parseErrors' => $this->getParseErrors(),
+			'parseWarnings' => $this->getParseWarnings(),
+			'fileErrors' => $this->getFileErrors(),
+			'fileWarnings' => $this->getFileWarnings(),
+			'securityTxt' => $this->getSecurityTxt(),
+			'expiresSoon' => $this->isExpiresSoon(),
+			'expired' => $this->getIsExpired(),
+			'expiryDays' => $this->getExpiryDays(),
+			'valid' => $this->isValid(),
+			'strictMode' => $this->isStrictMode(),
+			'expiresWarningThreshold' => $this->getExpiresWarningThreshold(),
+		];
 	}
 
 }

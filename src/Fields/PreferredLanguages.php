@@ -3,7 +3,9 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
 
-class PreferredLanguages
+use JsonSerializable;
+
+class PreferredLanguages implements JsonSerializable
 {
 
 	/**
@@ -21,6 +23,17 @@ class PreferredLanguages
 	public function getLanguages(): array
 	{
 		return $this->languages;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'languages' => $this->getLanguages(),
+		];
 	}
 
 }
