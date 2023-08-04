@@ -13,7 +13,7 @@ class SecurityTxtContentTypeInvalid extends SecurityTxtSpecViolation
 			: 'The file at `%s` has no `Content-Type` but it should be a `Content-Type` of `text/plain` with the `charset` parameter set to `utf-8`';
 		parent::__construct(
 			$format,
-			[$url, (string)$contentType],
+			$contentType ? [$url, $contentType] : [$url],
 			'draft-foudil-securitytxt-03',
 			'text/plain; charset=utf-8',
 			'Send a correct `Content-Type` header value of `text/plain` with the `charset` parameter set to `utf-8`',

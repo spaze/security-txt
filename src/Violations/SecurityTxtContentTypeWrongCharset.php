@@ -13,7 +13,7 @@ class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 			: 'The file at `%s` has a correct `Content-Type` of `%s` but the `charset=utf-8` parameter is missing';
 		parent::__construct(
 			$format,
-			[$url, $contentType, (string)$charset],
+			$charset ? [$url, $contentType, $charset] : [$url, $contentType],
 			'draft-foudil-securitytxt-03',
 			'text/plain; charset=utf-8',
 			$charset ? 'Change the parameter to `charset=utf-8`' : 'Add a `charset=utf-8` parameter',
