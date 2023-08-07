@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use JsonSerializable;
+use LogicException;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
@@ -176,18 +177,37 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 	 */
 	public function jsonSerialize(): array
 	{
+		return $this->getJsonSerializeValues(false);
+	}
+
+
+	public function jsonEncodeSimplified(): string
+	{
+		$encoded = json_encode($this->getJsonSerializeValues(true));
+		if (!$encoded) {
+			throw new LogicException('This should not happen');
+		}
+		return $encoded;
+	}
+
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function getJsonSerializeValues(bool $simplify): array
+	{
 		return [
 			'host' => $this->getHost(),
 			'redirects' => $this->getRedirects(),
 			'constructedUrl' => $this->getConstructedUrl(),
 			'finalUrl' => $this->getFinalUrl(),
 			'contents' => $this->getContents(),
-			'fetchErrors' => $this->getFetchErrors(),
-			'fetchWarnings' => $this->getFetchWarnings(),
-			'parseErrors' => $this->getParseErrors(),
-			'parseWarnings' => $this->getParseWarnings(),
-			'fileErrors' => $this->getFileErrors(),
-			'fileWarnings' => $this->getFileWarnings(),
+			'fetchErrors' => $this->simplifyViolations($simplify, $this->getFetchErrors()),
+			'fetchWarnings' => $this->simplifyViolations($simplify, $this->getFetchWarnings()),
+			'parseErrors' => array_map(fn(array $violations): array => $this->simplifyViolations($simplify, $violations), $this->getParseErrors()),
+			'parseWarnings' => array_map(fn(array $violations): array => $this->simplifyViolations($simplify, $violations), $this->getParseWarnings()),
+			'fileErrors' => $this->simplifyViolations($simplify, $this->getFileErrors()),
+			'fileWarnings' => $this->simplifyViolations($simplify, $this->getFileWarnings()),
 			'securityTxt' => $this->getSecurityTxt(),
 			'expiresSoon' => $this->isExpiresSoon(),
 			'expired' => $this->getIsExpired(),
@@ -196,6 +216,19 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 			'strictMode' => $this->isStrictMode(),
 			'expiresWarningThreshold' => $this->getExpiresWarningThreshold(),
 		];
+	}
+
+
+	/**
+	 * @param list<SecurityTxtSpecViolation> $violations
+	 * @return ($simplify is true ? list<array{class: class-string<SecurityTxtSpecViolation>, params: list<mixed>}> : list<SecurityTxtSpecViolation>)
+	 * @return list<($simplify is true ? array{class: class-string<SecurityTxtSpecViolation>, params: list<mixed>} : SecurityTxtSpecViolation)>
+	 */
+	public function simplifyViolations(bool $simplify, array $violations): array
+	{
+		return $simplify
+			? array_map(fn(SecurityTxtSpecViolation $violation): array => ['class' => $violation::class, 'params' => $violation->getConstructorParams()], $violations)
+			: $violations;
 	}
 
 }

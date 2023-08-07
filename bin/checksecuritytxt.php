@@ -5,10 +5,12 @@ declare(strict_types = 1);
 use Spaze\SecurityTxt\Check\ConsolePrinter;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHost;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostCli;
+use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResultFactory;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
+use Spaze\SecurityTxt\SecurityTxtFactory;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 
@@ -38,7 +40,9 @@ $fetcher = new SecurityTxtFetcher($fopenClient);
 $parser = new SecurityTxtParser($validator, $signature, $fetcher);
 $urlParser = new SecurityTxtUrlParser();
 $consolePrinter = new ConsolePrinter();
-$checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher);
+$securitytxtFactory = new SecurityTxtFactory();
+$checkHostResultFactory = new SecurityTxtCheckHostResultFactory($securitytxtFactory);
+$checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);
 $checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost);
 
 /** @var list<string> $args */

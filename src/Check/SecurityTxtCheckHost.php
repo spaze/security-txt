@@ -70,6 +70,7 @@ class SecurityTxtCheckHost
 		private readonly SecurityTxtParser $parser,
 		private readonly SecurityTxtUrlParser $urlParser,
 		private readonly SecurityTxtFetcher $fetcher,
+		private readonly SecurityTxtCheckHostResultFactory $resultFactory,
 	) {
 	}
 
@@ -131,26 +132,7 @@ class SecurityTxtCheckHost
 			$this->callOnCallback($this->onValidSignature, $signatureVerifyResult->getKeyFingerprint(), $signatureVerifyResult->getDate());
 		}
 
-		return new SecurityTxtCheckHostResult(
-			$host,
-			$parseResult->getFetchResult()?->getRedirects() ?? [],
-			$parseResult->getFetchResult()?->getConstructedUrl() ?? null,
-			$parseResult->getFetchResult()?->getFinalUrl() ?? null,
-			$parseResult->getFetchResult()?->getContents() ?? null,
-			$parseResult->getFetchErrors(),
-			$parseResult->getFetchWarnings(),
-			$parseResult->getParseErrors(),
-			$parseResult->getParseWarnings(),
-			$parseResult->getFileErrors(),
-			$parseResult->getFileWarnings(),
-			$parseResult->getSecurityTxt(),
-			$parseResult->isExpiresSoon(),
-			$expires?->isExpired(),
-			$days ?? null,
-			$parseResult->isValid(),
-			$parseResult->isStrictMode(),
-			$parseResult->getExpiresWarningThreshold(),
-		);
+		return $this->resultFactory->create($host, $parseResult);
 	}
 
 
