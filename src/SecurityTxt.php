@@ -86,13 +86,21 @@ class SecurityTxt implements JsonSerializable
 	 */
 	public function setExpires(Expires $expires): void
 	{
-		$this->expires = $expires;
-		if ($expires->isExpired()) {
-			throw new SecurityTxtError(new SecurityTxtExpired());
-		}
-		if ($expires->inDays() > 366) {
-			throw new SecurityTxtWarning(new SecurityTxtExpiresTooLong());
-		}
+		$this->setValue(
+			function () use ($expires): void {
+				$this->expires = $expires;
+			},
+			function () use ($expires): void {
+				if ($expires->isExpired()) {
+					throw new SecurityTxtError(new SecurityTxtExpired());
+				}
+			},
+			function () use ($expires): void {
+				if ($expires->inDays() > 366) {
+					throw new SecurityTxtWarning(new SecurityTxtExpiresTooLong());
+				}
+			},
+		);
 	}
 
 
@@ -310,9 +318,10 @@ class SecurityTxt implements JsonSerializable
 	/**
 	 * @param callable(): void $setValue
 	 * @param callable(): void $validator
+	 * @param (callable(): void)|null $warnings
 	 * @return void
 	 */
-	private function setValue(callable $setValue, callable $validator): void
+	private function setValue(callable $setValue, callable $validator, callable $warnings = null): void
 	{
 		if ($this->allowFieldsWithInvalidValues) {
 			$setValue();
@@ -320,6 +329,9 @@ class SecurityTxt implements JsonSerializable
 		} else {
 			$validator();
 			$setValue();
+		}
+		if ($warnings) {
+			$warnings();
 		}
 	}
 

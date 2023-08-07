@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
@@ -40,15 +41,52 @@ class SecurityTxtTest extends TestCase
 	}
 
 
-	public function testSetExpiresTooLong(): void
+	/**
+	 * @return array<string, array{0:bool}>
+	 */
+	public function getAllowInvalidValues(): array
+	{
+		return [
+			'allow invalid' => [true],
+			'do not allow invalid' => [false],
+		];
+	}
+
+
+	/** @dataProvider getAllowInvalidValues */
+	public function testSetExpiresTooLong(bool $allowInvalidValues): void
 	{
 		$securityTxt = new SecurityTxt();
+		if ($allowInvalidValues) {
+			$securityTxt->allowFieldsWithInvalidValues();
+		}
 		$future = new Expires(new DateTimeImmutable('+1 year +1 month'));
 		$e = Assert::throws(function () use ($securityTxt, $future): void {
 			$securityTxt->setExpires($future);
 		}, SecurityTxtWarning::class);
 		Assert::type(SecurityTxtExpiresTooLong::class, $e->getViolation());
 		Assert::equal($future, $securityTxt->getExpires());
+	}
+
+
+	public function testSetExpired(): void
+	{
+		$securityTxt = new SecurityTxt();
+		$past = new Expires(new DateTimeImmutable('-1 month'));
+		$e = Assert::throws(function () use ($securityTxt, $past): void {
+			$securityTxt->setExpires($past);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtExpired::class, $e->getViolation());
+		Assert::null($securityTxt->getExpires());
+
+		$securityTxt = new SecurityTxt();
+		$securityTxt->allowFieldsWithInvalidValues();
+		$past = new Expires(new DateTimeImmutable('-1 month'));
+		$e = Assert::throws(function () use ($securityTxt, $past): void {
+			$securityTxt->setExpires($past);
+		}, SecurityTxtError::class);
+		Assert::type(SecurityTxtExpired::class, $e->getViolation());
+		Assert::equal($past, $securityTxt->getExpires());
 	}
 
 
