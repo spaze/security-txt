@@ -29,8 +29,7 @@ class SecurityTxtFactory
 	 */
 	public function createFromJsonValues(array $values): SecurityTxt
 	{
-		$securityTxt = new SecurityTxt();
-		$securityTxt->allowFieldsWithInvalidValues();
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		try {
 			if ($values['expires']) {
 				if (!is_array($values['expires'])) {

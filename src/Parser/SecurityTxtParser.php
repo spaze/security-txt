@@ -27,6 +27,7 @@ use Spaze\SecurityTxt\Parser\LineProcessors\PolicyAddFieldValue;
 use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
@@ -119,8 +120,7 @@ class SecurityTxtParser
 			}, SecurityTxtField::cases()),
 			SecurityTxtField::cases(),
 		);
-		$securityTxt = new SecurityTxt();
-		$securityTxt->allowFieldsWithInvalidValues();
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
 		for ($lineNumber = 1; $lineNumber <= count($this->lines); $lineNumber++) {
 			$line = trim($this->lines[$lineNumber - 1]);
 			if (!str_ends_with($this->lines[$lineNumber - 1], "\n")) {

@@ -42,24 +42,21 @@ class SecurityTxtTest extends TestCase
 
 
 	/**
-	 * @return array<string, array{0:bool}>
+	 * @return array<string, array{0:SecurityTxtValidationLevel}>
 	 */
 	public function getAllowInvalidValues(): array
 	{
 		return [
-			'allow invalid' => [true],
-			'do not allow invalid' => [false],
+			'allow invalid' => [SecurityTxtValidationLevel::AllowInvalidValues],
+			'do not allow invalid' => [SecurityTxtValidationLevel::NoInvalidValues],
 		];
 	}
 
 
 	/** @dataProvider getAllowInvalidValues */
-	public function testSetExpiresTooLong(bool $allowInvalidValues): void
+	public function testSetExpiresTooLong(SecurityTxtValidationLevel $validationLevel): void
 	{
-		$securityTxt = new SecurityTxt();
-		if ($allowInvalidValues) {
-			$securityTxt->allowFieldsWithInvalidValues();
-		}
+		$securityTxt = new SecurityTxt($validationLevel);
 		$future = new Expires(new DateTimeImmutable('+1 year +1 month'));
 		$e = Assert::throws(function () use ($securityTxt, $future): void {
 			$securityTxt->setExpires($future);
@@ -79,8 +76,7 @@ class SecurityTxtTest extends TestCase
 		Assert::type(SecurityTxtExpired::class, $e->getViolation());
 		Assert::null($securityTxt->getExpires());
 
-		$securityTxt = new SecurityTxt();
-		$securityTxt->allowFieldsWithInvalidValues();
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
 		$past = new Expires(new DateTimeImmutable('-1 month'));
 		$e = Assert::throws(function () use ($securityTxt, $past): void {
 			$securityTxt->setExpires($past);
@@ -151,8 +147,7 @@ class SecurityTxtTest extends TestCase
 	public function testAddField(array $values, string $fieldClass, callable $addFactory, callable $getFieldFactory, callable $getValue): void
 	{
 		$securityTxt = new SecurityTxt();
-		$securityTxtWithInvalidValues = new SecurityTxt();
-		$securityTxtWithInvalidValues->allowFieldsWithInvalidValues();
+		$securityTxtWithInvalidValues = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
 		$allValues = $validValues = [];
 
 		foreach ($values as $value => $violation) {
@@ -202,8 +197,7 @@ class SecurityTxtTest extends TestCase
 	public function testSetPreferredLanguages(array $languages, ?string $violation): void
 	{
 		$securityTxt = new SecurityTxt();
-		$securityTxtWithInvalidValues = new SecurityTxt();
-		$securityTxtWithInvalidValues->allowFieldsWithInvalidValues();
+		$securityTxtWithInvalidValues = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
 
 		if ($violation) {
 			$e = Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
@@ -225,6 +219,48 @@ class SecurityTxtTest extends TestCase
 			Assert::same($languages, $securityTxt->getPreferredLanguages()->getLanguages());
 		}
 		Assert::same($languages, $securityTxtWithInvalidValues->getPreferredLanguages()->getLanguages());
+	}
+
+
+	public function testSecurityTxtValidationLevelDefault(): void
+	{
+		$securityTxt = new SecurityTxt();
+		Assert::throws(function () use ($securityTxt): void {
+			$securityTxt->setExpires(new Expires(new DateTimeImmutable('-1 month')));
+		}, SecurityTxtError::class, 'The file is considered stale and should not be used');
+		Assert::null($securityTxt->getExpires());
+	}
+
+
+	public function testSecurityTxtValidationLevelNoInvalidValues(): void
+	{
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::NoInvalidValues);
+		Assert::throws(function () use ($securityTxt): void {
+			$securityTxt->setExpires(new Expires(new DateTimeImmutable('-1 month')));
+		}, SecurityTxtError::class, 'The file is considered stale and should not be used');
+		Assert::null($securityTxt->getExpires());
+	}
+
+
+	public function testSecurityTxtValidationLevelAllowInvalidValues(): void
+	{
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
+		$expires = new DateTimeImmutable('-1 month');
+		Assert::throws(function () use ($securityTxt, $expires): void {
+			$securityTxt->setExpires(new Expires($expires));
+		}, SecurityTxtError::class, 'The file is considered stale and should not be used');
+		Assert::equal($expires, $securityTxt->getExpires()->getDateTime());
+	}
+
+
+	public function testSecurityTxtValidationLevelAllowInvalidValuesSilently(): void
+	{
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
+		$expires = new DateTimeImmutable('-1 month');
+		Assert::noError(function () use ($securityTxt, $expires): void {
+			$securityTxt->setExpires(new Expires($expires));
+		});
+		Assert::equal($expires, $securityTxt->getExpires()->getDateTime());
 	}
 
 }

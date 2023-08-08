@@ -38,7 +38,6 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
 class SecurityTxt implements JsonSerializable
 {
 
-	private bool $allowFieldsWithInvalidValues = false;
 	private ?Expires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
 	private ?PreferredLanguages $preferredLanguages = null;
@@ -74,9 +73,9 @@ class SecurityTxt implements JsonSerializable
 	private array $encryption = [];
 
 
-	public function allowFieldsWithInvalidValues(): void
-	{
-		$this->allowFieldsWithInvalidValues = true;
+	public function __construct(
+		private readonly SecurityTxtValidationLevel $validationLevel = SecurityTxtValidationLevel::NoInvalidValues,
+	) {
 	}
 
 
@@ -323,7 +322,11 @@ class SecurityTxt implements JsonSerializable
 	 */
 	private function setValue(callable $setValue, callable $validator, callable $warnings = null): void
 	{
-		if ($this->allowFieldsWithInvalidValues) {
+		if ($this->validationLevel === SecurityTxtValidationLevel::AllowInvalidValuesSilently) {
+			$setValue();
+			return;
+		}
+		if ($this->validationLevel === SecurityTxtValidationLevel::AllowInvalidValues) {
 			$setValue();
 			$validator();
 		} else {
