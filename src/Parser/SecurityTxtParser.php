@@ -141,7 +141,7 @@ class SecurityTxtParser
 			} else {
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
 				if ($suggestion) {
-					$this->parseWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion, $line);
+					$this->parseWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
 				}
 			}
 		}

@@ -181,7 +181,7 @@ class SecurityTxtCheckHostTest extends TestCase
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact')]],
-			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring, 'Hi-ring: https://example.com/hiring')]],
+			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
 			[new SecurityTxtNoContact()],
 			[new SecurityTxtSignatureExtensionNotLoaded()],
 			$securityTxt,
