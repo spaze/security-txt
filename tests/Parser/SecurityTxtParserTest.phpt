@@ -64,7 +64,7 @@ class SecurityTxtParserTest extends TestCase
 		$contents = "Foo: bar\nExpires: " . (new DateTime($fieldValue))->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::same($isExpired, $parseResult->getSecurityTxt()->getExpires()->isExpired());
-		foreach ($parseResult->getParseErrors() as $lineNumber => $lineErrors) {
+		foreach ($parseResult->getLineErrors() as $lineNumber => $lineErrors) {
 			foreach ($lineErrors as $key => $lineError) {
 				Assert::type($errors[$lineNumber][$key], $lineError);
 			}
@@ -77,7 +77,7 @@ class SecurityTxtParserTest extends TestCase
 		$contents = "Expires: 4020-10-05 03:21:00 Europe/Prague\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		/** @var SecurityTxtExpiresWrongFormat $expiresError */
-		$expiresError = $parseResult->getParseErrors()[1][0];
+		$expiresError = $parseResult->getLineErrors()[1][0];
 		Assert::type(SecurityTxtExpiresWrongFormat::class, $expiresError);
 		Assert::same('4020-10-05T03:21:00+02:00', $expiresError->getCorrectValue());
 	}
@@ -88,7 +88,7 @@ class SecurityTxtParserTest extends TestCase
 		$contents = "Expires: Mon, 15 Aug 2005 15:52:01 +0000\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		/** @var \Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat $expiresError */
-		$expiresError = $parseResult->getParseErrors()[1][0];
+		$expiresError = $parseResult->getLineErrors()[1][0];
 		Assert::type(SecurityTxtExpiresOldFormat::class, $expiresError);
 		Assert::same('2005-08-15T15:52:01+00:00', $expiresError->getCorrectValue());
 	}
@@ -108,7 +108,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nExpires: " . (new DateTime('+3 months'))->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		$expiresError = $parseResult->getParseErrors()[3][0];
+		$expiresError = $parseResult->getLineErrors()[3][0];
 		Assert::type(SecurityTxtMultipleExpires::class, $expiresError);
 	}
 
@@ -117,8 +117,8 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: Mon, 15 Aug 2015 15:52:01 +0000\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getParseErrors()[2][0]);
-		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getParseErrors()[3][0]);
+		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
+		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[3][0]);
 	}
 
 
@@ -126,7 +126,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getParseErrors()[2][0]);
+		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
 	}
 
 
@@ -134,9 +134,9 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::count(2, $parseResult->getParseErrors()[3]);
-		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getParseErrors()[3][0]);
-		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getParseErrors()[3][1]);
+		Assert::count(2, $parseResult->getLineErrors()[3]);
+		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
+		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[3][1]);
 	}
 
 
@@ -147,7 +147,7 @@ class SecurityTxtParserTest extends TestCase
 			$parseResult = $this->securityTxtParser->parseString($contents);
 			Assert::same($mailto, $parseResult->getSecurityTxt()->getContact()[0]->getUri());
 			Assert::same($expires, $parseResult->getSecurityTxt()->getExpires()->getDateTime()->format(DATE_RFC3339));
-			Assert::count(0, $parseResult->getParseErrors());
+			Assert::count(0, $parseResult->getLineErrors());
 			Assert::count(0, $parseResult->getFileErrors());
 		};
 		$assertParsed('mailto:foo@bar.example', (new DateTime('+2 months'))->format(DATE_RFC3339));
@@ -159,11 +159,11 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nExpires: " . (new DateTime('+3 months'))->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getParseErrors()[3][0]);
+		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
 
 		$contents = "Expires: Mon, 15 Aug 2005 15:52:01 +0000\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getParseErrors()[1][0]);
+		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[1][0]);
 	}
 
 
@@ -171,10 +171,10 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 years'))->format(DATE_RFC3339) . "\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::count(0, $parseResult->getParseErrors());
-		Assert::count(1, $parseResult->getParseWarnings());
-		Assert::count(1, $parseResult->getParseWarnings()[2]);
-		Assert::type(SecurityTxtExpiresTooLong::class, $parseResult->getParseWarnings()[2][0]);
+		Assert::count(0, $parseResult->getLineErrors());
+		Assert::count(1, $parseResult->getLineWarnings());
+		Assert::count(1, $parseResult->getLineWarnings()[2]);
+		Assert::type(SecurityTxtExpiresTooLong::class, $parseResult->getLineWarnings()[2][0]);
 	}
 
 
@@ -191,16 +191,16 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = 'Expires: ' . (new DateTime('+3 months'))->format(DATE_RFC3339) . "\nContact: https://foo.example/";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::count(1, $parseResult->getParseErrors());
-		Assert::count(1, $parseResult->getParseErrors()[2]);
-		Assert::type(SecurityTxtLineNoEol::class, $parseResult->getParseErrors()[2][0]);
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::count(1, $parseResult->getLineErrors()[2]);
+		Assert::type(SecurityTxtLineNoEol::class, $parseResult->getLineErrors()[2][0]);
 	}
 
 
 	public function testParseStringPreferredLanguages(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en,CS\n");
-		Assert::count(0, $parseResult->getParseErrors());
+		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same(['en', 'CS'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
 	}
 
@@ -208,16 +208,16 @@ class SecurityTxtParserTest extends TestCase
 	public function testParseStringMultiplePreferredLanguages(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en\nPreferred-Languages: cs\n");
-		Assert::count(1, $parseResult->getParseErrors());
-		Assert::type(SecurityTxtMultiplePreferredLanguages::class, $parseResult->getParseErrors()[2][0]);
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::type(SecurityTxtMultiplePreferredLanguages::class, $parseResult->getLineErrors()[2][0]);
 	}
 
 
 	public function testParseStringPreferredLanguagesBadSeparator(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en, cs;fi. nl\n");
-		$error = $parseResult->getParseErrors()[1][0];
-		Assert::count(1, $parseResult->getParseErrors());
+		$error = $parseResult->getLineErrors()[1][0];
+		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesSeparatorNotComma::class, $error);
 		Assert::same('The `Preferred-Languages` field uses wrong separators (#2 `;`, #3 `.`), separate multiple values with a comma (`,`)', $error->getMessage());
 		Assert::same('en, cs, fi, nl', $error->getCorrectValue());
@@ -227,14 +227,14 @@ class SecurityTxtParserTest extends TestCase
 	public function testParseStringPreferredLanguagesCommonMistake(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: CZ,en\n");
-		$error = $parseResult->getParseErrors()[1][0];
-		Assert::count(1, $parseResult->getParseErrors());
+		$error = $parseResult->getLineErrors()[1][0];
+		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
 		Assert::same('The language tag #1 `CZ` in the `Preferred-Languages` field is not correct, the code for Czech language is `cs`, not `cz`', $error->getMessage());
 		Assert::same(['CZ', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
 
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: CZ-Czechia,en\n");
-		$error = $parseResult->getParseErrors()[1][0];
+		$error = $parseResult->getLineErrors()[1][0];
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
 		Assert::same('cs-Czechia', $error->getCorrectValue());
 		Assert::same(['CZ-Czechia', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
@@ -245,7 +245,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$uri = 'https://example.com/ack.gif';
 		$parseResult = $this->securityTxtParser->parseString("Acknowledgments: {$uri}\n");
-		Assert::count(0, $parseResult->getParseErrors());
+		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getAcknowledgments()[0]->getUri());
 	}
 
@@ -255,8 +255,8 @@ class SecurityTxtParserTest extends TestCase
 		$uri1 = "https://example.example/whole-of-fame";
 		$uri2 = 'https://example.com/ack.gif';
 		$parseResult = $this->securityTxtParser->parseString("Acknowledgments: {$uri1}\nAcknowledgements: {$uri2}\n");
-		Assert::count(0, $parseResult->getParseErrors());
-		$warning = $parseResult->getParseWarnings()[2][0];
+		Assert::count(0, $parseResult->getLineErrors());
+		$warning = $parseResult->getLineWarnings()[2][0];
 		Assert::type(SecurityTxtPossibelFieldTypo::class, $warning);
 		Assert::same("Acknowledgments: {$uri2}", $warning->getCorrectValue());
 		Assert::count(1, $parseResult->getSecurityTxt()->getAcknowledgments());
@@ -268,7 +268,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$uri = 'https://example.com/cv.psd';
 		$parseResult = $this->securityTxtParser->parseString("Hiring: {$uri}\n");
-		Assert::count(0, $parseResult->getParseErrors());
+		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getHiring()[0]->getUri());
 	}
 
@@ -277,7 +277,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$uri = 'https://example.com/policy.pcx';
 		$parseResult = $this->securityTxtParser->parseString("Policy: {$uri}\n");
-		Assert::count(0, $parseResult->getParseErrors());
+		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getPolicy()[0]->getUri());
 	}
 
@@ -286,7 +286,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$uri = 'https://example.com/keys.ico';
 		$parseResult = $this->securityTxtParser->parseString("Encryption: {$uri}\n");
-		Assert::count(0, $parseResult->getParseErrors());
+		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getEncryption()[0]->getUri());
 	}
 

@@ -94,10 +94,10 @@ class SecurityTxtCheckHostCli
 			));
 		};
 		$this->checkHost->addOnFetchError($onError);
-		$this->checkHost->addOnParseError($onError);
+		$this->checkHost->addOnLineError($onError);
 		$this->checkHost->addOnFileError($onError);
 		$this->checkHost->addOnFetchWarning($onWarning);
-		$this->checkHost->addOnParseWarning($onWarning);
+		$this->checkHost->addOnLineWarning($onWarning);
 		$this->checkHost->addOnFileWarning($onWarning);
 
 		if ($colors) {

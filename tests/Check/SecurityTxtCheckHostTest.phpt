@@ -72,7 +72,7 @@ class SecurityTxtCheckHostTest extends TestCase
 					'seeAlsoSections' => [],
 				],
 			],
-			'parseErrors' => [
+			'lineErrors' => [
 				2 => [
 					[
 						'message' => "The line (`Contact: https://example.com/contact`) doesn't end with neither <CRLF> nor <LF>",
@@ -88,7 +88,7 @@ class SecurityTxtCheckHostTest extends TestCase
 					],
 				],
 			],
-			'parseWarnings' => [
+			'lineWarnings' => [
 				1 => [
 					[
 						'message' => 'Field `Hi-ring` may be a typo, did you mean `Hiring`?',
@@ -217,7 +217,7 @@ class SecurityTxtCheckHostTest extends TestCase
 					'params' => [],
 				],
 			],
-			'parseErrors' => [
+			'lineErrors' => [
 				2 => [
 					[
 						'class' => SecurityTxtLineNoEol::class,
@@ -225,7 +225,7 @@ class SecurityTxtCheckHostTest extends TestCase
 					],
 				],
 			],
-			'parseWarnings' => [
+			'lineWarnings' => [
 				1 => [
 					[
 						'class' => SecurityTxtPossibelFieldTypo::class,

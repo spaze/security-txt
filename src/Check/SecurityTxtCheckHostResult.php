@@ -15,8 +15,8 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 	 * @param array<string, list<string>> $redirects
 	 * @param list<SecurityTxtSpecViolation> $fetchErrors
 	 * @param list<SecurityTxtSpecViolation> $fetchWarnings
-	 * @param array<int, list<SecurityTxtSpecViolation>> $parseErrors
-	 * @param array<int, list<SecurityTxtSpecViolation>> $parseWarnings
+	 * @param array<int, list<SecurityTxtSpecViolation>> $lineErrors
+	 * @param array<int, list<SecurityTxtSpecViolation>> $lineWarnings
 	 * @param list<SecurityTxtSpecViolation> $fileErrors
 	 * @param list<SecurityTxtSpecViolation> $fileWarnings
 	 */
@@ -28,8 +28,8 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 		private readonly ?string $contents,
 		private readonly array $fetchErrors,
 		private readonly array $fetchWarnings,
-		private readonly array $parseErrors,
-		private readonly array $parseWarnings,
+		private readonly array $lineErrors,
+		private readonly array $lineWarnings,
 		private readonly array $fileErrors,
 		private readonly array $fileWarnings,
 		private readonly SecurityTxt $securityTxt,
@@ -97,18 +97,18 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 	/**
 	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
-	public function getParseErrors(): array
+	public function getLineErrors(): array
 	{
-		return $this->parseErrors;
+		return $this->lineErrors;
 	}
 
 
 	/**
 	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
-	public function getParseWarnings(): array
+	public function getLineWarnings(): array
 	{
-		return $this->parseWarnings;
+		return $this->lineWarnings;
 	}
 
 
@@ -204,8 +204,8 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 			'contents' => $this->getContents(),
 			'fetchErrors' => $this->simplifyViolations($simplify, $this->getFetchErrors()),
 			'fetchWarnings' => $this->simplifyViolations($simplify, $this->getFetchWarnings()),
-			'parseErrors' => array_map(fn(array $violations): array => $this->simplifyViolations($simplify, $violations), $this->getParseErrors()),
-			'parseWarnings' => array_map(fn(array $violations): array => $this->simplifyViolations($simplify, $violations), $this->getParseWarnings()),
+			'lineErrors' => array_map(fn(array $violations): array => $this->simplifyViolations($simplify, $violations), $this->getLineErrors()),
+			'lineWarnings' => array_map(fn(array $violations): array => $this->simplifyViolations($simplify, $violations), $this->getLineWarnings()),
 			'fileErrors' => $this->simplifyViolations($simplify, $this->getFileErrors()),
 			'fileWarnings' => $this->simplifyViolations($simplify, $this->getFileWarnings()),
 			'securityTxt' => $this->getSecurityTxt(),

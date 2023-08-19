@@ -46,10 +46,10 @@ class SecurityTxtParser
 	private array $lineProcessors = [];
 
 	/** @var array<int, list<SecurityTxtSpecViolation>> */
-	private array $parseErrors = [];
+	private array $lineErrors = [];
 
 	/** @var array<int, list<SecurityTxtSpecViolation>> */
-	private array $parseWarnings = [];
+	private array $lineWarnings = [];
 
 
 	public function __construct(
@@ -98,9 +98,9 @@ class SecurityTxtParser
 			try {
 				$processor->process($value, $securityTxt);
 			} catch (SecurityTxtError $e) {
-				$this->parseErrors[$lineNumber][] = $e->getViolation();
+				$this->lineErrors[$lineNumber][] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {
-				$this->parseWarnings[$lineNumber][] = $e->getViolation();
+				$this->lineWarnings[$lineNumber][] = $e->getViolation();
 			}
 		}
 	}
@@ -108,7 +108,7 @@ class SecurityTxtParser
 
 	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
 	{
-		$this->parseErrors = [];
+		$this->lineErrors = [];
 		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
 		if (!$lines) {
 			throw new LogicException('This should not happen');
@@ -124,7 +124,7 @@ class SecurityTxtParser
 		for ($lineNumber = 1; $lineNumber <= count($this->lines); $lineNumber++) {
 			$line = trim($this->lines[$lineNumber - 1]);
 			if (!str_ends_with($this->lines[$lineNumber - 1], "\n")) {
-				$this->parseErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
+				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
 			}
 			if (str_starts_with($line, '#')) {
 				continue;
@@ -141,23 +141,23 @@ class SecurityTxtParser
 			} else {
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
 				if ($suggestion) {
-					$this->parseWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
+					$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
 				}
 			}
 		}
 		$validateResult = $this->validator->validate($securityTxt);
 		$expires = $securityTxt->getExpires();
 		$expiresSoon = $expiresWarningThreshold !== null && $expires?->inDays() < $expiresWarningThreshold;
-		$hasErrors = $this->parseErrors || $validateResult->getErrors();
-		$hasWarnings = $this->parseWarnings || $validateResult->getWarnings();
+		$hasErrors = $this->lineErrors || $validateResult->getErrors();
+		$hasWarnings = $this->lineWarnings || $validateResult->getWarnings();
 		return new SecurityTxtParseResult(
 			$securityTxt,
 			!$expires?->isExpired() && (!$strictMode || !$expiresSoon) && !$hasErrors && (!$strictMode || !$hasWarnings),
 			$strictMode,
 			$expiresWarningThreshold,
 			$expiresSoon,
-			$this->parseErrors,
-			$this->parseWarnings,
+			$this->lineErrors,
+			$this->lineWarnings,
 			$validateResult,
 		);
 	}
@@ -182,8 +182,8 @@ class SecurityTxtParser
 			$parseResult->isStrictMode(),
 			$parseResult->getExpiresWarningThreshold(),
 			$parseResult->isExpiresSoon(),
-			$parseResult->getParseErrors(),
-			$parseResult->getParseWarnings(),
+			$parseResult->getLineErrors(),
+			$parseResult->getLineWarnings(),
 			$parseResult->getValidateResult(),
 			$fetchResult,
 		);
@@ -197,9 +197,9 @@ class SecurityTxtParser
 				$result = $this->signature->verify($contents);
 				$securityTxt->setSignatureVerifyResult($result);
 			} catch (SecurityTxtError $e) {
-				$this->parseErrors[$lineNumber][] = $e->getViolation();
+				$this->lineErrors[$lineNumber][] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {
-				$this->parseWarnings[$lineNumber][] = $e->getViolation();
+				$this->lineWarnings[$lineNumber][] = $e->getViolation();
 			}
 		}
 	}

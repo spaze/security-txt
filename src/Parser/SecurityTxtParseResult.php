@@ -13,8 +13,8 @@ class SecurityTxtParseResult implements JsonSerializable
 {
 
 	/**
-	 * @param array<int, list<SecurityTxtSpecViolation>> $parseErrors
-	 * @param array<int, list<SecurityTxtSpecViolation>> $parseWarnings
+	 * @param array<int, list<SecurityTxtSpecViolation>> $lineErrors
+	 * @param array<int, list<SecurityTxtSpecViolation>> $lineWarnings
 	 */
 	public function __construct(
 		private readonly SecurityTxt $securityTxt,
@@ -22,8 +22,8 @@ class SecurityTxtParseResult implements JsonSerializable
 		private readonly bool $strictMode,
 		private readonly ?int $expiresWarningThreshold,
 		private readonly bool $expiresSoon,
-		private readonly array $parseErrors,
-		private readonly array $parseWarnings,
+		private readonly array $lineErrors,
+		private readonly array $lineWarnings,
 		private readonly SecurityTxtValidateResult $validateResult,
 		private readonly ?SecurityTxtFetchResult $fetchResult = null,
 	) {
@@ -72,9 +72,9 @@ class SecurityTxtParseResult implements JsonSerializable
 	/**
 	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
-	public function getParseErrors(): array
+	public function getLineErrors(): array
 	{
-		return $this->parseErrors;
+		return $this->lineErrors;
 	}
 
 
@@ -89,7 +89,7 @@ class SecurityTxtParseResult implements JsonSerializable
 
 	public function hasErrors(): bool
 	{
-		return $this->getFetchErrors() || $this->getParseErrors() || $this->getFileErrors();
+		return $this->getFetchErrors() || $this->getLineErrors() || $this->getFileErrors();
 	}
 
 
@@ -105,9 +105,9 @@ class SecurityTxtParseResult implements JsonSerializable
 	/**
 	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
-	public function getParseWarnings(): array
+	public function getLineWarnings(): array
 	{
-		return $this->parseWarnings;
+		return $this->lineWarnings;
 	}
 
 
@@ -122,7 +122,7 @@ class SecurityTxtParseResult implements JsonSerializable
 
 	public function hasWarnings(): bool
 	{
-		return $this->getFetchWarnings() || $this->getParseWarnings() || $this->getFileWarnings();
+		return $this->getFetchWarnings() || $this->getLineWarnings() || $this->getFileWarnings();
 	}
 
 
@@ -149,8 +149,8 @@ class SecurityTxtParseResult implements JsonSerializable
 			'strictMode' => $this->isStrictMode(),
 			'expiresWarningThreshold' => $this->getExpiresWarningThreshold(),
 			'expiresSoon' => $this->isExpiresSoon(),
-			'parseErrors' => $this->getParseErrors(),
-			'parseWarnings' => $this->getParseWarnings(),
+			'lineErrors' => $this->getLineErrors(),
+			'lineWarnings' => $this->getLineWarnings(),
 			'validateResult' => $this->getValidateResult(),
 			'fetchResult' => $this->getFetchResult(),
 		];

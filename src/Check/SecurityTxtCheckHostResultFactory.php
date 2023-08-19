@@ -27,8 +27,8 @@ class SecurityTxtCheckHostResultFactory
 			$parseResult->getFetchResult()?->getContents(),
 			$parseResult->getFetchErrors(),
 			$parseResult->getFetchWarnings(),
-			$parseResult->getParseErrors(),
-			$parseResult->getParseWarnings(),
+			$parseResult->getLineErrors(),
+			$parseResult->getLineWarnings(),
 			$parseResult->getFileErrors(),
 			$parseResult->getFileWarnings(),
 			$parseResult->getSecurityTxt(),
@@ -86,31 +86,31 @@ class SecurityTxtCheckHostResultFactory
 		if (!is_array($values['fetchWarnings'])) {
 			throw new SecurityTxtCannotParseJsonException('fetchWarnings is not an array');
 		}
-		if (!is_array($values['parseErrors'])) {
-			throw new SecurityTxtCannotParseJsonException('parseErrors is not an array');
+		if (!is_array($values['lineErrors'])) {
+			throw new SecurityTxtCannotParseJsonException('lineErrors is not an array');
 		}
-		$parseErrors = [];
-		foreach ($values['parseErrors'] as $line => $violations) {
+		$lineErrors = [];
+		foreach ($values['lineErrors'] as $line => $violations) {
 			if (!is_int($line)) {
-				throw new SecurityTxtCannotParseJsonException("parseErrors > {$line} key is not an int");
+				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} key is not an int");
 			}
 			if (!is_array($violations)) {
-				throw new SecurityTxtCannotParseJsonException("parseErrors > {$line} is not an array");
+				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} is not an array");
 			}
-			$parseErrors[$line] = $this->createViolations(array_values($violations));
+			$lineErrors[$line] = $this->createViolations(array_values($violations));
 		}
-		$parseWarnings = [];
-		foreach ($values['parseWarnings'] as $line => $violations) {
+		$lineWarnings = [];
+		foreach ($values['lineWarnings'] as $line => $violations) {
 			if (!is_int($line)) {
-				throw new SecurityTxtCannotParseJsonException("parseWarnings > {$line} key is not an int");
+				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$line} key is not an int");
 			}
 			if (!is_array($violations)) {
-				throw new SecurityTxtCannotParseJsonException("parseWarnings > {$line} is not an array");
+				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$line} is not an array");
 			}
-			$parseWarnings[$line] = $this->createViolations(array_values($violations));
+			$lineWarnings[$line] = $this->createViolations(array_values($violations));
 		}
-		if (!is_array($values['parseWarnings'])) {
-			throw new SecurityTxtCannotParseJsonException('parseWarnings is not an array');
+		if (!is_array($values['lineWarnings'])) {
+			throw new SecurityTxtCannotParseJsonException('lineWarnings is not an array');
 		}
 		if (!is_array($values['fileErrors'])) {
 			throw new SecurityTxtCannotParseJsonException('fileErrors is not an array');
@@ -139,8 +139,8 @@ class SecurityTxtCheckHostResultFactory
 			$values['contents'],
 			$this->createViolations(array_values($values['fetchErrors'])),
 			$this->createViolations(array_values($values['fetchWarnings'])),
-			$parseErrors,
-			$parseWarnings,
+			$lineErrors,
+			$lineWarnings,
 			$this->createViolations(array_values($values['fileErrors'])),
 			$this->createViolations(array_values($values['fileWarnings'])),
 			$this->securityTxtFactory->createFromJsonValues($securityTxtFields),

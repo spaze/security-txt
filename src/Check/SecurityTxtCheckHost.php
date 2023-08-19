@@ -51,7 +51,7 @@ class SecurityTxtCheckHost
 	private array $onFetchError = [];
 
 	/** @var list<callable(?int, string, string, ?string): void> */
-	private array $onParseError = [];
+	private array $onLineError = [];
 
 	/** @var list<callable(?int, string, string, ?string): void> */
 	private array $onFileError = [];
@@ -60,7 +60,7 @@ class SecurityTxtCheckHost
 	private array $onFetchWarning = [];
 
 	/** @var list<callable(?int, string, string, ?string): void> */
-	private array $onParseWarning = [];
+	private array $onLineWarning = [];
 
 	/** @var list<callable(?int, string, string, ?string): void> */
 	private array $onFileWarning = [];
@@ -96,9 +96,9 @@ class SecurityTxtCheckHost
 		foreach ($parseResult->getFetchErrors() as $error) {
 			$this->error($this->onFetchError, $error);
 		}
-		foreach ($parseResult->getParseErrors() as $line => $errors) {
+		foreach ($parseResult->getLineErrors() as $line => $errors) {
 			foreach ($errors as $error) {
-				$this->error($this->onParseError, $error, $line);
+				$this->error($this->onLineError, $error, $line);
 			}
 		}
 		foreach ($parseResult->getFileErrors() as $error) {
@@ -107,9 +107,9 @@ class SecurityTxtCheckHost
 		foreach ($parseResult->getFetchWarnings() as $warning) {
 			$this->warning($this->onFetchWarning, $warning);
 		}
-		foreach ($parseResult->getParseWarnings() as $line => $warnings) {
+		foreach ($parseResult->getLineWarnings() as $line => $warnings) {
 			foreach ($warnings as $warning) {
-				$this->warning($this->onParseWarning, $warning, $line);
+				$this->warning($this->onLineWarning, $warning, $line);
 			}
 		}
 		foreach ($parseResult->getFileWarnings() as $warning) {
@@ -281,11 +281,11 @@ class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onParseError
+	 * @param callable(?int, string, string, ?string): void $onLineError
 	 */
-	public function addOnParseError(callable $onParseError): void
+	public function addOnLineError(callable $onLineError): void
 	{
-		$this->onParseError[] = $onParseError;
+		$this->onLineError[] = $onLineError;
 	}
 
 
@@ -308,11 +308,11 @@ class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onParseWarning
+	 * @param callable(?int, string, string, ?string): void $onLineWarning
 	 */
-	public function addOnParseWarning(callable $onParseWarning): void
+	public function addOnLineWarning(callable $onLineWarning): void
 	{
-		$this->onParseWarning[] = $onParseWarning;
+		$this->onLineWarning[] = $onLineWarning;
 	}
 
 
