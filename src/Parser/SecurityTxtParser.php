@@ -15,17 +15,17 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
-use Spaze\SecurityTxt\Parser\LineProcessors\AcknowledgmentsAddFieldValue;
-use Spaze\SecurityTxt\Parser\LineProcessors\CanonicalAddFieldValue;
-use Spaze\SecurityTxt\Parser\LineProcessors\ContactAddFieldValue;
-use Spaze\SecurityTxt\Parser\LineProcessors\EncryptionAddFieldValue;
-use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresCheckMultipleFields;
-use Spaze\SecurityTxt\Parser\LineProcessors\ExpiresSetFieldValue;
-use Spaze\SecurityTxt\Parser\LineProcessors\HiringAddFieldValue;
-use Spaze\SecurityTxt\Parser\LineProcessors\LineProcessor;
-use Spaze\SecurityTxt\Parser\LineProcessors\PolicyAddFieldValue;
-use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesCheckMultipleFields;
-use Spaze\SecurityTxt\Parser\LineProcessors\PreferredLanguagesSetFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\AcknowledgmentsAddFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\CanonicalAddFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\ContactAddFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\EncryptionAddFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\ExpiresCheckMultipleFields;
+use Spaze\SecurityTxt\Parser\FieldProcessors\ExpiresSetFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\FieldProcessor;
+use Spaze\SecurityTxt\Parser\FieldProcessors\HiringAddFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\PolicyAddFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesCheckMultipleFields;
+use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
@@ -41,9 +41,9 @@ class SecurityTxtParser
 	private array $lines = [];
 
 	/**
-	 * @var array<string, list<LineProcessor>>
+	 * @var array<string, list<FieldProcessor>>
 	 */
-	private array $lineProcessors = [];
+	private array $fieldProcessors = [];
 
 	/** @var array<int, list<SecurityTxtSpecViolation>> */
 	private array $lineErrors = [];
@@ -60,41 +60,41 @@ class SecurityTxtParser
 	}
 
 
-	private function initLineProcessors(): void
+	private function initFieldProcessors(): void
 	{
-		$this->lineProcessors[SecurityTxtField::Acknowledgments->value] = [
+		$this->fieldProcessors[SecurityTxtField::Acknowledgments->value] = [
 			new AcknowledgmentsAddFieldValue(),
 		];
-		$this->lineProcessors[SecurityTxtField::Canonical->value] = [
+		$this->fieldProcessors[SecurityTxtField::Canonical->value] = [
 			new CanonicalAddFieldValue(),
 		];
-		$this->lineProcessors[SecurityTxtField::Contact->value] = [
+		$this->fieldProcessors[SecurityTxtField::Contact->value] = [
 			new ContactAddFieldValue(),
 		];
-		$this->lineProcessors[SecurityTxtField::Encryption->value] = [
+		$this->fieldProcessors[SecurityTxtField::Encryption->value] = [
 			new EncryptionAddFieldValue(),
 		];
-		$this->lineProcessors[SecurityTxtField::Expires->value] = [
+		$this->fieldProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),
 			new ExpiresSetFieldValue(),
 		];
-		$this->lineProcessors[SecurityTxtField::Hiring->value] = [
+		$this->fieldProcessors[SecurityTxtField::Hiring->value] = [
 			new HiringAddFieldValue(),
 		];
-		$this->lineProcessors[SecurityTxtField::Policy->value] = [
+		$this->fieldProcessors[SecurityTxtField::Policy->value] = [
 			new PolicyAddFieldValue(),
 		];
-		$this->lineProcessors[SecurityTxtField::PreferredLanguages->value] = [
+		$this->fieldProcessors[SecurityTxtField::PreferredLanguages->value] = [
 			new PreferredLanguagesCheckMultipleFields(),
 			new PreferredLanguagesSetFieldValue(),
 		];
 	}
 
 
-	private function processLine(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt): void
+	private function processField(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt): void
 	{
-		$this->initLineProcessors();
-		foreach ($this->lineProcessors[$field->value] as $processor) {
+		$this->initFieldProcessors();
+		foreach ($this->fieldProcessors[$field->value] as $processor) {
 			try {
 				$processor->process($value, $securityTxt);
 			} catch (SecurityTxtError $e) {
@@ -137,7 +137,7 @@ class SecurityTxtParser
 			$fieldName = strtolower($field[0]);
 			$fieldValue = trim($field[1]);
 			if (isset($securityTxtFields[$fieldName])) {
-				$this->processLine($lineNumber, $fieldValue, $securityTxtFields[$fieldName], $securityTxt);
+				$this->processField($lineNumber, $fieldValue, $securityTxtFields[$fieldName], $securityTxt);
 			} else {
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
 				if ($suggestion) {

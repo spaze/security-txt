@@ -2,7 +2,7 @@
 /** @noinspection PhpUnhandledExceptionInspection */
 declare(strict_types = 1);
 
-namespace Spaze\SecurityTxt\Parser\LineProcessors;
+namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;

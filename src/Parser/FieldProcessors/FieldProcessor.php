@@ -1,13 +1,13 @@
 <?php
 declare(strict_types = 1);
 
-namespace Spaze\SecurityTxt\Parser\LineProcessors;
+namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\SecurityTxt;
 
-interface LineProcessor
+interface FieldProcessor
 {
 
 	/**

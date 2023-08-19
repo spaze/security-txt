@@ -1,12 +1,12 @@
 <?php
 declare(strict_types = 1);
 
-namespace Spaze\SecurityTxt\Parser\LineProcessors;
+namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\SecurityTxt;
 
-class AcknowledgmentsAddFieldValue implements LineProcessor
+class AcknowledgmentsAddFieldValue implements FieldProcessor
 {
 
 	public function process(string $value, SecurityTxt $securityTxt): void

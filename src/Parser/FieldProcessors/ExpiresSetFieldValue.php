@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Spaze\SecurityTxt\Parser\LineProcessors;
+namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use DateTimeImmutable;
 use Exception;
@@ -12,7 +12,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 
-class ExpiresSetFieldValue implements LineProcessor
+class ExpiresSetFieldValue implements FieldProcessor
 {
 
 	/**

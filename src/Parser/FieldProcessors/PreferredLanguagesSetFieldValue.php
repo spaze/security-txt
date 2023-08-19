@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Spaze\SecurityTxt\Parser\LineProcessors;
+namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
@@ -9,7 +9,7 @@ use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 
-class PreferredLanguagesSetFieldValue implements LineProcessor
+class PreferredLanguagesSetFieldValue implements FieldProcessor
 {
 
 	public function process(string $value, SecurityTxt $securityTxt): void
