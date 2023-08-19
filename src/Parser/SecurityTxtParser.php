@@ -62,6 +62,9 @@ class SecurityTxtParser
 
 	private function initFieldProcessors(): void
 	{
+		if ($this->fieldProcessors !== []) {
+			return;
+		}
 		$this->fieldProcessors[SecurityTxtField::Acknowledgments->value] = [
 			new AcknowledgmentsAddFieldValue(),
 		];
