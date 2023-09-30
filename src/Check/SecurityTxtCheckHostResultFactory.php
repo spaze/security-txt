@@ -4,15 +4,16 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseResult;
 use Spaze\SecurityTxt\SecurityTxtFactory;
-use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
 class SecurityTxtCheckHostResultFactory
 {
 
 	public function __construct(
 		private readonly SecurityTxtFactory $securityTxtFactory,
+		private readonly SecurityTxtJson $securityTxtJson,
 	) {
 	}
 
@@ -97,7 +98,7 @@ class SecurityTxtCheckHostResultFactory
 			if (!is_array($violations)) {
 				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} is not an array");
 			}
-			$lineErrors[$line] = $this->createViolations(array_values($violations));
+			$lineErrors[$line] = $this->securityTxtJson->createViolationsFromJsonValues(array_values($violations));
 		}
 		$lineWarnings = [];
 		foreach ($values['lineWarnings'] as $line => $violations) {
@@ -107,7 +108,7 @@ class SecurityTxtCheckHostResultFactory
 			if (!is_array($violations)) {
 				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$line} is not an array");
 			}
-			$lineWarnings[$line] = $this->createViolations(array_values($violations));
+			$lineWarnings[$line] = $this->securityTxtJson->createViolationsFromJsonValues(array_values($violations));
 		}
 		if (!is_array($values['lineWarnings'])) {
 			throw new SecurityTxtCannotParseJsonException('lineWarnings is not an array');
@@ -137,12 +138,12 @@ class SecurityTxtCheckHostResultFactory
 			$values['constructedUrl'],
 			$values['finalUrl'],
 			$values['contents'],
-			$this->createViolations(array_values($values['fetchErrors'])),
-			$this->createViolations(array_values($values['fetchWarnings'])),
+			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fetchErrors'])),
+			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fetchWarnings'])),
 			$lineErrors,
 			$lineWarnings,
-			$this->createViolations(array_values($values['fileErrors'])),
-			$this->createViolations(array_values($values['fileWarnings'])),
+			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fileErrors'])),
+			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fileWarnings'])),
 			$this->securityTxtFactory->createFromJsonValues($securityTxtFields),
 			$values['expiresSoon'],
 			$values['expired'],
@@ -151,30 +152,6 @@ class SecurityTxtCheckHostResultFactory
 			$values['strictMode'],
 			$values['expiresWarningThreshold'],
 		);
-	}
-
-
-	/**
-	 * @param list<mixed> $violations
-	 * @return list<SecurityTxtSpecViolation>
-	 * @throws SecurityTxtCannotParseJsonException
-	 */
-	private function createViolations(array $violations): array
-	{
-		$objects = [];
-		foreach ($violations as $violation) {
-			if (!is_array($violation) || !isset($violation['class']) || !is_string($violation['class'])) {
-				throw new SecurityTxtCannotParseJsonException('class is missing or not a string');
-			} elseif (!class_exists($violation['class'])) {
-				throw new SecurityTxtCannotParseJsonException("class {$violation['class']} doesn't exist");
-			}
-			$object = new $violation['class'](...$violation['params']);
-			if (!$object instanceof SecurityTxtSpecViolation) {
-				throw new SecurityTxtCannotParseJsonException(sprintf("class %s doesn't extend %s", $violation['class'], SecurityTxtSpecViolation::class));
-			}
-			$objects[] = $object;
-		}
-		return $objects;
 	}
 
 }

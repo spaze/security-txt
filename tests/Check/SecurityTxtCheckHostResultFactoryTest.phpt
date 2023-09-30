@@ -10,6 +10,7 @@ use DateTimeImmutable;
 use ReflectionProperty;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtFactory;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
@@ -31,7 +32,8 @@ class SecurityTxtCheckHostResultFactoryTest extends TestCase
 	public function testCreateFromJson(): void
 	{
 		$securityTxtFactory = new SecurityTxtFactory();
-		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory);
+		$violationFactory = new SecurityTxtJson();
+		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory, $violationFactory);
 		$expectedResult = $this->getResult();
 		$actualResult = $resultFactory->createFromJson(json_encode($expectedResult));
 		$this->setExpiresInterval($expectedResult);
