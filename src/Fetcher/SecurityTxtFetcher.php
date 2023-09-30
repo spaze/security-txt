@@ -87,7 +87,8 @@ class SecurityTxtFetcher
 				throw new SecurityTxtHostNotFoundException($url, $host);
 			}
 			$records = array_merge(...$records);
-			$response = $this->getResponse($this->buildUrl($urlTemplate, $records['ipv6'] ?? $records['ip']), $urlTemplate, $host, true);
+			$ipAddress = isset($records['ipv6']) ? "[{$records['ipv6']}]" : $records['ip'];
+			$response = $this->getResponse($this->buildUrl($urlTemplate, $ipAddress), $urlTemplate, $host, true);
 		} catch (SecurityTxtUrlNotFoundException $e) {
 			$this->callOnCallback($this->onUrlNotFound, $e->getUrl());
 			$response = null;
