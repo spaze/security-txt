@@ -63,11 +63,8 @@ Returns `list<SecurityTxtSpecViolation>`, the list contains file-level warnings 
 `SecurityTxtCheckHost::check()` supports callbacks that can be set with `SecurityTxtCheckHost::addOn*()` methods. You can use them to get the parsing information in "real time", and are used for example by the `bin/checksecuritytxt.php` script via the `\Spaze\SecurityTxt\Check\SecurityTxtCheckHostCli` class to print information as soon as it is available.
 
 ## JSON
-The `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult` object can be encoded to JSON in two ways, each producing a diffeent result:
-1. Call `json_encode()` on the result, this would give you the whole object with all the violations and everything encoded as JSON
-2. Call `SecurityTxtCheckHostResult::jsonEncodeSimplified()`, this will encode only class names and parameters needed to reconstruct the result, you can use `SecurityTxtCheckHostResultFactory::createFromSimplifiedJson()` to do so
-
-Compare the expected structures in the test `SecurityTxtCheckHostTest::testJsonSerialize()` and `SecurityTxtCheckHostTest::getSimplifiedJson()` to notice the difference.
+The `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult` object can be encoded to JSON with `json_encode()`,
+and decoded back with `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResultFactory::createFromJson()`.
 
 ## The other methods
 Both `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseString()` and `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseHost()` return a `Spaze\SecurityTxt\Parser\SecurityTxtParseResult` object with similar methods as what's described above for `SecurityTxtCheckHostResult`.
