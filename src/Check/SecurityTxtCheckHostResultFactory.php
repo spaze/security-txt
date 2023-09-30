@@ -45,7 +45,7 @@ class SecurityTxtCheckHostResultFactory
 	/**
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
-	public function createFromSimplifiedJson(string $json): SecurityTxtCheckHostResult
+	public function createFromJson(string $json): SecurityTxtCheckHostResult
 	{
 		$values = json_decode($json, true);
 		if (!is_array($values)) {

@@ -28,12 +28,12 @@ require __DIR__ . '/../bootstrap.php';
 class SecurityTxtCheckHostResultFactoryTest extends TestCase
 {
 
-	public function testCreateFromSimplifiedJson(): void
+	public function testCreateFromJson(): void
 	{
 		$securityTxtFactory = new SecurityTxtFactory();
 		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory);
 		$expectedResult = $this->getResult();
-		$actualResult = $resultFactory->createFromSimplifiedJson($this->getResult()->jsonEncodeSimplified());
+		$actualResult = $resultFactory->createFromJson(json_encode($expectedResult));
 		$this->setExpiresInterval($expectedResult);
 		$this->setExpiresInterval($actualResult);
 		Assert::equal($expectedResult, $actualResult);
