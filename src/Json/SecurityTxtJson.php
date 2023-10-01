@@ -32,4 +32,27 @@ class SecurityTxtJson
 		return $objects;
 	}
 
+
+	/**
+	 * @param array<array-key, mixed> $values
+	 * @return array<string, list<string>>
+	 * @throws SecurityTxtCannotParseJsonException
+	 */
+	public function createRedirectsFromJsonValues(array $values): array
+	{
+		$redirects = [];
+		foreach ($values as $url => $urlRedirects) {
+			if (!is_array($urlRedirects)) {
+				throw new SecurityTxtCannotParseJsonException("redirects > {$url} is not an array");
+			}
+			foreach ($urlRedirects as $urlRedirect) {
+				if (!is_string($urlRedirect)) {
+					throw new SecurityTxtCannotParseJsonException('redirects contains an item which is not a string');
+				}
+				$redirects[$url][] = $urlRedirect;
+			}
+		}
+		return $redirects;
+	}
+
 }

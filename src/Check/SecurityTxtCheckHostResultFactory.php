@@ -59,18 +59,7 @@ class SecurityTxtCheckHostResultFactory
 			if (!is_array($values['redirects'])) {
 				throw new SecurityTxtCannotParseJsonException('redirects is not an array');
 			}
-			$redirects = [];
-			foreach ($values['redirects'] as $url => $urlRedirects) {
-				if (!is_array($urlRedirects)) {
-					throw new SecurityTxtCannotParseJsonException("redirects > {$url} is not an array");
-				}
-				foreach ($urlRedirects as $urlRedirect) {
-					if (!is_string($urlRedirect)) {
-						throw new SecurityTxtCannotParseJsonException('redirects contains an item which is not a string');
-					}
-					$redirects[$url][] = $urlRedirect;
-				}
-			}
+			$redirects = $this->securityTxtJson->createRedirectsFromJsonValues($values['redirects']);
 		}
 		if ($values['constructedUrl'] !== null && !is_string($values['constructedUrl'])) {
 			throw new SecurityTxtCannotParseJsonException('constructedUrl is not a string');
