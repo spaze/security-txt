@@ -14,6 +14,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\FieldProcessors\AcknowledgmentsAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\CanonicalAddFieldValue;
@@ -179,17 +180,14 @@ class SecurityTxtParser
 	{
 		$fetchResult = $this->fetcher->fetchHost($host, $noIpv6);
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
-		return new SecurityTxtParseResult(
-			$parseResult->getSecurityTxt(),
-			$parseResult->isValid() && !$fetchResult->getErrors() && (!$strictMode || !$fetchResult->getWarnings()),
-			$parseResult->isStrictMode(),
-			$parseResult->getExpiresWarningThreshold(),
-			$parseResult->isExpiresSoon(),
-			$parseResult->getLineErrors(),
-			$parseResult->getLineWarnings(),
-			$parseResult->getValidateResult(),
-			$fetchResult,
-		);
+		return $this->createParseResult($parseResult, $fetchResult, $strictMode);
+	}
+
+
+	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
+	{
+		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
+		return $this->createParseResult($parseResult, $fetchResult, $strictMode);
 	}
 
 
@@ -230,6 +228,22 @@ class SecurityTxtParser
 			}
 		}
 		return $best;
+	}
+
+
+	private function createParseResult(SecurityTxtParseResult $parseResult, SecurityTxtFetchResult $fetchResult, bool $strictMode): SecurityTxtParseResult
+	{
+		return new SecurityTxtParseResult(
+			$parseResult->getSecurityTxt(),
+			$parseResult->isValid() && !$fetchResult->getErrors() && (!$strictMode || !$fetchResult->getWarnings()),
+			$parseResult->isStrictMode(),
+			$parseResult->getExpiresWarningThreshold(),
+			$parseResult->isExpiresSoon(),
+			$parseResult->getLineErrors(),
+			$parseResult->getLineWarnings(),
+			$parseResult->getValidateResult(),
+			$fetchResult,
+		);
 	}
 
 }
