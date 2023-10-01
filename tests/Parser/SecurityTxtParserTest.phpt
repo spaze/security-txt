@@ -5,11 +5,14 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use DateTime;
+use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
@@ -23,6 +26,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -288,6 +292,50 @@ class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseString("Encryption: {$uri}\n");
 		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getEncryption()[0]->getUri());
+	}
+
+
+	public function testParseFetchResult(): void
+	{
+		$fetchResult = new SecurityTxtFetchResult(
+			'https://example.com/security.txt',
+			'https://www.example.com/security.txt',
+			[
+				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
+				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
+			],
+			"Contact: mailto:example@example.com\r\nExpires: 2020-12-31T23:59:59.000Z",
+			[new SecurityTxtContentTypeWrongCharset('https://example.com/security.txt', 'text/plain', null)],
+			[new SecurityTxtTopLevelPathOnly()],
+		);
+		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
+		Assert::same("The line (`Expires: 2020-12-31T23:59:59.000Z`) doesn't end with neither <CRLF> nor <LF>", $parseResult->getLineErrors()[2][0]->getMessage());
+		Assert::same("The file is considered stale and should not be used", $parseResult->getLineErrors()[2][1]->getMessage());
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::same([], $parseResult->getFileErrors());
+		Assert::same([], $parseResult->getFileWarnings());
+		Assert::false($parseResult->isExpiresSoon());
+		Assert::false($parseResult->isValid());
+
+		$expires = new DateTimeImmutable('+7 days');
+		$fetchResult = new SecurityTxtFetchResult(
+			'https://example.com/security.txt',
+			'https://www.example.com/security.txt',
+			[],
+			"Contact: mailto:example@example.com\r\nExpires: " . $expires->format(DATE_RFC3339) . "\r\n",
+			[],
+			[],
+		);
+		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14);
+		Assert::same([], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::same([], $parseResult->getFileErrors());
+		Assert::same([], $parseResult->getFileWarnings());
+		Assert::true($parseResult->isExpiresSoon());
+		Assert::true($parseResult->isValid());
+
+		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
+		Assert::false($parseResult->isValid());
 	}
 
 }

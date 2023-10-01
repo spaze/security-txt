@@ -8,6 +8,7 @@ use Spaze\SecurityTxt\Check\SecurityTxtCheckHostCli;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResultFactory;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\SecurityTxtFactory;
@@ -41,7 +42,8 @@ $parser = new SecurityTxtParser($validator, $signature, $fetcher);
 $urlParser = new SecurityTxtUrlParser();
 $consolePrinter = new ConsolePrinter();
 $securitytxtFactory = new SecurityTxtFactory();
-$checkHostResultFactory = new SecurityTxtCheckHostResultFactory($securitytxtFactory);
+$violationFactory = new SecurityTxtJson();
+$checkHostResultFactory = new SecurityTxtCheckHostResultFactory($securitytxtFactory, $violationFactory);
 $checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);
 $checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost);
 
