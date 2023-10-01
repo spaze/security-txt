@@ -10,6 +10,8 @@ Each of the options above will call preceding method and add more validations wh
 
 There's also a command line script in `bin` which uses `Spaze\SecurityTxt\Check\SecurityTxtCheckHostCli::check()` mostly just to add command line output to `Spaze\SecurityTxt\Check\SecurityTxtCheckHost::check()`.
 
+If you want to decouple fetching the `security.txt` file and parsing it, there's also a possibility to pass a `SecurityTxtFetchResult` object to `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseFetchResult()`.
+
 ## How to use it
 `Spaze\SecurityTxt\Check\SecurityTxtCheckHost::check()` is probably what you'd want to use as it provides the mos comprehensive checks, can pass a URL, not just a hostname, and also supports callbacks. It accepts these parameters:
 
