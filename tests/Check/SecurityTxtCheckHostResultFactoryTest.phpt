@@ -35,7 +35,7 @@ class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		$violationFactory = new SecurityTxtJson();
 		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory, $violationFactory);
 		$expectedResult = $this->getResult();
-		$actualResult = $resultFactory->createFromJson(json_encode($expectedResult));
+		$actualResult = $resultFactory->createFromJsonValues(json_decode(json_encode($expectedResult), true));
 		$this->setExpiresInterval($expectedResult);
 		$this->setExpiresInterval($actualResult);
 		Assert::equal($expectedResult, $actualResult);

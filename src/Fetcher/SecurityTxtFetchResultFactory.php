@@ -16,14 +16,11 @@ class SecurityTxtFetchResultFactory
 
 
 	/**
+	 * @param array<array-key, mixed> $values
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
-	public function createFromJson(string $json): SecurityTxtFetchResult
+	public function createFromJsonValues(array $values): SecurityTxtFetchResult
 	{
-		$values = json_decode($json, true);
-		if (!is_array($values)) {
-			throw new SecurityTxtCannotParseJsonException('not an array');
-		}
 		if (!is_string($values['constructedUrl'])) {
 			throw new SecurityTxtCannotParseJsonException('constructedUrl is not a string');
 		}

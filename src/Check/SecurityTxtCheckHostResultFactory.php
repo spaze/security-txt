@@ -44,14 +44,11 @@ class SecurityTxtCheckHostResultFactory
 
 
 	/**
+	 * @param array<array-key, mixed> $values
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
-	public function createFromJson(string $json): SecurityTxtCheckHostResult
+	public function createFromJsonValues(array $values): SecurityTxtCheckHostResult
 	{
-		$values = json_decode($json, true);
-		if (!is_array($values)) {
-			throw new SecurityTxtCannotParseJsonException('not an array');
-		}
 		if (!is_string($values['host'])) {
 			throw new SecurityTxtCannotParseJsonException('host is not a string');
 		}
