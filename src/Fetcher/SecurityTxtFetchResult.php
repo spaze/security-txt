@@ -76,6 +76,7 @@ class SecurityTxtFetchResult implements JsonSerializable
 	public function jsonSerialize(): array
 	{
 		return [
+			'class' => $this::class,
 			'constructedUrl' => $this->getConstructedUrl(),
 			'finalUrl' => $this->getFinalUrl(),
 			'redirects' => $this->getRedirects(),

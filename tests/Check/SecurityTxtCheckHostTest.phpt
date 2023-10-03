@@ -37,6 +37,7 @@ class SecurityTxtCheckHostTest extends TestCase
 	{
 		$result = $this->getResult();
 		$expected = [
+			'class' => 'Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult',
 			'host' => 'www.example.com',
 			'redirects' => [
 				'http://example.com' => ['https://example.com', 'https://www.example.com'],

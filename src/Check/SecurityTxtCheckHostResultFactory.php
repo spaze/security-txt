@@ -49,6 +49,12 @@ class SecurityTxtCheckHostResultFactory
 	 */
 	public function createFromJsonValues(array $values): SecurityTxtCheckHostResult
 	{
+		if (!is_string($values['class'])) {
+			throw new SecurityTxtCannotParseJsonException('class is not a string');
+		}
+		if ($values['class'] !== SecurityTxtCheckHostResult::class) {
+			throw new SecurityTxtCannotParseJsonException('class is not ' . SecurityTxtCheckHostResult::class);
+		}
 		if (!is_string($values['host'])) {
 			throw new SecurityTxtCannotParseJsonException('host is not a string');
 		}

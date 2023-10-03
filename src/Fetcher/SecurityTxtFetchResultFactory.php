@@ -21,6 +21,12 @@ class SecurityTxtFetchResultFactory
 	 */
 	public function createFromJsonValues(array $values): SecurityTxtFetchResult
 	{
+		if (!is_string($values['class'])) {
+			throw new SecurityTxtCannotParseJsonException('class is not a string');
+		}
+		if ($values['class'] !== SecurityTxtFetchResult::class) {
+			throw new SecurityTxtCannotParseJsonException('class is not ' . SecurityTxtFetchResult::class);
+		}
 		if (!is_string($values['constructedUrl'])) {
 			throw new SecurityTxtCannotParseJsonException('constructedUrl is not a string');
 		}

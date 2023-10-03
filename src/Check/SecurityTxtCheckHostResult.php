@@ -177,6 +177,7 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 	public function jsonSerialize(): array
 	{
 		return [
+			'class' => $this::class,
 			'host' => $this->getHost(),
 			'redirects' => $this->getRedirects(),
 			'constructedUrl' => $this->getConstructedUrl(),
