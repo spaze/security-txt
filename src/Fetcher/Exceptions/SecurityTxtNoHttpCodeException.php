@@ -10,7 +10,7 @@ class SecurityTxtNoHttpCodeException extends SecurityTxtFetcherException
 
 	public function __construct(string $url, ?Throwable $previous = null)
 	{
-		parent::__construct("Missing HTTP code when fetching {$url}", $url, previous: $previous);
+		parent::__construct(func_get_args(), "Missing HTTP code when fetching %s", [$url], $url, previous: $previous);
 	}
 
 }
