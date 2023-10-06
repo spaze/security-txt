@@ -13,12 +13,14 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	/**
 	 * @param list<mixed> $constructorParams
 	 * @param list<string|int> $messageValues
+	 * @param list<string> $redirects
 	 */
 	public function __construct(
 		private readonly array $constructorParams,
 		private readonly string $messageFormat,
 		private readonly array $messageValues,
 		private readonly string $url,
+		private readonly array $redirects = [],
 		int $code = 0,
 		?Throwable $previous = null,
 	) {
@@ -48,6 +50,15 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
+	 * @return list<string>
+	 */
+	public function getRedirects(): array
+	{
+		return $this->redirects;
+	}
+
+
+	/**
 	 * @return array<string, mixed>
 	 */
 	public function jsonSerialize(): array
@@ -59,6 +70,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 			'messageFormat' => $this->getMessageFormat(),
 			'messageValues' => $this->getMessageValues(),
 			'url' => $this->getUrl(),
+			'redirects' => $this->getRedirects(),
 		];
 	}
 

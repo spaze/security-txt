@@ -8,6 +8,9 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 interface SecurityTxtFetcherHttpClient
 {
 
-	public function getResponse(string $url, ?string $contextHost): SecurityTxtFetcherResponse;
+	/**
+	 * @param list<string> $redirects
+	 */
+	public function getResponse(string $url, ?string $contextHost, array $redirects): SecurityTxtFetcherResponse;
 
 }

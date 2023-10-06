@@ -8,9 +8,19 @@ use Throwable;
 class SecurityTxtNoHttpCodeException extends SecurityTxtFetcherException
 {
 
-	public function __construct(string $url, ?Throwable $previous = null)
+	/**
+	 * @param list<string> $redirects
+	 */
+	public function __construct(string $url, array $redirects, ?Throwable $previous = null)
 	{
-		parent::__construct(func_get_args(), "Missing HTTP code when fetching %s", [$url], $url, previous: $previous);
+		parent::__construct(
+			func_get_args(),
+			$redirects ? "Missing HTTP code when fetching %s (redirects: %s)" : "Missing HTTP code when fetching %s",
+			$redirects ? [$url, implode(' => ', $redirects)] : [$url],
+			$url,
+			$redirects,
+			previous: $previous,
+		);
 	}
 
 }
