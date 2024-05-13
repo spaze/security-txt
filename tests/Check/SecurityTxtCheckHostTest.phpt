@@ -6,6 +6,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -45,6 +46,47 @@ class SecurityTxtCheckHostTest extends TestCase
 			'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
 			'finalUrl' => 'https://www.example.com/.well-known/security.txt',
 			'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(DATE_RFC3339),
+			'fetchResult' => [
+				'class' => 'Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult',
+				'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
+				'finalUrl' => 'https://www.example.com/.well-known/security.txt',
+				'redirects' => [
+					'http://example.com' => ['https://example.com', 'https://www.example.com'],
+				],
+				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(DATE_RFC3339),
+				'errors' => [
+					[
+						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps',
+						'params' => ['http://example.com'],
+						'message' => 'The file at `http://example.com` must use HTTPS',
+						'messageFormat' => 'The file at `%s` must use HTTPS',
+						'messageValues' => ['http://example.com'],
+						'since' => 'draft-foudil-securitytxt-06',
+						'correctValue' => 'https://example.com',
+						'howToFix' => 'Use HTTPS to serve the `security.txt` file',
+						'howToFixFormat' => 'Use HTTPS to serve the `security.txt` file',
+						'howToFixValues' => [],
+						'specSection' => '3',
+						'seeAlsoSections' => [],
+					],
+				],
+				'warnings' => [
+					[
+						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly',
+						'params' => [],
+						'message' => '`security.txt` not found at the top-level path',
+						'messageFormat' => '`security.txt` not found at the top-level path',
+						'messageValues' => [],
+						'since' => 'draft-foudil-securitytxt-02',
+						'correctValue' => null,
+						'howToFix' => 'Redirect the top-level file to the one under the `/.well-known/` path',
+						'howToFixFormat' => 'Redirect the top-level file to the one under the `/.well-known/` path',
+						'howToFixValues' => [],
+						'specSection' => '3',
+						'seeAlsoSections' => [],
+					],
+				],
+			],
 			'fetchErrors' => [
 				[
 					'class' => SecurityTxtSchemeNotHttps::class,
@@ -171,14 +213,23 @@ class SecurityTxtCheckHostTest extends TestCase
 	{
 		$securityTxt = new SecurityTxt();
 		$securityTxt->setExpires(new Expires($this->expires));
-		return new SecurityTxtCheckHostResult(
-			'www.example.com',
-			['http://example.com' => ['https://example.com', 'https://www.example.com']],
+		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
+			['http://example.com' => ['https://example.com', 'https://www.example.com']],
 			"Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(DATE_RFC3339),
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
+		);
+		return new SecurityTxtCheckHostResult(
+			'www.example.com',
+			$fetchResult->getRedirects(),
+			$fetchResult->getConstructedUrl(),
+			$fetchResult->getFinalUrl(),
+			$fetchResult->getContents(),
+			$fetchResult,
+			$fetchResult->getErrors(),
+			$fetchResult->getWarnings(),
 			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact')]],
 			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
 			[new SecurityTxtNoContact()],

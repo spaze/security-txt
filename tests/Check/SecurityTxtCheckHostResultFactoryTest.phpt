@@ -8,6 +8,8 @@ namespace Spaze\SecurityTxt\Check;
 use DateInterval;
 use DateTimeImmutable;
 use ReflectionProperty;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
@@ -32,8 +34,9 @@ class SecurityTxtCheckHostResultFactoryTest extends TestCase
 	public function testCreateFromJson(): void
 	{
 		$securityTxtFactory = new SecurityTxtFactory();
-		$violationFactory = new SecurityTxtJson();
-		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory, $violationFactory);
+		$json = new SecurityTxtJson();
+		$fetchResultFactory = new SecurityTxtFetchResultFactory($json);
+		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory, $json, $fetchResultFactory);
 		$expectedResult = $this->getResult();
 		$actualResult = $resultFactory->createFromJsonValues(json_decode(json_encode($expectedResult), true));
 		$this->setExpiresInterval($expectedResult);
@@ -55,14 +58,24 @@ class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		$dateTime = new DateTimeImmutable('2022-08-08T02:40:54+00:00');
 		$securityTxt->setExpires(new Expires($dateTime));
-		return new SecurityTxtCheckHostResult(
-			'www.example.com',
-			['http://example.com' => ['https://example.com', 'https://www.example.com']],
+		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
+			['http://example.com' => ['https://example.com', 'https://www.example.com']],
 			"Hi-ring: https://example.com/hiring\nExpires: " . $dateTime->format(DATE_RFC3339),
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
+		);
+
+		return new SecurityTxtCheckHostResult(
+			'www.example.com',
+			$fetchResult->getRedirects(),
+			$fetchResult->getConstructedUrl(),
+			$fetchResult->getFinalUrl(),
+			$fetchResult->getContents(),
+			$fetchResult,
+			$fetchResult->getErrors(),
+			$fetchResult->getWarnings(),
 			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact')]],
 			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
 			[new SecurityTxtNoContact()],

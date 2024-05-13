@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseResult;
 use Spaze\SecurityTxt\SecurityTxtFactory;
@@ -14,6 +15,7 @@ class SecurityTxtCheckHostResultFactory
 	public function __construct(
 		private readonly SecurityTxtFactory $securityTxtFactory,
 		private readonly SecurityTxtJson $securityTxtJson,
+		private readonly SecurityTxtFetchResultFactory $securityTxtFetchResultFactory,
 	) {
 	}
 
@@ -26,6 +28,7 @@ class SecurityTxtCheckHostResultFactory
 			$parseResult->getFetchResult()?->getConstructedUrl(),
 			$parseResult->getFetchResult()?->getFinalUrl(),
 			$parseResult->getFetchResult()?->getContents(),
+			$parseResult->getFetchResult(),
 			$parseResult->getFetchErrors(),
 			$parseResult->getFetchWarnings(),
 			$parseResult->getLineErrors(),
@@ -130,6 +133,7 @@ class SecurityTxtCheckHostResultFactory
 			$values['constructedUrl'],
 			$values['finalUrl'],
 			$values['contents'],
+			$this->securityTxtFetchResultFactory->createFromJsonValues($values['fetchResult']),
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fetchErrors'])),
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fetchWarnings'])),
 			$lineErrors,

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use JsonSerializable;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
@@ -25,6 +26,7 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 		private readonly ?string $constructedUrl,
 		private readonly ?string $finalUrl,
 		private readonly ?string $contents,
+		private readonly ?SecurityTxtFetchResult $fetchResult,
 		private readonly array $fetchErrors,
 		private readonly array $fetchWarnings,
 		private readonly array $lineErrors,
@@ -72,6 +74,12 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 	public function getContents(): ?string
 	{
 		return $this->contents;
+	}
+
+
+	public function getFetchResult(): ?SecurityTxtFetchResult
+	{
+		return $this->fetchResult;
 	}
 
 
@@ -183,6 +191,7 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 			'constructedUrl' => $this->getConstructedUrl(),
 			'finalUrl' => $this->getFinalUrl(),
 			'contents' => $this->getContents(),
+			'fetchResult' => $this->getFetchResult(),
 			'fetchErrors' => $this->getFetchErrors(),
 			'fetchWarnings' => $this->getFetchWarnings(),
 			'lineErrors' => $this->getLineErrors(),
