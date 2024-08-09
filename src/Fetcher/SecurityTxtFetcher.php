@@ -124,7 +124,7 @@ class SecurityTxtFetcher
 		if ($redirects) {
 			array_unshift($redirects, $builtUrl);
 		}
-		$response = $this->httpClient->getResponse($url, $useHostForContextHost ? $host : null, $redirects);
+		$response = $this->httpClient->getResponse(new SecurityTxtFetcherUrl($url, $redirects), $useHostForContextHost ? $host : null);
 		if ($response->getHttpCode() >= 400) {
 			throw new SecurityTxtUrlNotFoundException($url, $response->getHttpCode());
 		}

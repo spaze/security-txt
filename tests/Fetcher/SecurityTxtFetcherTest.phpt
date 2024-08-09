@@ -31,7 +31,7 @@ class SecurityTxtFetcherTest extends TestCase
 			private SecurityTxtFetcherResponse $fetcherResponse;
 
 
-			public function getResponse(string $url, ?string $contextHost, array $redirects): SecurityTxtFetcherResponse
+			public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse;
 			}

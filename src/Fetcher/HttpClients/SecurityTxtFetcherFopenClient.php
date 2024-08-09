@@ -7,17 +7,17 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 
 class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 {
 
 	/**
-	 * @param list<string> $redirects
 	 * @throws SecurityTxtCannotReadUrlException
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtNoHttpCodeException
 	 */
-	public function getResponse(string $url, ?string $contextHost, array $redirects): SecurityTxtFetcherResponse
+	public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse
 	{
 
 		$options = [
@@ -33,13 +33,13 @@ class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 			];
 			$options['http']['header'][] = "Host: {$contextHost}";
 		}
-		$fp = @fopen($url, 'r', context: stream_context_create($options)); // intentionally @, converted to exception
+		$fp = @fopen($url->getUrl(), 'r', context: stream_context_create($options)); // intentionally @, converted to exception
 		if (!$fp) {
-			throw new SecurityTxtCannotOpenUrlException($url, $redirects);
+			throw new SecurityTxtCannotOpenUrlException($url);
 		}
 		$contents = stream_get_contents($fp);
 		if ($contents === false) {
-			throw new SecurityTxtCannotReadUrlException($url, $redirects);
+			throw new SecurityTxtCannotReadUrlException($url);
 		}
 		$metadata = stream_get_meta_data($fp);
 		fclose($fp);
@@ -48,7 +48,7 @@ class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $wrapperData[0], $matches)) {
 			$code = (int)$matches[1];
 		} else {
-			throw new SecurityTxtNoHttpCodeException($url, $redirects);
+			throw new SecurityTxtNoHttpCodeException($url);
 		}
 
 		$headers = [];

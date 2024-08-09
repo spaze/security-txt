@@ -4,13 +4,11 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher\HttpClients;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 
 interface SecurityTxtFetcherHttpClient
 {
 
-	/**
-	 * @param list<string> $redirects
-	 */
-	public function getResponse(string $url, ?string $contextHost, array $redirects): SecurityTxtFetcherResponse;
+	public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse;
 
 }
