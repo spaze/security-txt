@@ -320,7 +320,7 @@ class SecurityTxt implements JsonSerializable
 	 * @param (callable(): void)|null $warnings
 	 * @return void
 	 */
-	private function setValue(callable $setValue, callable $validator, callable $warnings = null): void
+	private function setValue(callable $setValue, callable $validator, ?callable $warnings = null): void
 	{
 		if ($this->validationLevel === SecurityTxtValidationLevel::AllowInvalidValuesSilently) {
 			$setValue();
