@@ -6,11 +6,11 @@ namespace Spaze\SecurityTxt\Fetcher;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
 
-class SecurityTxtFetchResultFactory
+readonly class SecurityTxtFetchResultFactory
 {
 
 	public function __construct(
-		private readonly SecurityTxtJson $securityTxtJson,
+		private SecurityTxtJson $securityTxtJson,
 	) {
 	}
 

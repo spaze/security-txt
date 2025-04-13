@@ -6,12 +6,12 @@ namespace Spaze\SecurityTxt\Check;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 
-class SecurityTxtCheckHostCli
+readonly class SecurityTxtCheckHostCli
 {
 
 	public function __construct(
-		private readonly ConsolePrinter $consolePrinter,
-		private readonly SecurityTxtCheckHost $checkHost,
+		private ConsolePrinter $consolePrinter,
+		private SecurityTxtCheckHost $checkHost,
 	) {
 	}
 

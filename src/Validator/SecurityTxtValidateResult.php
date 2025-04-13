@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Validator;
 use JsonSerializable;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtValidateResult implements JsonSerializable
+readonly class SecurityTxtValidateResult implements JsonSerializable
 {
 
 	/**
@@ -14,8 +14,8 @@ class SecurityTxtValidateResult implements JsonSerializable
 	 * @param list<SecurityTxtSpecViolation> $warnings
 	 */
 	public function __construct(
-		private readonly array $errors,
-		private readonly array $warnings,
+		private array $errors,
+		private array $warnings,
 	) {
 	}
 

@@ -9,13 +9,13 @@ use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseResult;
 use Spaze\SecurityTxt\SecurityTxtFactory;
 
-class SecurityTxtCheckHostResultFactory
+readonly class SecurityTxtCheckHostResultFactory
 {
 
 	public function __construct(
-		private readonly SecurityTxtFactory $securityTxtFactory,
-		private readonly SecurityTxtJson $securityTxtJson,
-		private readonly SecurityTxtFetchResultFactory $securityTxtFetchResultFactory,
+		private SecurityTxtFactory $securityTxtFactory,
+		private SecurityTxtJson $securityTxtJson,
+		private SecurityTxtFetchResultFactory $securityTxtFetchResultFactory,
 	) {
 	}
 
