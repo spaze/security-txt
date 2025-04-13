@@ -7,7 +7,6 @@ namespace Spaze\SecurityTxt\Parser;
 use DateTime;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
-use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
@@ -86,7 +85,7 @@ class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Expires: Mon, 15 Aug 2005 15:52:01 +0000\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		/** @var \Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat $expiresError */
+		/** @var SecurityTxtExpiresOldFormat $expiresError */
 		$expiresError = $parseResult->getLineErrors()[1][0];
 		Assert::type(SecurityTxtExpiresOldFormat::class, $expiresError);
 		Assert::same('2005-08-15T15:52:01+00:00', $expiresError->getCorrectValue());
