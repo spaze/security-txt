@@ -37,19 +37,14 @@ class SecurityTxtParserTest extends TestCase
 {
 
 	private SecurityTxtParser $securityTxtParser;
-	private SecurityTxtValidator $securityTxtValidator;
-	private SecurityTxtSignature $securityTxtSignature;
-	private SecurityTxtFetcher $securityTxtFetcher;
-	private SecurityTxtFetcherHttpClient $securityTxtFetcherHttpClient;
-
 
 	protected function setUp(): void
 	{
-		$this->securityTxtValidator = new SecurityTxtValidator();
-		$this->securityTxtSignature = new SecurityTxtSignature();
-		$this->securityTxtFetcherHttpClient = new SecurityTxtFetcherFopenClient();
-		$this->securityTxtFetcher = new SecurityTxtFetcher($this->securityTxtFetcherHttpClient);
-		$this->securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $this->securityTxtSignature, $this->securityTxtFetcher);
+		$securityTxtValidator = new SecurityTxtValidator();
+		$securityTxtSignature = new SecurityTxtSignature();
+		$securityTxtFetcherHttpClient = new SecurityTxtFetcherFopenClient();
+		$securityTxtFetcher = new SecurityTxtFetcher($securityTxtFetcherHttpClient);
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtFetcher);
 	}
 
 
