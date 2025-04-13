@@ -29,4 +29,4 @@ class HiringTest extends TestCase
 
 }
 
-(new HiringTest())->run();
+new HiringTest()->run();

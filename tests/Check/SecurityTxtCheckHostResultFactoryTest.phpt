@@ -92,4 +92,4 @@ class SecurityTxtCheckHostResultFactoryTest extends TestCase
 
 }
 
-(new SecurityTxtCheckHostResultFactoryTest())->run();
+new SecurityTxtCheckHostResultFactoryTest()->run();

@@ -65,7 +65,7 @@ class SecurityTxtParserTest extends TestCase
 	/** @dataProvider getExpiresField */
 	public function testParseStringExpiresField(string $fieldValue, bool $isExpired, array $errors): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime($fieldValue))->format(DATE_RFC3339) . "\nBar: foo\n";
+		$contents = "Foo: bar\nExpires: " . new DateTime($fieldValue)->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::same($isExpired, $parseResult->getSecurityTxt()->getExpires()->isExpired());
 		foreach ($parseResult->getLineErrors() as $lineNumber => $lineErrors) {
@@ -110,7 +110,7 @@ class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMultipleExpires(): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nExpires: " . (new DateTime('+3 months'))->format(DATE_RFC3339) . "\nBar: foo\n";
+		$contents = "Foo: bar\nExpires: " . new DateTime('+2 months')->format(DATE_RFC3339) . "\nExpires: " . new DateTime('+3 months')->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		$expiresError = $parseResult->getLineErrors()[3][0];
 		Assert::type(SecurityTxtMultipleExpires::class, $expiresError);
@@ -128,7 +128,7 @@ class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMultipleExpiresFirstWrong(): void
 	{
-		$contents = "Foo: bar\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nBar: foo\n";
+		$contents = "Foo: bar\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: " . new DateTime('+2 months')->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
 	}
@@ -136,7 +136,7 @@ class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMultipleExpiresFirstCorrect(): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nBar: foo\n";
+		$contents = "Foo: bar\nExpires: " . new DateTime('+2 months')->format(DATE_RFC3339) . "\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::count(2, $parseResult->getLineErrors()[3]);
 		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
@@ -154,14 +154,14 @@ class SecurityTxtParserTest extends TestCase
 			Assert::count(0, $parseResult->getLineErrors());
 			Assert::count(0, $parseResult->getFileErrors());
 		};
-		$assertParsed('mailto:foo@bar.example', (new DateTime('+2 months'))->format(DATE_RFC3339));
-		$assertParsed('mailto:bar@foo.example', (new DateTime('+3 months'))->format(DATE_RFC3339));
+		$assertParsed('mailto:foo@bar.example', new DateTime('+2 months')->format(DATE_RFC3339));
+		$assertParsed('mailto:bar@foo.example', new DateTime('+3 months')->format(DATE_RFC3339));
 	}
 
 
 	public function testParseMultipleBadFiles(): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(DATE_RFC3339) . "\nExpires: " . (new DateTime('+3 months'))->format(DATE_RFC3339) . "\nBar: foo\n";
+		$contents = "Foo: bar\nExpires: " . new DateTime('+2 months')->format(DATE_RFC3339) . "\nExpires: " . new DateTime('+3 months')->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
 
@@ -173,7 +173,7 @@ class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringExpiresTooLong(): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 years'))->format(DATE_RFC3339) . "\n";
+		$contents = "Foo: bar\nExpires: " . new DateTime('+2 years')->format(DATE_RFC3339) . "\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::count(0, $parseResult->getLineErrors());
 		Assert::count(1, $parseResult->getLineWarnings());
@@ -193,7 +193,7 @@ class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringNoEol(): void
 	{
-		$contents = 'Expires: ' . (new DateTime('+3 months'))->format(DATE_RFC3339) . "\nContact: https://foo.example/";
+		$contents = 'Expires: ' . new DateTime('+3 months')->format(DATE_RFC3339) . "\nContact: https://foo.example/";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::count(1, $parseResult->getLineErrors());
 		Assert::count(1, $parseResult->getLineErrors()[2]);
@@ -340,4 +340,4 @@ class SecurityTxtParserTest extends TestCase
 
 }
 
-(new SecurityTxtParserTest())->run();
+new SecurityTxtParserTest()->run();

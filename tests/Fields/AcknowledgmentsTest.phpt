@@ -29,4 +29,4 @@ class AcknowledgmentsTest extends TestCase
 
 }
 
-(new AcknowledgmentsTest())->run();
+new AcknowledgmentsTest()->run();

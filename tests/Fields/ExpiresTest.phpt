@@ -41,4 +41,4 @@ class ExpiresTest extends TestCase
 
 }
 
-(new ExpiresTest())->run();
+new ExpiresTest()->run();

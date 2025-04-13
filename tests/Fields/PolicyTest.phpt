@@ -29,4 +29,4 @@ class PolicyTest extends TestCase
 
 }
 
-(new PolicyTest())->run();
+new PolicyTest()->run();

@@ -50,7 +50,7 @@ class SecurityTxtSignature
 		if (!$this->isSignatureKindaOkay($signature['summary'])) {
 			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
-		return new SecurityTxtSignatureVerifyResult($signature['fingerprint'], (new DateTimeImmutable())->setTimestamp($signature['timestamp']));
+		return new SecurityTxtSignatureVerifyResult($signature['fingerprint'], new DateTimeImmutable()->setTimestamp($signature['timestamp']));
 	}
 
 

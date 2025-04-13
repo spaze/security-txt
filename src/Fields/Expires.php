@@ -16,7 +16,7 @@ class Expires implements JsonSerializable
 	public function __construct(
 		private readonly DateTimeImmutable $dateTime,
 	) {
-		$this->interval = (new DateTimeImmutable())->diff($this->dateTime);
+		$this->interval = new DateTimeImmutable()->diff($this->dateTime);
 	}
 
 
