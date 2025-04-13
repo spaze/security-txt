@@ -24,7 +24,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 class SecurityTxtFetcher
 {
 
-	private const MAX_ALLOWED_REDIRECTS = 5;
+	private const int MAX_ALLOWED_REDIRECTS = 5;
 
 	/** @var array<string, list<string>> */
 	private array $redirects = [];
