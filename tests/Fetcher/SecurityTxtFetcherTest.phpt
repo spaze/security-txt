@@ -1,6 +1,5 @@
 <?php
 /** @noinspection PhpUnhandledExceptionInspection */
-/** @noinspection PhpUnnecessaryFullyQualifiedNameInspection */
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 declare(strict_types = 1);
 
