@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtPreferredLanguagesWrongLanguageTags extends SecurityTxtSpecViolation
+final class SecurityTxtPreferredLanguagesWrongLanguageTags extends SecurityTxtSpecViolation
 {
 
 	/**

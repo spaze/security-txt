@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt;
 
 use JsonSerializable;
+use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\Acknowledgments;
@@ -35,7 +36,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
 
-class SecurityTxt implements JsonSerializable
+final class SecurityTxt implements JsonSerializable
 {
 
 	private ?Expires $expires = null;
@@ -359,6 +360,7 @@ class SecurityTxt implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

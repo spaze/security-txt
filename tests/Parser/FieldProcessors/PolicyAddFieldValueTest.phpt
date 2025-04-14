@@ -15,7 +15,7 @@ use Tester\TestCase;
 require __DIR__ . '/../../bootstrap.php';
 
 /** @testCase */
-class PolicyAddFieldValueTest extends TestCase
+final class PolicyAddFieldValueTest extends TestCase
 {
 
 	public function testProcess(): void

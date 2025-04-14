@@ -4,12 +4,13 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use JsonSerializable;
+use Override;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-readonly class SecurityTxtParseResult implements JsonSerializable
+final readonly class SecurityTxtParseResult implements JsonSerializable
 {
 
 	/**
@@ -141,6 +142,7 @@ readonly class SecurityTxtParseResult implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

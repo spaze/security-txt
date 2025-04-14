@@ -15,7 +15,7 @@ use Tester\TestCase;
 require __DIR__ . '/../../bootstrap.php';
 
 /** @testCase */
-class HiringAddFieldValueTest extends TestCase
+final class HiringAddFieldValueTest extends TestCase
 {
 
 	public function testProcess(): void

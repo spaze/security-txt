@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtSignatureInvalid extends SecurityTxtSpecViolation
+final class SecurityTxtSignatureInvalid extends SecurityTxtSpecViolation
 {
 
 	public function __construct()

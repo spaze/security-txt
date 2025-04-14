@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtSchemeNotHttps extends SecurityTxtSpecViolation
+final class SecurityTxtSchemeNotHttps extends SecurityTxtSpecViolation
 {
 
 	public function __construct(string $url)

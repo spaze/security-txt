@@ -19,7 +19,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class SecurityTxtValidatorTest extends TestCase
+final class SecurityTxtValidatorTest extends TestCase
 {
 
 	private SecurityTxtValidator $securityTxtValidator;

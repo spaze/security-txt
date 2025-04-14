@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtNoHttpCodeException extends SecurityTxtFetcherException
+final class SecurityTxtNoHttpCodeException extends SecurityTxtFetcherException
 {
 
 	/**

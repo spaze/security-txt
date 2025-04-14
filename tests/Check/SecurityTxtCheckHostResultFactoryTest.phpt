@@ -28,7 +28,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class SecurityTxtCheckHostResultFactoryTest extends TestCase
+final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 {
 
 	public function testCreateFromJson(): void

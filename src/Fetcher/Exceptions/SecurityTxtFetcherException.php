@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Exception;
 use JsonSerializable;
+use Override;
 use Throwable;
 
 abstract class SecurityTxtFetcherException extends Exception implements JsonSerializable
@@ -61,6 +62,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

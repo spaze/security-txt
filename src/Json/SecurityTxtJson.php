@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Json;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtJson
+final class SecurityTxtJson
 {
 
 	/**

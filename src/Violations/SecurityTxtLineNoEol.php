@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtLineNoEol extends SecurityTxtSpecViolation
+final class SecurityTxtLineNoEol extends SecurityTxtSpecViolation
 {
 
 	public function __construct(string $line)

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fields;
 
 use JsonSerializable;
+use Override;
 
 abstract class SecurityTxtUriField implements JsonSerializable
 {
@@ -23,6 +24,7 @@ abstract class SecurityTxtUriField implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

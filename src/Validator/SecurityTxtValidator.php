@@ -11,7 +11,7 @@ use Spaze\SecurityTxt\Validator\Validators\ExpiresMissingFieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\FieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\SignedButCanonicalMissingFieldValidator;
 
-class SecurityTxtValidator
+final class SecurityTxtValidator
 {
 
 	/**

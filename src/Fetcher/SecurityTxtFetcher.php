@@ -23,7 +23,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 
-class SecurityTxtFetcher
+final class SecurityTxtFetcher
 {
 
 	private const int MAX_ALLOWED_REDIRECTS = 5;

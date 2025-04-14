@@ -11,7 +11,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class SecurityTxtUrlParserTest extends TestCase
+final class SecurityTxtUrlParserTest extends TestCase
 {
 
 	private SecurityTxtUrlParser $securityTxtUrlParser;

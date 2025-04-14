@@ -4,9 +4,10 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher;
 
 use JsonSerializable;
+use Override;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-readonly class SecurityTxtFetchResult implements JsonSerializable
+final readonly class SecurityTxtFetchResult implements JsonSerializable
 {
 
 	/**
@@ -73,6 +74,7 @@ readonly class SecurityTxtFetchResult implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

@@ -39,7 +39,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtParser
+final class SecurityTxtParser
 {
 
 	/** @var list<string> */

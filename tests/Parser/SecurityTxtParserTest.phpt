@@ -32,7 +32,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class SecurityTxtParserTest extends TestCase
+final class SecurityTxtParserTest extends TestCase
 {
 
 	private SecurityTxtParser $securityTxtParser;

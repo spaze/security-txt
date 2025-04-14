@@ -4,8 +4,9 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fields;
 
 use JsonSerializable;
+use Override;
 
-readonly class PreferredLanguages implements JsonSerializable
+final readonly class PreferredLanguages implements JsonSerializable
 {
 
 	/**
@@ -29,6 +30,7 @@ readonly class PreferredLanguages implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

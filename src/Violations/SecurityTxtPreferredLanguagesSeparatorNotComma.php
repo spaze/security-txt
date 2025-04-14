@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtPreferredLanguagesSeparatorNotComma extends SecurityTxtSpecViolation
+final class SecurityTxtPreferredLanguagesSeparatorNotComma extends SecurityTxtSpecViolation
 {
 
 	/**

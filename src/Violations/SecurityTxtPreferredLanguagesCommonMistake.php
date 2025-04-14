@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtPreferredLanguagesCommonMistake extends SecurityTxtSpecViolation
+final class SecurityTxtPreferredLanguagesCommonMistake extends SecurityTxtSpecViolation
 {
 
 	public function __construct(int $position, string $mistake, ?string $correctValue, string $reason)

@@ -21,7 +21,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtCheckHost
+final class SecurityTxtCheckHost
 {
 
 	/** @var list<callable(string): void> */

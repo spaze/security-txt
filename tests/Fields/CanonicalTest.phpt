@@ -10,7 +10,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class CanonicalTest extends TestCase
+final class CanonicalTest extends TestCase
 {
 
 	/**

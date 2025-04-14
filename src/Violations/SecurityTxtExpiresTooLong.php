@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Violations;
 
 use DateTimeImmutable;
 
-class SecurityTxtExpiresTooLong extends SecurityTxtSpecViolation
+final class SecurityTxtExpiresTooLong extends SecurityTxtSpecViolation
 {
 
 	public function __construct()

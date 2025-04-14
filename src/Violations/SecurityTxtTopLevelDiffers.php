@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtTopLevelDiffers extends SecurityTxtSpecViolation
+final class SecurityTxtTopLevelDiffers extends SecurityTxtSpecViolation
 {
 
 	public function __construct(

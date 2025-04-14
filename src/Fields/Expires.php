@@ -6,8 +6,9 @@ namespace Spaze\SecurityTxt\Fields;
 use DateInterval;
 use DateTimeImmutable;
 use JsonSerializable;
+use Override;
 
-class Expires implements JsonSerializable
+final class Expires implements JsonSerializable
 {
 
 	private DateInterval $interval;
@@ -42,6 +43,7 @@ class Expires implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

@@ -12,7 +12,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class ExpiresTest extends TestCase
+final class ExpiresTest extends TestCase
 {
 
 	public function getExpiresField(): array

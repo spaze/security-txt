@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtNotFoundException extends SecurityTxtFetcherException
+final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 {
 
 	/**

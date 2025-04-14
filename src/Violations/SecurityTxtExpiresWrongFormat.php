@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Violations;
 use DateTimeImmutable;
 use DateTimeInterface;
 
-class SecurityTxtExpiresWrongFormat extends SecurityTxtSpecViolation
+final class SecurityTxtExpiresWrongFormat extends SecurityTxtSpecViolation
 {
 
 	public function __construct(?DateTimeInterface $expires = null)

@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Violations;
 
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 
-class SecurityTxtHiringNotHttps extends SecurityTxtFieldUriNotHttps
+final class SecurityTxtHiringNotHttps extends SecurityTxtFieldUriNotHttps
 {
 
 	public function __construct(string $uri)

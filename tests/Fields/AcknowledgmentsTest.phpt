@@ -10,7 +10,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class AcknowledgmentsTest extends TestCase
+final class AcknowledgmentsTest extends TestCase
 {
 
 	/**

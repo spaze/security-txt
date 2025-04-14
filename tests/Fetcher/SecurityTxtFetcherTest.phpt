@@ -16,7 +16,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class SecurityTxtFetcherTest extends TestCase
+final class SecurityTxtFetcherTest extends TestCase
 {
 
 	private SecurityTxtFetcher $securityTxtFetcher;

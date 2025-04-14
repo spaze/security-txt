@@ -3,6 +3,7 @@ parameters:
 		- src
 		- bin
 	level: max
+	checkMissingOverrideMethodAttribute: true
 
 includes:
 	- vendor/phpstan/phpstan/conf/bleedingEdge.neon

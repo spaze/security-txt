@@ -15,7 +15,7 @@ use Tester\TestCase;
 require __DIR__ . '/../../bootstrap.php';
 
 /** @testCase */
-class AcknowledgmentsAddFieldValueTest extends TestCase
+final class AcknowledgmentsAddFieldValueTest extends TestCase
 {
 
 	public function testProcess(): void

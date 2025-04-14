@@ -4,8 +4,9 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher;
 
 use JsonSerializable;
+use Override;
 
-readonly class SecurityTxtFetcherResponse implements JsonSerializable
+final readonly class SecurityTxtFetcherResponse implements JsonSerializable
 {
 
 	/**
@@ -49,6 +50,7 @@ readonly class SecurityTxtFetcherResponse implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

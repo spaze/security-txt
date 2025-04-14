@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtTooManyRedirectsException extends SecurityTxtFetcherException
+final class SecurityTxtTooManyRedirectsException extends SecurityTxtFetcherException
 {
 
 	/**

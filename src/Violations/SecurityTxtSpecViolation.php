@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Violations;
 
 use JsonSerializable;
+use Override;
 
 abstract class SecurityTxtSpecViolation implements JsonSerializable
 {
@@ -100,6 +101,7 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [
