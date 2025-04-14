@@ -31,8 +31,8 @@ final class SecurityTxtSignature
 		if (!extension_loaded('gnupg')) {
 			throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
 		}
-		$options = ['home_dir' => $this->homeDir];
-		$this->gnupg = new gnupg(array_filter($options));
+		$options = $this->homeDir !== null ? ['home_dir' => $this->homeDir] : [];
+		$this->gnupg = new gnupg($options);
 	}
 
 
@@ -45,7 +45,7 @@ final class SecurityTxtSignature
 	{
 		$this->init();
 		$signatures = $this->gnupg->verify($contents, false);
-		if (!$signatures || !isset($signatures[0])) {
+		if ($signatures === false || !isset($signatures[0])) {
 			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
 		$signature = $signatures[0];
@@ -70,7 +70,7 @@ final class SecurityTxtSignature
 
 	private function isSignatureKindaOkay(int $summary): bool
 	{
-		return ($summary & GNUPG_SIGSUM_GREEN || $summary & GNUPG_SIGSUM_KEY_MISSING) && !($summary & GNUPG_SIGSUM_RED);
+		return (($summary & GNUPG_SIGSUM_GREEN) !== 0 || ($summary & GNUPG_SIGSUM_KEY_MISSING) !== 0) && ($summary & GNUPG_SIGSUM_RED) === 0;
 	}
 
 

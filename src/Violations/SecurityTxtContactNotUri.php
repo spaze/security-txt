@@ -10,10 +10,10 @@ final class SecurityTxtContactNotUri extends SecurityTxtFieldNotUri
 
 	public function __construct(string $uri)
 	{
-		if (filter_var($uri, FILTER_VALIDATE_EMAIL)) {
+		if (filter_var($uri, FILTER_VALIDATE_EMAIL) !== false) {
 			$correctValue = "mailto:{$uri}";
 			$howToFix = 'The value looks like an email address, add the "mailto" schema';
-		} elseif (preg_match('/^\+?[0-9\-. ]+$/', $uri)) {
+		} elseif (preg_match('/^\+?[0-9\-. ]+$/', $uri) === 1) {
 			$correctValue = "tel:{$uri}";
 			$howToFix = 'The value looks like a phone number, add the "tel" schema';
 		} else {

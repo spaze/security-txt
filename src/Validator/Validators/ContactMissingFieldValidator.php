@@ -17,7 +17,7 @@ final class ContactMissingFieldValidator implements FieldValidator
 	#[Override]
 	public function validate(SecurityTxt $securityTxt): void
 	{
-		if (!$securityTxt->getContact()) {
+		if ($securityTxt->getContact() === []) {
 			throw new SecurityTxtError(new SecurityTxtNoContact());
 		}
 	}

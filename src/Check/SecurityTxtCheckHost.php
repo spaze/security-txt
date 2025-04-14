@@ -136,7 +136,7 @@ final class SecurityTxtCheckHost
 			}
 		}
 		$signatureVerifyResult = $parseResult->getSecurityTxt()->getSignatureVerifyResult();
-		if ($signatureVerifyResult) {
+		if ($signatureVerifyResult !== null) {
 			$this->callOnCallback($this->onValidSignature, $signatureVerifyResult->getKeyFingerprint(), $signatureVerifyResult->getDate());
 		}
 

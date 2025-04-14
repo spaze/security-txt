@@ -92,7 +92,7 @@ final class SecurityTxtFetcher
 		try {
 			$this->redirects[$url] = [];
 			$records = @dns_get_record($host, DNS_A | DNS_AAAA); // intentionally @, converted to exception
-			if (!$records) {
+			if ($records === false) {
 				throw new SecurityTxtHostNotFoundException($url, $host);
 			}
 			$records = array_merge(...$records);
@@ -142,7 +142,7 @@ final class SecurityTxtFetcher
 	{
 		$builtUrl = $this->buildUrl($urlTemplate, $host);
 		$redirects = $this->redirects[$builtUrl] ?? [];
-		if ($redirects) {
+		if ($redirects !== []) {
 			array_unshift($redirects, $builtUrl);
 		}
 		$response = $this->httpClient->getResponse(new SecurityTxtFetcherUrl($url, $redirects), $useHostForContextHost ? $host : null);
@@ -169,16 +169,16 @@ final class SecurityTxtFetcher
 				$wellKnown->getUrl() => $wellKnown->getHttpCode(),
 				$topLevel->getUrl() => $topLevel->getHttpCode(),
 			]);
-		} elseif ($wellKnownContents && $topLevelContents === null) {
+		} elseif ($wellKnownContents !== null && $topLevelContents === null) {
 			$warnings[] = new SecurityTxtWellKnownPathOnly();
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
-		} elseif ($wellKnownContents === null && $topLevelContents) {
+		} elseif ($wellKnownContents === null) {
 			$warnings[] = new SecurityTxtTopLevelPathOnly();
 			$result = $topLevel;
 			$contents = $topLevelContents;
 		} elseif ($wellKnownContents !== $topLevelContents) {
-			if ($wellKnownContents === null || $topLevelContents === null) {
+			if ($topLevelContents === null) {
 				throw new LogicException('This should not happen');
 			}
 			$warnings[] = new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents);
@@ -188,18 +188,15 @@ final class SecurityTxtFetcher
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		}
-		if ($contents === null) {
-			throw new LogicException('This should not happen');
-		}
 		$this->callOnCallback($this->onFinalUrl, $result->getFinalUrl());
 
 		$contentTypeHeader = $result->getContentTypeHeader();
-		$headerParts = $contentTypeHeader ? explode(';', $contentTypeHeader, 2) : [];
+		$headerParts = $contentTypeHeader !== null ? explode(';', $contentTypeHeader, 2) : [];
 		$contentType = isset($headerParts[0]) ? trim($headerParts[0]) : null;
 		$charset = isset($headerParts[1]) ? trim($headerParts[1]) : null;
-		if (!$contentType || strtolower($contentType) !== 'text/plain') {
+		if ($contentType === null || strtolower($contentType) !== 'text/plain') {
 			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl(), $contentType);
-		} elseif (!$charset || strtolower($charset) !== 'charset=utf-8') {
+		} elseif ($charset === null || strtolower($charset) !== 'charset=utf-8') {
 			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentType, $charset);
 		}
 		$scheme = parse_url($result->getUrl(), PHP_URL_SCHEME);
@@ -282,7 +279,7 @@ final class SecurityTxtFetcher
 	private function redirect(string $url, SecurityTxtFetcherResponse $response, string $urlTemplate, string $host): SecurityTxtFetcherResponse
 	{
 		$location = $response->getHeader('Location');
-		if (!$location) {
+		if ($location === null) {
 			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
 		} else {
 			$originalUrl = $this->buildUrl($urlTemplate, $host);

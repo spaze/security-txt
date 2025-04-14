@@ -31,7 +31,7 @@ final class SecurityTxtFactory
 	{
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		try {
-			if ($values['expires']) {
+			if (isset($values['expires'])) {
 				if (!is_array($values['expires'])) {
 					throw new SecurityTxtCannotParseJsonException('expires is not an array');
 				} elseif (!isset($values['expires']['dateTime']) || !is_string($values['expires']['dateTime'])) {
@@ -44,7 +44,7 @@ final class SecurityTxtFactory
 				}
 				$securityTxt->setExpires(new Expires($dateTime));
 			}
-			if ($values['signatureVerifyResult']) {
+			if (isset($values['signatureVerifyResult'])) {
 				if (!is_array($values['signatureVerifyResult'])) {
 					throw new SecurityTxtCannotParseJsonException('signatureVerifyResult is not an array');
 				} elseif (
@@ -65,7 +65,7 @@ final class SecurityTxtFactory
 				}
 				$securityTxt->setSignatureVerifyResult(new SecurityTxtSignatureVerifyResult($values['signatureVerifyResult']['keyFingerprint'], $dateTime));
 			}
-			if ($values['preferredLanguages']) {
+			if (isset($values['preferredLanguages'])) {
 				if (!is_array($values['preferredLanguages'])) {
 					throw new SecurityTxtCannotParseJsonException('preferredLanguages is not an array');
 				} elseif (

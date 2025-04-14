@@ -17,7 +17,7 @@ final class ExpiresCheckMultipleFields implements FieldProcessor
 	#[Override]
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
-		if ($securityTxt->getExpires()) {
+		if ($securityTxt->getExpires() !== null) {
 			throw new SecurityTxtError(new SecurityTxtMultipleExpires());
 		}
 	}

@@ -182,20 +182,20 @@ final class SecurityTxt implements JsonSerializable
 				$this->preferredLanguages = $preferredLanguages;
 			},
 			function () use ($preferredLanguages): void {
-				if (!$preferredLanguages->getLanguages()) {
+				if ($preferredLanguages->getLanguages() === []) {
 					throw new SecurityTxtError(new SecurityTxtPreferredLanguagesEmpty());
 				}
 				$wrongLanguages = [];
 				foreach ($preferredLanguages->getLanguages() as $key => $value) {
-					if (!preg_match('/^([a-z]{2,3}(-[a-z0-9]+)*|[xi]-[a-z0-9]+)$/i', $value)) {
+					if (preg_match('/^([a-z]{2,3}(-[a-z0-9]+)*|[xi]-[a-z0-9]+)$/i', $value) !== 1) {
 						$wrongLanguages[$key + 1] = $value;
 					}
 				}
-				if ($wrongLanguages) {
+				if ($wrongLanguages !== []) {
 					throw new SecurityTxtError(new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages));
 				}
 				foreach ($preferredLanguages->getLanguages() as $key => $value) {
-					if (preg_match('/^cz-?/i', $value)) {
+					if (preg_match('/^cz-?/i', $value) === 1) {
 						throw new SecurityTxtError(new SecurityTxtPreferredLanguagesCommonMistake(
 							$key + 1,
 							$value,
@@ -334,7 +334,7 @@ final class SecurityTxt implements JsonSerializable
 			$validator();
 			$setValue();
 		}
-		if ($warnings) {
+		if ($warnings !== null) {
 			$warnings();
 		}
 	}
@@ -348,7 +348,7 @@ final class SecurityTxt implements JsonSerializable
 	private function checkUri(string $uri, string $notUriError, string $notHttpsError): void
 	{
 		$scheme = parse_url($uri, PHP_URL_SCHEME);
-		if (!$scheme) {
+		if ($scheme === false || $scheme === null) {
 			throw new SecurityTxtError(new $notUriError($uri));
 		}
 		if (strtolower($scheme) === 'http') {

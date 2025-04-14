@@ -29,14 +29,14 @@ final class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClien
 				'user_agent' => 'spaze/security-txt',
 			],
 		];
-		if ($contextHost) {
+		if ($contextHost !== null) {
 			$options['ssl'] = [
 				'peer_name' => $contextHost,
 			];
 			$options['http']['header'] = ["Host: {$contextHost}"];
 		}
 		$fp = @fopen($url->getUrl(), 'r', context: stream_context_create($options)); // intentionally @, converted to exception
-		if (!$fp) {
+		if ($fp === false) {
 			throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
 		}
 		$contents = stream_get_contents($fp);
@@ -47,7 +47,7 @@ final class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClien
 		fclose($fp);
 		/** @var list<string> $wrapperData */
 		$wrapperData = $metadata['wrapper_data'];
-		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $wrapperData[0], $matches)) {
+		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $wrapperData[0], $matches) === 1) {
 			$code = (int)$matches[1];
 		} else {
 			throw new SecurityTxtNoHttpCodeException($url->getUrl(), $url->getRedirects());
