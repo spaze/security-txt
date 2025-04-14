@@ -6,12 +6,12 @@ namespace Spaze\SecurityTxt\Signature;
 use DateTimeImmutable;
 use JsonSerializable;
 
-class SecurityTxtSignatureVerifyResult implements JsonSerializable
+readonly class SecurityTxtSignatureVerifyResult implements JsonSerializable
 {
 
 	public function __construct(
-		private readonly string $keyFingerprint,
-		private readonly DateTimeImmutable $date,
+		private string $keyFingerprint,
+		private DateTimeImmutable $date,
 	) {
 	}
 

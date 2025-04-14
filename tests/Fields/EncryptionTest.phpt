@@ -29,4 +29,4 @@ class EncryptionTest extends TestCase
 
 }
 
-(new EncryptionTest())->run();
+new EncryptionTest()->run();

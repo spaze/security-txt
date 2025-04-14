@@ -42,6 +42,9 @@ class SecurityTxtJson
 	{
 		$redirects = [];
 		foreach ($values as $url => $urlRedirects) {
+			if (!is_string($url)) {
+				throw new SecurityTxtCannotParseJsonException(sprintf('redirects key is a %s not a string', get_debug_type($url)));
+			}
 			if (!is_array($urlRedirects)) {
 				throw new SecurityTxtCannotParseJsonException("redirects > {$url} is not an array");
 			}

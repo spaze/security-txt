@@ -30,4 +30,4 @@ class ContactTest extends TestCase
 
 }
 
-(new ContactTest())->run();
+new ContactTest()->run();

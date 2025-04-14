@@ -9,14 +9,14 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 /**
  * @internal
  */
-class SecurityTxtFetcherFetchHostResult implements JsonSerializable
+readonly class SecurityTxtFetcherFetchHostResult implements JsonSerializable
 {
 
 	public function __construct(
-		private readonly string $url,
-		private readonly string $finalUrl,
-		private readonly ?SecurityTxtFetcherResponse $response,
-		private readonly ?SecurityTxtFetcherException $exception,
+		private string $url,
+		private string $finalUrl,
+		private ?SecurityTxtFetcherResponse $response,
+		private ?SecurityTxtFetcherException $exception,
 	) {
 	}
 

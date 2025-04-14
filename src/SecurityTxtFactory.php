@@ -98,7 +98,7 @@ class SecurityTxtFactory
 
 	/**
 	 * @template T of SecurityTxtUriField
-	 * @param array<mixed, mixed> $values
+	 * @param array<array-key, mixed> $values
 	 * @param callable(T): void $addField
 	 * @param class-string<T> $class
 	 * @throws SecurityTxtCannotParseJsonException
@@ -106,7 +106,7 @@ class SecurityTxtFactory
 	private function addSecurityTxtUriField(array $values, string $field, string $class, callable $addField): void
 	{
 		if (!is_array($values[$field])) {
-			throw new SecurityTxtCannotParseJsonException("Field {field} is not an array");
+			throw new SecurityTxtCannotParseJsonException("Field {$field} is not an array");
 		}
 		foreach ($values[$field] as $value) {
 			if (!is_array($value)) {

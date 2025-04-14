@@ -63,4 +63,4 @@ class SecurityTxtUrlParserTest extends TestCase
 
 }
 
-(new SecurityTxtUrlParserTest())->run();
+new SecurityTxtUrlParserTest()->run();

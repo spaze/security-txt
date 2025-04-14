@@ -9,13 +9,13 @@ use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseResult;
 use Spaze\SecurityTxt\SecurityTxtFactory;
 
-class SecurityTxtCheckHostResultFactory
+readonly class SecurityTxtCheckHostResultFactory
 {
 
 	public function __construct(
-		private readonly SecurityTxtFactory $securityTxtFactory,
-		private readonly SecurityTxtJson $securityTxtJson,
-		private readonly SecurityTxtFetchResultFactory $securityTxtFetchResultFactory,
+		private SecurityTxtFactory $securityTxtFactory,
+		private SecurityTxtJson $securityTxtJson,
+		private SecurityTxtFetchResultFactory $securityTxtFetchResultFactory,
 	) {
 	}
 
@@ -76,6 +76,9 @@ class SecurityTxtCheckHostResultFactory
 		if ($values['contents'] !== null && !is_string($values['contents'])) {
 			throw new SecurityTxtCannotParseJsonException('contents is not a string');
 		}
+		if (!is_array($values['fetchResult'])) {
+			throw new SecurityTxtCannotParseJsonException('fetchResult is not an array');
+		}
 		if (!is_array($values['fetchErrors'])) {
 			throw new SecurityTxtCannotParseJsonException('fetchErrors is not an array');
 		}
@@ -95,6 +98,9 @@ class SecurityTxtCheckHostResultFactory
 			}
 			$lineErrors[$line] = $this->securityTxtJson->createViolationsFromJsonValues(array_values($violations));
 		}
+		if (!is_array($values['lineWarnings'])) {
+			throw new SecurityTxtCannotParseJsonException('lineWarnings is not an array');
+		}
 		$lineWarnings = [];
 		foreach ($values['lineWarnings'] as $line => $violations) {
 			if (!is_int($line)) {
@@ -104,9 +110,6 @@ class SecurityTxtCheckHostResultFactory
 				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$line} is not an array");
 			}
 			$lineWarnings[$line] = $this->securityTxtJson->createViolationsFromJsonValues(array_values($violations));
-		}
-		if (!is_array($values['lineWarnings'])) {
-			throw new SecurityTxtCannotParseJsonException('lineWarnings is not an array');
 		}
 		if (!is_array($values['fileErrors'])) {
 			throw new SecurityTxtCannotParseJsonException('fileErrors is not an array');
@@ -126,6 +129,24 @@ class SecurityTxtCheckHostResultFactory
 				throw new SecurityTxtCannotParseJsonException("securityTxt > {$field} is not an array");
 			}
 			$securityTxtFields[$field] = $fieldValues;
+		}
+		if (!is_bool($values['expiresSoon'])) {
+			throw new SecurityTxtCannotParseJsonException('expiresSoon is not a bool');
+		}
+		if ($values['expired'] !== null && !is_bool($values['expired'])) {
+			throw new SecurityTxtCannotParseJsonException('expired is not an int');
+		}
+		if ($values['expiryDays'] !== null && !is_int($values['expiryDays'])) {
+			throw new SecurityTxtCannotParseJsonException('expiryDays is not an int');
+		}
+		if (!is_bool($values['valid'])) {
+			throw new SecurityTxtCannotParseJsonException('valid is not a bool');
+		}
+		if (!is_bool($values['strictMode'])) {
+			throw new SecurityTxtCannotParseJsonException('strictMode is not a bool');
+		}
+		if ($values['expiresWarningThreshold'] !== null && !is_int($values['expiresWarningThreshold'])) {
+			throw new SecurityTxtCannotParseJsonException('expiresWarningThreshold is not an int');
 		}
 		return new SecurityTxtCheckHostResult(
 			$values['host'],

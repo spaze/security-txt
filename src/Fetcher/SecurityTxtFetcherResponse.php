@@ -5,16 +5,16 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use JsonSerializable;
 
-class SecurityTxtFetcherResponse implements JsonSerializable
+readonly class SecurityTxtFetcherResponse implements JsonSerializable
 {
 
 	/**
 	 * @param array<string, string> $headers lowercase name => value
 	 */
 	public function __construct(
-		private readonly int $httpCode,
-		private readonly array $headers,
-		private readonly string $contents,
+		private int $httpCode,
+		private array $headers,
+		private string $contents,
 	) {
 	}
 

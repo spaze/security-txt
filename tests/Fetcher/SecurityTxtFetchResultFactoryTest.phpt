@@ -36,4 +36,4 @@ class SecurityTxtFetchResultFactoryTest extends TestCase
 
 }
 
-(new SecurityTxtFetchResultFactoryTest())->run();
+new SecurityTxtFetchResultFactoryTest()->run();

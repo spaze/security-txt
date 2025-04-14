@@ -1,6 +1,5 @@
 <?php
 /** @noinspection PhpUnhandledExceptionInspection */
-/** @noinspection PhpUnnecessaryFullyQualifiedNameInspection */
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 declare(strict_types = 1);
 
@@ -161,9 +160,9 @@ class SecurityTxtFetcherTest extends TestCase
 	 */
 	public function testGetResultNotFound(): void
 	{
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
-		Assert::with($this->securityTxtFetcher, function () use ($wellKnown, $topLevel): void {
+		Assert::with($this->securityTxtFetcher, function (): void {
+			$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
+			$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
 			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
 			$this->getResult($wellKnown, $topLevel);
 		});
@@ -171,4 +170,4 @@ class SecurityTxtFetcherTest extends TestCase
 
 }
 
-(new SecurityTxtFetcherTest())->run();
+new SecurityTxtFetcherTest()->run();

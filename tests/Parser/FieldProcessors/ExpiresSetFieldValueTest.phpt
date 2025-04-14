@@ -48,4 +48,4 @@ class ExpiresSetFieldValueTest extends TestCase
 
 }
 
-(new ExpiresSetFieldValueTest())->run();
+new ExpiresSetFieldValueTest()->run();

@@ -3,15 +3,15 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
-class SecurityTxtFetcherUrl
+readonly class SecurityTxtFetcherUrl
 {
 
 	/**
 	 * @param list<string> $redirects
 	 */
 	public function __construct(
-		private readonly string $url,
-		private readonly array $redirects,
+		private string $url,
+		private array $redirects,
 	) {
 	}
 

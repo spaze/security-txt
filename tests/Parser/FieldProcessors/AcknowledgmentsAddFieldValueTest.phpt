@@ -45,4 +45,4 @@ class AcknowledgmentsAddFieldValueTest extends TestCase
 
 }
 
-(new AcknowledgmentsAddFieldValueTest())->run();
+new AcknowledgmentsAddFieldValueTest()->run();

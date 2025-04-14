@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 use JsonSerializable;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtFetchResult implements JsonSerializable
+readonly class SecurityTxtFetchResult implements JsonSerializable
 {
 
 	/**
@@ -15,12 +15,12 @@ class SecurityTxtFetchResult implements JsonSerializable
 	 * @param list<SecurityTxtSpecViolation> $warnings
 	 */
 	public function __construct(
-		private readonly string $constructedUrl,
-		private readonly string $finalUrl,
-		private readonly array $redirects,
-		private readonly string $contents,
-		private readonly array $errors,
-		private readonly array $warnings,
+		private string $constructedUrl,
+		private string $finalUrl,
+		private array $redirects,
+		private string $contents,
+		private array $errors,
+		private array $warnings,
 	) {
 	}
 

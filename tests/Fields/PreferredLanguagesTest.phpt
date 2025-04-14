@@ -29,4 +29,4 @@ class PreferredLanguagesTest extends TestCase
 
 }
 
-(new PreferredLanguagesTest())->run();
+new PreferredLanguagesTest()->run();

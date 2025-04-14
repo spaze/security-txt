@@ -265,4 +265,4 @@ class SecurityTxtTest extends TestCase
 
 }
 
-(new SecurityTxtTest())->run();
+new SecurityTxtTest()->run();

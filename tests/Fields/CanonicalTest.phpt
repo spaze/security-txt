@@ -28,4 +28,4 @@ class CanonicalTest extends TestCase
 
 }
 
-(new CanonicalTest())->run();
+new CanonicalTest()->run();

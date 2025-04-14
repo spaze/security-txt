@@ -9,7 +9,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtParseResult implements JsonSerializable
+readonly class SecurityTxtParseResult implements JsonSerializable
 {
 
 	/**
@@ -17,15 +17,15 @@ class SecurityTxtParseResult implements JsonSerializable
 	 * @param array<int, list<SecurityTxtSpecViolation>> $lineWarnings
 	 */
 	public function __construct(
-		private readonly SecurityTxt $securityTxt,
-		private readonly bool $isValid,
-		private readonly bool $strictMode,
-		private readonly ?int $expiresWarningThreshold,
-		private readonly bool $expiresSoon,
-		private readonly array $lineErrors,
-		private readonly array $lineWarnings,
-		private readonly SecurityTxtValidateResult $validateResult,
-		private readonly ?SecurityTxtFetchResult $fetchResult = null,
+		private SecurityTxt $securityTxt,
+		private bool $isValid,
+		private bool $strictMode,
+		private ?int $expiresWarningThreshold,
+		private bool $expiresSoon,
+		private array $lineErrors,
+		private array $lineWarnings,
+		private SecurityTxtValidateResult $validateResult,
+		private ?SecurityTxtFetchResult $fetchResult = null,
 	) {
 	}
 

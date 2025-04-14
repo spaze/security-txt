@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-class SecurityTxtCheckHostResult implements JsonSerializable
+readonly class SecurityTxtCheckHostResult implements JsonSerializable
 {
 
 	/**
@@ -21,25 +21,25 @@ class SecurityTxtCheckHostResult implements JsonSerializable
 	 * @param list<SecurityTxtSpecViolation> $fileWarnings
 	 */
 	public function __construct(
-		private readonly string $host,
-		private readonly ?array $redirects,
-		private readonly ?string $constructedUrl,
-		private readonly ?string $finalUrl,
-		private readonly ?string $contents,
-		private readonly ?SecurityTxtFetchResult $fetchResult,
-		private readonly array $fetchErrors,
-		private readonly array $fetchWarnings,
-		private readonly array $lineErrors,
-		private readonly array $lineWarnings,
-		private readonly array $fileErrors,
-		private readonly array $fileWarnings,
-		private readonly SecurityTxt $securityTxt,
-		private readonly bool $expiresSoon,
-		private readonly ?bool $isExpired,
-		private readonly ?int $expiryDays,
-		private readonly bool $isValid,
-		private readonly bool $strictMode,
-		private readonly ?int $expiresWarningThreshold,
+		private string $host,
+		private ?array $redirects,
+		private ?string $constructedUrl,
+		private ?string $finalUrl,
+		private ?string $contents,
+		private ?SecurityTxtFetchResult $fetchResult,
+		private array $fetchErrors,
+		private array $fetchWarnings,
+		private array $lineErrors,
+		private array $lineWarnings,
+		private array $fileErrors,
+		private array $fileWarnings,
+		private SecurityTxt $securityTxt,
+		private bool $expiresSoon,
+		private ?bool $isExpired,
+		private ?int $expiryDays,
+		private bool $isValid,
+		private bool $strictMode,
+		private ?int $expiresWarningThreshold,
 	) {
 	}
 

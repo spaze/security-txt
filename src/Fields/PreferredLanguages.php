@@ -5,14 +5,14 @@ namespace Spaze\SecurityTxt\Fields;
 
 use JsonSerializable;
 
-class PreferredLanguages implements JsonSerializable
+readonly class PreferredLanguages implements JsonSerializable
 {
 
 	/**
 	 * @param list<string> $languages
 	 */
 	public function __construct(
-		private readonly array $languages,
+		private array $languages,
 	) {
 	}
 
