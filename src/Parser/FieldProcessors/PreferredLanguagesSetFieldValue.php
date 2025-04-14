@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use LogicException;
+use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -12,6 +13,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 class PreferredLanguagesSetFieldValue implements FieldProcessor
 {
 
+	#[Override]
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
 		$regexp = '/\s*([,.;:])\s*/';

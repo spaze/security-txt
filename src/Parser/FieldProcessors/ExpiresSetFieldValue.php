@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use DateTimeImmutable;
 use Exception;
+use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\Expires;
@@ -20,6 +21,7 @@ class ExpiresSetFieldValue implements FieldProcessor
 	 * @throws SecurityTxtWarning
 	 * @throws Exception
 	 */
+	#[Override]
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
 		$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC3339, $value);

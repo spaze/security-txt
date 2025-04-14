@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Signature;
 
 use DateTimeImmutable;
 use JsonSerializable;
+use Override;
 
 readonly class SecurityTxtSignatureVerifyResult implements JsonSerializable
 {
@@ -31,6 +32,7 @@ readonly class SecurityTxtSignatureVerifyResult implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [

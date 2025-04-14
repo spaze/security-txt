@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Validator;
 
 use JsonSerializable;
+use Override;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
 readonly class SecurityTxtValidateResult implements JsonSerializable
@@ -41,6 +42,7 @@ readonly class SecurityTxtValidateResult implements JsonSerializable
 	/**
 	 * @return array<string, mixed>
 	 */
+	#[Override]
 	public function jsonSerialize(): array
 	{
 		return [
