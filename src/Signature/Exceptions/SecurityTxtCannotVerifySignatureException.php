@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Signature\Exceptions;
 use Exception;
 use Throwable;
 
-class SecurityTxtCannotVerifySignatureException extends Exception
+final class SecurityTxtCannotVerifySignatureException extends Exception
 {
 
 	public function __construct(string $message, ?Throwable $previous = null)

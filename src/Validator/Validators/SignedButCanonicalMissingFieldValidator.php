@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignedButNoCanonical;
 
-class SignedButCanonicalMissingFieldValidator implements FieldValidator
+final class SignedButCanonicalMissingFieldValidator implements FieldValidator
 {
 
 	/**

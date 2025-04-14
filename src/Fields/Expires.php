@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use JsonSerializable;
 use Override;
 
-class Expires implements JsonSerializable
+final class Expires implements JsonSerializable
 {
 
 	private DateInterval $interval;

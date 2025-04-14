@@ -10,7 +10,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-readonly class SecurityTxtParseResult implements JsonSerializable
+final readonly class SecurityTxtParseResult implements JsonSerializable
 {
 
 	/**

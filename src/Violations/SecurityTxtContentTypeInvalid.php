@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtContentTypeInvalid extends SecurityTxtSpecViolation
+final class SecurityTxtContentTypeInvalid extends SecurityTxtSpecViolation
 {
 
 	public function __construct(string $url, ?string $contentType)

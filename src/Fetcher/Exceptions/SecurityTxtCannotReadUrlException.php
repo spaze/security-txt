@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtCannotReadUrlException extends SecurityTxtFetcherException
+final class SecurityTxtCannotReadUrlException extends SecurityTxtFetcherException
 {
 
 	/**

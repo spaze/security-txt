@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 
-class ExpiresCheckMultipleFields implements FieldProcessor
+final class ExpiresCheckMultipleFields implements FieldProcessor
 {
 
 	/**

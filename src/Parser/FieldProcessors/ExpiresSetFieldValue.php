@@ -13,7 +13,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 
-class ExpiresSetFieldValue implements FieldProcessor
+final class ExpiresSetFieldValue implements FieldProcessor
 {
 
 	/**

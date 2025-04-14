@@ -7,7 +7,7 @@ use Override;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\SecurityTxt;
 
-class ContactAddFieldValue implements FieldProcessor
+final class ContactAddFieldValue implements FieldProcessor
 {
 
 	#[Override]

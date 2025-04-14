@@ -7,7 +7,7 @@ use Override;
 use Spaze\SecurityTxt\Fields\Encryption;
 use Spaze\SecurityTxt\SecurityTxt;
 
-class EncryptionAddFieldValue implements FieldProcessor
+final class EncryptionAddFieldValue implements FieldProcessor
 {
 
 	#[Override]

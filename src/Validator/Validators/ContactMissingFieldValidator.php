@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 
-class ContactMissingFieldValidator implements FieldValidator
+final class ContactMissingFieldValidator implements FieldValidator
 {
 
 	/**

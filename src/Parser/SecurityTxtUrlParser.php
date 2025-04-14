@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Parser;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 
-class SecurityTxtUrlParser
+final class SecurityTxtUrlParser
 {
 
 	/**

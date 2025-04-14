@@ -7,7 +7,7 @@ use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-readonly class SecurityTxtFetchResult implements JsonSerializable
+final readonly class SecurityTxtFetchResult implements JsonSerializable
 {
 
 	/**

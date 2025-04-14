@@ -10,7 +10,7 @@ use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 
-class PreferredLanguagesSetFieldValue implements FieldProcessor
+final class PreferredLanguagesSetFieldValue implements FieldProcessor
 {
 
 	#[Override]

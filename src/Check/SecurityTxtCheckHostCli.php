@@ -7,7 +7,7 @@ use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 
-readonly class SecurityTxtCheckHostCli
+final readonly class SecurityTxtCheckHostCli
 {
 
 	public function __construct(

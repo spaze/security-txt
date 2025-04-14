@@ -7,7 +7,7 @@ use Override;
 use Spaze\SecurityTxt\Fields\Hiring;
 use Spaze\SecurityTxt\SecurityTxt;
 
-class HiringAddFieldValue implements FieldProcessor
+final class HiringAddFieldValue implements FieldProcessor
 {
 
 	#[Override]

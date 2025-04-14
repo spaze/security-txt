@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtHostIpAddressInvalidTypeException extends SecurityTxtFetcherException
+final class SecurityTxtHostIpAddressInvalidTypeException extends SecurityTxtFetcherException
 {
 
 	public function __construct(string $host, string $type, string $url, ?Throwable $previous = null)

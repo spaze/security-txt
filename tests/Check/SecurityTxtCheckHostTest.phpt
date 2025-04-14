@@ -22,7 +22,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class SecurityTxtCheckHostTest extends TestCase
+final class SecurityTxtCheckHostTest extends TestCase
 {
 
 	private DateTimeImmutable $expires;

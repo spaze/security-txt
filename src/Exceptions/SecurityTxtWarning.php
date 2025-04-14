@@ -7,7 +7,7 @@ use Exception;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Throwable;
 
-class SecurityTxtWarning extends Exception
+final class SecurityTxtWarning extends Exception
 {
 
 	public function __construct(private readonly SecurityTxtSpecViolation $violation, ?Throwable $previous = null)

@@ -10,7 +10,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 
-class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
+final class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 {
 
 	/**

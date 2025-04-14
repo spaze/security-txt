@@ -7,7 +7,7 @@ use DateTimeImmutable;
 use JsonSerializable;
 use Override;
 
-readonly class SecurityTxtSignatureVerifyResult implements JsonSerializable
+final readonly class SecurityTxtSignatureVerifyResult implements JsonSerializable
 {
 
 	public function __construct(

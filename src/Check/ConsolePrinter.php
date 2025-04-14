@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Check;
 /**
  * @internal Should be used only in the check host class
  */
-class ConsolePrinter
+final class ConsolePrinter
 {
 
 	private bool $colors = false;

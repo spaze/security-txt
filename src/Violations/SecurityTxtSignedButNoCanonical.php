@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtSignedButNoCanonical extends SecurityTxtSpecViolation
+final class SecurityTxtSignedButNoCanonical extends SecurityTxtSpecViolation
 {
 
 	public function __construct()

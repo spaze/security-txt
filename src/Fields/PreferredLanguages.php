@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Fields;
 use JsonSerializable;
 use Override;
 
-readonly class PreferredLanguages implements JsonSerializable
+final readonly class PreferredLanguages implements JsonSerializable
 {
 
 	/**

@@ -7,7 +7,7 @@ use Override;
 use Spaze\SecurityTxt\Fields\Acknowledgments;
 use Spaze\SecurityTxt\SecurityTxt;
 
-class AcknowledgmentsAddFieldValue implements FieldProcessor
+final class AcknowledgmentsAddFieldValue implements FieldProcessor
 {
 
 	#[Override]

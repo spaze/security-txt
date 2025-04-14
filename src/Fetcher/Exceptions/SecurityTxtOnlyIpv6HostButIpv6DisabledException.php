@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtOnlyIpv6HostButIpv6DisabledException extends SecurityTxtFetcherException
+final class SecurityTxtOnlyIpv6HostButIpv6DisabledException extends SecurityTxtFetcherException
 {
 
 	public function __construct(string $host, string $ipv6, string $url, ?Throwable $previous = null)

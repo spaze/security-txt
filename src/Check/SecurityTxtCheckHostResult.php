@@ -9,7 +9,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-readonly class SecurityTxtCheckHostResult implements JsonSerializable
+final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 {
 
 	/**

@@ -9,7 +9,7 @@ use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseResult;
 use Spaze\SecurityTxt\SecurityTxtFactory;
 
-readonly class SecurityTxtCheckHostResultFactory
+final readonly class SecurityTxtCheckHostResultFactory
 {
 
 	public function __construct(

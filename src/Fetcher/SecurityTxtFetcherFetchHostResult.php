@@ -10,7 +10,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 /**
  * @internal
  */
-readonly class SecurityTxtFetcherFetchHostResult implements JsonSerializable
+final readonly class SecurityTxtFetcherFetchHostResult implements JsonSerializable
 {
 
 	public function __construct(

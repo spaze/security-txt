@@ -27,7 +27,7 @@ use Tester\TestCase;
 require __DIR__ . '/bootstrap.php';
 
 /** @testCase */
-class SecurityTxtTest extends TestCase
+final class SecurityTxtTest extends TestCase
 {
 
 	public function testSetExpires(): void

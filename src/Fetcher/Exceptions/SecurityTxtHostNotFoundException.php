@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
 
-class SecurityTxtHostNotFoundException extends SecurityTxtFetcherException
+final class SecurityTxtHostNotFoundException extends SecurityTxtFetcherException
 {
 
 	public function __construct(string $url, string $host, ?Throwable $previous = null)

@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-class SecurityTxtMultipleExpires extends SecurityTxtSpecViolation
+final class SecurityTxtMultipleExpires extends SecurityTxtSpecViolation
 {
 
 	public function __construct()

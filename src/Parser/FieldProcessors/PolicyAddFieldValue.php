@@ -7,7 +7,7 @@ use Override;
 use Spaze\SecurityTxt\Fields\Policy;
 use Spaze\SecurityTxt\SecurityTxt;
 
-class PolicyAddFieldValue implements FieldProcessor
+final class PolicyAddFieldValue implements FieldProcessor
 {
 
 	#[Override]

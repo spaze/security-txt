@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
 
-class ExpiresMissingFieldValidator implements FieldValidator
+final class ExpiresMissingFieldValidator implements FieldValidator
 {
 
 	/**

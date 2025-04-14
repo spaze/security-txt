@@ -13,7 +13,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-class SecurityTxtFetchResultFactoryTest extends TestCase
+final class SecurityTxtFetchResultFactoryTest extends TestCase
 {
 
 	public function testCreateFromJson(): void

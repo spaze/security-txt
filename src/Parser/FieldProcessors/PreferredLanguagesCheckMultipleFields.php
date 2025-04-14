@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
 
-class PreferredLanguagesCheckMultipleFields implements FieldProcessor
+final class PreferredLanguagesCheckMultipleFields implements FieldProcessor
 {
 
 	/**

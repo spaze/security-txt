@@ -36,7 +36,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
 
-class SecurityTxt implements JsonSerializable
+final class SecurityTxt implements JsonSerializable
 {
 
 	private ?Expires $expires = null;

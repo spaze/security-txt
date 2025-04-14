@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Check\Exceptions;
 use Exception;
 use Throwable;
 
-class SecurityTxtCannotParseJsonException extends Exception
+final class SecurityTxtCannotParseJsonException extends Exception
 {
 
 	public function __construct(string $message, ?Throwable $previous = null)

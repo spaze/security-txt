@@ -19,7 +19,7 @@ use Spaze\SecurityTxt\Fields\PreferredLanguages;
 use Spaze\SecurityTxt\Fields\SecurityTxtUriField;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 
-class SecurityTxtFactory
+final class SecurityTxtFactory
 {
 
 	/**

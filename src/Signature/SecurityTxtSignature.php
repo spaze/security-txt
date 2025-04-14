@@ -11,7 +11,7 @@ use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureExcep
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 
-class SecurityTxtSignature
+final class SecurityTxtSignature
 {
 
 	private gnupg $gnupg;

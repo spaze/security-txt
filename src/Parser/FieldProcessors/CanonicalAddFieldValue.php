@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\SecurityTxt;
 
-class CanonicalAddFieldValue implements FieldProcessor
+final class CanonicalAddFieldValue implements FieldProcessor
 {
 
 	/**

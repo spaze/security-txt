@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Violations;
 
 use DateTimeInterface;
 
-class SecurityTxtExpiresOldFormat extends SecurityTxtSpecViolation
+final class SecurityTxtExpiresOldFormat extends SecurityTxtSpecViolation
 {
 
 	public function __construct(private readonly DateTimeInterface $expires)

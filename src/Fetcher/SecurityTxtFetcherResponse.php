@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 use JsonSerializable;
 use Override;
 
-readonly class SecurityTxtFetcherResponse implements JsonSerializable
+final readonly class SecurityTxtFetcherResponse implements JsonSerializable
 {
 
 	/**

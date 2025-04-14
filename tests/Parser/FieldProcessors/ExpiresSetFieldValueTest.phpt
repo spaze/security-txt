@@ -15,7 +15,7 @@ use Tester\TestCase;
 require __DIR__ . '/../../bootstrap.php';
 
 /** @testCase */
-class ExpiresSetFieldValueTest extends TestCase
+final class ExpiresSetFieldValueTest extends TestCase
 {
 
 	public function testProcess(): void
