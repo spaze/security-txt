@@ -3,18 +3,17 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Throwable;
 
 class SecurityTxtNoLocationHeaderException extends SecurityTxtFetcherException
 {
 
-	public function __construct(string $url, SecurityTxtFetcherResponse $response, ?Throwable $previous = null)
+	public function __construct(string $url, int $httpCode, ?Throwable $previous = null)
 	{
 		parent::__construct(
-			func_get_args(),
+			[$url, $httpCode],
 			'HTTP response with code %d is missing a Location header when fetching %s',
-			[$response->getHttpCode(), $url],
+			[$httpCode, $url],
 			$url,
 			previous: $previous,
 		);

@@ -15,7 +15,7 @@ class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 	public function __construct(array $urls, ?Throwable $previous = null)
 	{
 		parent::__construct(
-			func_get_args(),
+			[$urls],
 			"Can't read security.txt: %s",
 			[implode(', ', array_map(fn(string $url, int $code): string => "{$url} => {$code}", array_keys($urls), $urls))],
 			array_key_first($urls),

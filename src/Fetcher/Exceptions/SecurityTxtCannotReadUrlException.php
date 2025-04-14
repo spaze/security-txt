@@ -3,20 +3,22 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 use Throwable;
 
 class SecurityTxtCannotReadUrlException extends SecurityTxtFetcherException
 {
 
-	public function __construct(SecurityTxtFetcherUrl $url, ?Throwable $previous = null)
+	/**
+	 * @param list<string> $redirects
+	 */
+	public function __construct(string $url, array $redirects, ?Throwable $previous = null)
 	{
 		parent::__construct(
-			func_get_args(),
-			$url->getRedirects() ? "Can't get contents of %s (redirects: %s)" : "Can't get contents of %s",
-			$url->getRedirects() ? [$url->getUrl(), implode(' => ', $url->getRedirects())] : [$url->getUrl()],
-			$url->getUrl(),
-			$url->getRedirects(),
+			[$url, $redirects],
+			$redirects ? "Can't get contents of %s (redirects: %s)" : "Can't get contents of %s",
+			$redirects ? [$url, implode(' => ', $redirects)] : [$url],
+			$url,
+			$redirects,
 			previous: $previous,
 		);
 	}

@@ -10,7 +10,7 @@ class SecurityTxtHostIpAddressNotFoundException extends SecurityTxtFetcherExcept
 
 	public function __construct(string $url, string $host, ?Throwable $previous = null)
 	{
-		parent::__construct(func_get_args(), "Can't open %s, no IP address for %s found", [$url, $host], $url, previous: $previous);
+		parent::__construct([$url, $host], "Can't open %s, no IP address for %s found", [$url, $host], $url, previous: $previous);
 	}
 
 }

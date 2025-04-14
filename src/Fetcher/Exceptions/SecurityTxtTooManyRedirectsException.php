@@ -17,7 +17,7 @@ class SecurityTxtTooManyRedirectsException extends SecurityTxtFetcherException
 	public function __construct(string $url, array $redirects, int $maxAllowed, ?Throwable $previous = null)
 	{
 		parent::__construct(
-			func_get_args(),
+			[$url, $redirects, $maxAllowed],
 			"Can't read %s, too many redirects, max allowed is %d (%s [not loaded])",
 			[$url, $maxAllowed, implode(' → ', $redirects)],
 			$url,

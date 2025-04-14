@@ -283,7 +283,7 @@ class SecurityTxtFetcher
 	{
 		$location = $response->getHeader('Location');
 		if (!$location) {
-			throw new SecurityTxtNoLocationHeaderException($url, $response);
+			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
 		} else {
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
 			$previousUrl = $this->redirects[$originalUrl][array_key_last($this->redirects[$originalUrl])] ?? $originalUrl;

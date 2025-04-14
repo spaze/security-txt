@@ -35,11 +35,11 @@ class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 		}
 		$fp = @fopen($url->getUrl(), 'r', context: stream_context_create($options)); // intentionally @, converted to exception
 		if (!$fp) {
-			throw new SecurityTxtCannotOpenUrlException($url);
+			throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
 		}
 		$contents = stream_get_contents($fp);
 		if ($contents === false) {
-			throw new SecurityTxtCannotReadUrlException($url);
+			throw new SecurityTxtCannotReadUrlException($url->getUrl(), $url->getRedirects());
 		}
 		$metadata = stream_get_meta_data($fp);
 		fclose($fp);
@@ -48,7 +48,7 @@ class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 		if (preg_match('~^HTTP/[\d.]+ (\d+)~', $wrapperData[0], $matches)) {
 			$code = (int)$matches[1];
 		} else {
-			throw new SecurityTxtNoHttpCodeException($url);
+			throw new SecurityTxtNoHttpCodeException($url->getUrl(), $url->getRedirects());
 		}
 
 		$headers = [];
