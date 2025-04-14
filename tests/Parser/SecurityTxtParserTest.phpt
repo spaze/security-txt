@@ -37,6 +37,7 @@ class SecurityTxtParserTest extends TestCase
 
 	private SecurityTxtParser $securityTxtParser;
 
+
 	protected function setUp(): void
 	{
 		$securityTxtValidator = new SecurityTxtValidator();
