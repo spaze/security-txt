@@ -98,7 +98,7 @@ class SecurityTxtFactory
 
 	/**
 	 * @template T of SecurityTxtUriField
-	 * @param array<mixed, mixed> $values
+	 * @param array<array-key, mixed> $values
 	 * @param callable(T): void $addField
 	 * @param class-string<T> $class
 	 * @throws SecurityTxtCannotParseJsonException
