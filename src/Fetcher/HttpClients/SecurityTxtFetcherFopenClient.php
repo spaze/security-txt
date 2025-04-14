@@ -31,7 +31,7 @@ class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 			$options['ssl'] = [
 				'peer_name' => $contextHost,
 			];
-			$options['http']['header'][] = "Host: {$contextHost}";
+			$options['http']['header'] = ["Host: {$contextHost}"];
 		}
 		$fp = @fopen($url->getUrl(), 'r', context: stream_context_create($options)); // intentionally @, converted to exception
 		if (!$fp) {

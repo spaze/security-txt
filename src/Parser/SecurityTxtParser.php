@@ -8,6 +8,8 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidTypeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
@@ -30,6 +32,7 @@ use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesCheckMultipleFiel
 use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
+use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
@@ -111,6 +114,9 @@ class SecurityTxtParser
 	}
 
 
+	/**
+	 * @throws SecurityTxtCannotVerifySignatureException
+	 */
 	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
 	{
 		$this->lineErrors = [];
@@ -177,6 +183,9 @@ class SecurityTxtParser
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
+	 * @throws SecurityTxtHostIpAddressInvalidTypeException
+	 * @throws SecurityTxtHostIpAddressNotFoundException
+	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
 	public function parseHost(string $host, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $noIpv6 = false): SecurityTxtParseResult
 	{
@@ -186,6 +195,9 @@ class SecurityTxtParser
 	}
 
 
+	/**
+	 * @throws SecurityTxtCannotVerifySignatureException
+	 */
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
@@ -193,6 +205,9 @@ class SecurityTxtParser
 	}
 
 
+	/**
+	 * @throws SecurityTxtCannotVerifySignatureException
+	 */
 	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): void
 	{
 		if ($this->signature->isCleartextHeader($line)) {

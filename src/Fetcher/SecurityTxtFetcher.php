@@ -6,6 +6,8 @@ namespace Spaze\SecurityTxt\Fetcher;
 use LogicException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidTypeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
@@ -59,6 +61,8 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
+	 * @throws SecurityTxtHostIpAddressInvalidTypeException
+	 * @throws SecurityTxtHostIpAddressNotFoundException
 	 */
 	public function fetchHost(string $host, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
@@ -77,6 +81,8 @@ class SecurityTxtFetcher
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
+	 * @throws SecurityTxtHostIpAddressInvalidTypeException
+	 * @throws SecurityTxtHostIpAddressNotFoundException
 	 */
 	private function fetchUrl(string $urlTemplate, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
@@ -90,10 +96,25 @@ class SecurityTxtFetcher
 				throw new SecurityTxtHostNotFoundException($url, $host);
 			}
 			$records = array_merge(...$records);
-			if ($noIpv6 && isset($records['ipv6']) && !isset($records['ip'])) {
-				throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $records['ipv6'], $url);
+			$ipRecord = $records['ip'] ?? null;
+			$ipv6Record = $records['ipv6'] ?? null;
+			if ($ipRecord !== null && !is_string($ipRecord)) {
+				throw new SecurityTxtHostIpAddressInvalidTypeException($host, get_debug_type($ipRecord), $url);
 			}
-			$ipAddress = !$noIpv6 && isset($records['ipv6']) ? "[{$records['ipv6']}]" : $records['ip'];
+			if ($ipv6Record !== null && !is_string($ipv6Record)) {
+				throw new SecurityTxtHostIpAddressInvalidTypeException($host, get_debug_type($ipv6Record), $url);
+			}
+			if ($noIpv6 && $ipv6Record !== null && $ipRecord === null) {
+				throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url);
+			}
+			if (!$noIpv6 && $ipv6Record !== null) {
+				$ipAddress = "[{$ipv6Record}]";
+			} elseif ($ipRecord !== null) {
+				$ipAddress = $ipRecord;
+			}
+			if (!isset($ipAddress)) {
+				throw new SecurityTxtHostIpAddressNotFoundException($url, $host);
+			}
 			$response = $this->getResponse($this->buildUrl($urlTemplate, $ipAddress), $urlTemplate, $host, true);
 		} catch (SecurityTxtUrlNotFoundException $e) {
 			$this->callOnCallback($this->onUrlNotFound, $e->getUrl());

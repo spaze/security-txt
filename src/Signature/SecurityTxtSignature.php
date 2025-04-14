@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use gnupg;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
+use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 
@@ -38,6 +39,7 @@ class SecurityTxtSignature
 	/**
 	 * @throws SecurityTxtError
 	 * @throws SecurityTxtWarning
+	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
 	public function verify(string $contents): SecurityTxtSignatureVerifyResult
 	{
@@ -47,8 +49,20 @@ class SecurityTxtSignature
 			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
 		$signature = $signatures[0];
+		if (!is_array($signature)) {
+			throw new SecurityTxtCannotVerifySignatureException('signature is not an array');
+		}
+		if (!isset($signature['summary']) || !is_int($signature['summary'])) {
+			throw new SecurityTxtCannotVerifySignatureException('summary is missing or not a string');
+		}
 		if (!$this->isSignatureKindaOkay($signature['summary'])) {
 			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
+		}
+		if (!isset($signature['fingerprint']) || !is_string($signature['fingerprint'])) {
+			throw new SecurityTxtCannotVerifySignatureException('fingerprint is missing or not a string');
+		}
+		if (!isset($signature['timestamp']) || !is_int($signature['timestamp'])) {
+			throw new SecurityTxtCannotVerifySignatureException('timestamp is missing or not a string');
 		}
 		return new SecurityTxtSignatureVerifyResult($signature['fingerprint'], new DateTimeImmutable()->setTimestamp($signature['timestamp']));
 	}
