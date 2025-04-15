@@ -23,6 +23,7 @@ jobs:
       with:
         coverage: "none"
         php-version: ${{ matrix.php-version }}
+        extensions: gnupg
 
     - name: PHP info
       run: |

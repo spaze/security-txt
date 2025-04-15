@@ -26,8 +26,6 @@ use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
-use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotUri;
-use Spaze\SecurityTxt\Violations\SecurityTxtFieldUriNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
@@ -341,8 +339,8 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @param class-string<SecurityTxtFieldNotUri> $notUriError
-	 * @param class-string<SecurityTxtFieldUriNotHttps> $notHttpsError
+	 * @param class-string<SecurityTxtAcknowledgmentsNotUri|SecurityTxtCanonicalNotUri|SecurityTxtContactNotUri|SecurityTxtEncryptionNotUri|SecurityTxtHiringNotUri|SecurityTxtPolicyNotUri> $notUriError
+	 * @param class-string<SecurityTxtAcknowledgmentsNotHttps|SecurityTxtCanonicalNotHttps|SecurityTxtContactNotHttps|SecurityTxtEncryptionNotHttps|SecurityTxtHiringNotHttps|SecurityTxtPolicyNotHttps> $notHttpsError
 	 * @throws SecurityTxtError
 	 */
 	private function checkUri(string $uri, string $notUriError, string $notHttpsError): void

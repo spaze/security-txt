@@ -9,7 +9,7 @@ use Override;
 abstract class SecurityTxtUriField implements JsonSerializable
 {
 
-	public function __construct(
+	final public function __construct(
 		private readonly string $uri,
 	) {
 	}

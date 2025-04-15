@@ -5,7 +5,6 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use DateTimeImmutable;
-use Override;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
@@ -26,8 +25,7 @@ final class SecurityTxtValidatorTest extends TestCase
 	private SecurityTxtValidator $securityTxtValidator;
 
 
-	#[Override]
-	protected function setUp(): void
+	public function __construct()
 	{
 		$this->securityTxtValidator = new SecurityTxtValidator();
 	}
