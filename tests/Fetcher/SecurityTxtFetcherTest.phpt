@@ -118,12 +118,13 @@ final class SecurityTxtFetcherTest extends TestCase
 		assert(is_array($redirects));
 		$property->setValue($fetcher, array_merge($redirects, [sprintf($template, $host) => []]));
 		$method = new ReflectionMethod($fetcher, 'getResponse');
+		$finalUrl = 'passed by ref';
 		if ($expectedException !== null) {
-			Assert::throws(function () use ($method, $fetcher, $template, $host): void {
-				$method->invoke($fetcher, 'https://example.com/foo', $template, $host, true);
+			Assert::throws(function () use ($method, $fetcher, $template, $host, $finalUrl): void {
+				$method->invokeArgs($fetcher, ['https://example.com/foo', $template, $host, true, &$finalUrl]);
 			}, $expectedException);
 		} else {
-			$response = $method->invoke($fetcher, 'https://example.com/foo', $template, $host, true);
+			$response = $method->invokeArgs($fetcher, ['https://example.com/foo', $template, $host, true, &$finalUrl]);
 			assert($response instanceof SecurityTxtFetcherResponse);
 			Assert::same($expectedHttpCode, $response->getHttpCode());
 			Assert::same($expectedLocation, $response->getHeader('location'));
@@ -132,7 +133,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
-	 * @return array<string, array{0:string|null, 1:string|null, bool}>
+	 * @return array<string, array{0:string|null, 1:string|null, 2:bool}>
 	 */
 	public function getContents(): array
 	{

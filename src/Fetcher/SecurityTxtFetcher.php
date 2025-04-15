@@ -31,8 +31,6 @@ final class SecurityTxtFetcher
 	/** @var array<string, list<string>> */
 	private array $redirects = [];
 
-	private string $finalUrl;
-
 	/** @var list<callable(string): void> */
 	private array $onUrl = [];
 
@@ -87,7 +85,7 @@ final class SecurityTxtFetcher
 	private function fetchUrl(string $urlTemplate, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
 		$url = $this->buildUrl($urlTemplate, $host);
-		$this->finalUrl = $url;
+		$finalUrl = $url;
 		$this->callOnCallback($this->onUrl, $url);
 		try {
 			$this->redirects[$url] = [];
@@ -115,14 +113,14 @@ final class SecurityTxtFetcher
 			if (!isset($ipAddress)) {
 				throw new SecurityTxtHostIpAddressNotFoundException($url, $host);
 			}
-			$response = $this->getResponse($this->buildUrl($urlTemplate, $ipAddress), $urlTemplate, $host, true);
+			$response = $this->getResponse($this->buildUrl($urlTemplate, $ipAddress), $urlTemplate, $host, true, $finalUrl);
 		} catch (SecurityTxtUrlNotFoundException $e) {
 			$this->callOnCallback($this->onUrlNotFound, $e->getUrl());
 			$response = null;
 		}
 		return new SecurityTxtFetcherFetchHostResult(
 			$url,
-			$this->finalUrl,
+			$finalUrl,
 			$response,
 			$e ?? null,
 		);
@@ -138,7 +136,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 */
-	private function getResponse(string $url, string $urlTemplate, string $host, bool $useHostForContextHost): SecurityTxtFetcherResponse
+	private function getResponse(string $url, string $urlTemplate, string $host, bool $useHostForContextHost, string &$finalUrl): SecurityTxtFetcherResponse
 	{
 		$builtUrl = $this->buildUrl($urlTemplate, $host);
 		$redirects = $this->redirects[$builtUrl] ?? [];
@@ -150,7 +148,7 @@ final class SecurityTxtFetcher
 			throw new SecurityTxtUrlNotFoundException($url, $response->getHttpCode());
 		}
 		if ($response->getHttpCode() >= 300) {
-			return $this->redirect($url, $response, $urlTemplate, $host);
+			return $this->redirect($url, $response, $urlTemplate, $host, $finalUrl);
 		}
 		return $response;
 	}
@@ -276,21 +274,21 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtUrlNotFoundException
 	 */
-	private function redirect(string $url, SecurityTxtFetcherResponse $response, string $urlTemplate, string $host): SecurityTxtFetcherResponse
+	private function redirect(string $url, SecurityTxtFetcherResponse $response, string $urlTemplate, string $host, string &$finalUrl): SecurityTxtFetcherResponse
 	{
 		$location = $response->getHeader('Location');
 		if ($location === null) {
 			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
 		} else {
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
-			$previousUrl = $this->redirects[$originalUrl][array_key_last($this->redirects[$originalUrl])] ?? $originalUrl;
+			$previousUrl = $this->redirects[$originalUrl] !== [] ? $this->redirects[$originalUrl][array_key_last($this->redirects[$originalUrl])] : $originalUrl;
 			$this->callOnCallback($this->onRedirect, $previousUrl, $location);
 			$this->redirects[$originalUrl][] = $location;
-			$this->finalUrl = $location;
+			$finalUrl = $location;
 			if (count($this->redirects[$originalUrl]) > self::MAX_ALLOWED_REDIRECTS) {
 				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], self::MAX_ALLOWED_REDIRECTS);
 			}
-			return $this->getResponse($location, $urlTemplate, $host, false);
+			return $this->getResponse($location, $urlTemplate, $host, false, $finalUrl);
 		}
 	}
 

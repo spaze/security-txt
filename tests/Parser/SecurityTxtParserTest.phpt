@@ -7,7 +7,6 @@ namespace Spaze\SecurityTxt\Parser;
 
 use DateTime;
 use DateTimeImmutable;
-use Override;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
@@ -40,8 +39,7 @@ final class SecurityTxtParserTest extends TestCase
 	private SecurityTxtParser $securityTxtParser;
 
 
-	#[Override]
-	protected function setUp(): void
+	public function __construct()
 	{
 		$securityTxtValidator = new SecurityTxtValidator();
 		$securityTxtSignature = new SecurityTxtSignature();

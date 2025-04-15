@@ -5,7 +5,6 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
-use Override;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -18,8 +17,7 @@ final class SecurityTxtUrlParserTest extends TestCase
 	private SecurityTxtUrlParser $securityTxtUrlParser;
 
 
-	#[Override]
-	protected function setUp(): void
+	public function __construct()
 	{
 		$this->securityTxtUrlParser = new SecurityTxtUrlParser();
 	}

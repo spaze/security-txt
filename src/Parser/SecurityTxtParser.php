@@ -119,7 +119,7 @@ final class SecurityTxtParser
 	 */
 	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
 	{
-		$this->lineErrors = [];
+		$this->lineErrors = $this->lineWarnings = [];
 		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
 		if ($lines === false) {
 			throw new LogicException('This should not happen');

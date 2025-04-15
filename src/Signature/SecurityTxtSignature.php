@@ -11,28 +11,12 @@ use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureExcep
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 
-final class SecurityTxtSignature
+final readonly class SecurityTxtSignature
 {
 
-	private gnupg $gnupg;
-
-
 	public function __construct(
-		private readonly ?string $homeDir = null,
+		private ?string $homeDir = null,
 	) {
-	}
-
-
-	/**
-	 * @throws SecurityTxtWarning
-	 */
-	public function init(): void
-	{
-		if (!extension_loaded('gnupg')) {
-			throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
-		}
-		$options = $this->homeDir !== null ? ['home_dir' => $this->homeDir] : [];
-		$this->gnupg = new gnupg($options);
 	}
 
 
@@ -43,8 +27,11 @@ final class SecurityTxtSignature
 	 */
 	public function verify(string $contents): SecurityTxtSignatureVerifyResult
 	{
-		$this->init();
-		$signatures = $this->gnupg->verify($contents, false);
+		if (!extension_loaded('gnupg')) {
+			throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
+		}
+		$options = $this->homeDir !== null ? ['home_dir' => $this->homeDir] : [];
+		$signatures = new gnupg($options)->verify($contents, false);
 		if ($signatures === false || !isset($signatures[0])) {
 			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
