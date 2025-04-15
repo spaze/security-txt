@@ -25,24 +25,27 @@ final class ExpiresSetFieldValueTest extends TestCase
 		$expires = new DateTimeImmutable('+2 weeks');
 
 		$processor->process($expires->format(DATE_RFC3339), $securityTxt);
-		Assert::same($expires->format(DATE_RFC3339), $securityTxt->getExpires()->getDateTime()->format(DATE_RFC3339));
+		Assert::same($expires->format(DATE_RFC3339), $securityTxt->getExpires()?->getDateTime()->format(DATE_RFC3339));
 
 		$processor->process($expires->format(DATE_RFC3339_EXTENDED), $securityTxt);
-		Assert::same($expires->format(DATE_RFC3339), $securityTxt->getExpires()->getDateTime()->format(DATE_RFC3339));
+		Assert::same($expires->format(DATE_RFC3339), $securityTxt->getExpires()?->getDateTime()->format(DATE_RFC3339));
 
 		$e = Assert::throws(function () use ($processor, $expires, $securityTxt): void {
 			$processor->process($expires->format(DATE_RFC2822), $securityTxt);
 		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
 		Assert::type(SecurityTxtExpiresOldFormat::class, $e->getViolation());
 
 		$e = Assert::throws(function () use ($processor, $expires, $securityTxt): void {
 			$processor->process($expires->format(DATE_RFC850), $securityTxt);
 		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
 		Assert::type(SecurityTxtExpiresWrongFormat::class, $e->getViolation());
 
 		$e = Assert::throws(function () use ($processor, $expires, $securityTxt): void {
 			$processor->process($expires->format('Y-m-d H:i:s'), $securityTxt);
 		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
 		Assert::type(SecurityTxtExpiresWrongFormat::class, $e->getViolation());
 	}
 

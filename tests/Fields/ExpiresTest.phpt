@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
 /** @noinspection PhpUnhandledExceptionInspection */
 declare(strict_types = 1);
 
@@ -6,6 +7,7 @@ namespace Spaze\SecurityTxt\Fields;
 
 use DateInterval;
 use DateTimeImmutable;
+use ReflectionProperty;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -15,6 +17,9 @@ require __DIR__ . '/../bootstrap.php';
 final class ExpiresTest extends TestCase
 {
 
+	/**
+	 * @return array<string, array{0:DateTimeImmutable, 1:DateTimeImmutable, 2:bool, 3:int}>
+	 */
 	public function getExpiresField(): array
 	{
 		$now = new DateTimeImmutable();
@@ -31,10 +36,7 @@ final class ExpiresTest extends TestCase
 	public function testIsExpiredInDays(DateTimeImmutable $now, DateTimeImmutable $expires, bool $isExpired, int $expireDays): void
 	{
 		$expiresObject = new Expires($expires);
-		Assert::with($expiresObject, function () use ($now, $expires): void {
-			/** @noinspection PhpDynamicFieldDeclarationInspection Closure bound to $expiresObject */
-			$this->interval = $now->diff($expires);
-		});
+		new ReflectionProperty($expiresObject, 'interval')->setValue($expiresObject, $now->diff($expires));
 		Assert::same($isExpired, $expiresObject->isExpired());
 		Assert::same($expireDays, $expiresObject->inDays());
 	}

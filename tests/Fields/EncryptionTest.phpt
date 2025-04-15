@@ -14,16 +14,27 @@ final class EncryptionTest extends TestCase
 {
 
 	/**
+	 * @return list<list<string>>
 	 * @noinspection HttpUrlsUsage
-	 * @noinspection PhpExpressionResultUnusedInspection
 	 */
-	public function testValues(): void
+	public function getUris(): array
 	{
-		Assert::noError(function (): void {
-			new Encryption('http://example.com/key.txt');
-			new Encryption('https://example.com/key.txt');
-			new Encryption('ftp://foo.bar.example.net/key.txt');
-			new Encryption('a e i o u');
+		return [
+			['http://example.com/key.txt'],
+			['https://example.com/key.txt'],
+			['ftp://foo.bar.example.net/key.txt'],
+			['a e i o u'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getUris
+	 */
+	public function testValues(string $uri): void
+	{
+		Assert::noError(function () use ($uri): void {
+			Assert::same($uri, new Encryption($uri)->getUri());
 		});
 	}
 

@@ -2,6 +2,10 @@ parameters:
 	paths:
 		- src
 		- bin
+		- tests
+	fileExtensions:
+		- php
+		- phpt
 	level: max
 	checkMissingOverrideMethodAttribute: true
 

@@ -12,6 +12,7 @@ use Spaze\SecurityTxt\Fields\Canonical;
 use Spaze\SecurityTxt\Fields\Contact;
 use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
+use Spaze\SecurityTxt\Fields\SecurityTxtUriField;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
@@ -61,6 +62,7 @@ final class SecurityTxtTest extends TestCase
 		$e = Assert::throws(function () use ($securityTxt, $future): void {
 			$securityTxt->setExpires($future);
 		}, SecurityTxtWarning::class);
+		assert($e instanceof SecurityTxtWarning);
 		Assert::type(SecurityTxtExpiresTooLong::class, $e->getViolation());
 		Assert::equal($future, $securityTxt->getExpires());
 	}
@@ -73,6 +75,7 @@ final class SecurityTxtTest extends TestCase
 		$e = Assert::throws(function () use ($securityTxt, $past): void {
 			$securityTxt->setExpires($past);
 		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
 		Assert::type(SecurityTxtExpired::class, $e->getViolation());
 		Assert::null($securityTxt->getExpires());
 
@@ -81,13 +84,14 @@ final class SecurityTxtTest extends TestCase
 		$e = Assert::throws(function () use ($securityTxt, $past): void {
 			$securityTxt->setExpires($past);
 		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
 		Assert::type(SecurityTxtExpired::class, $e->getViolation());
 		Assert::equal($past, $securityTxt->getExpires());
 	}
 
 
 	/**
-	 * @return array<string, array{0: array<string, class-string<SecurityTxtSpecViolation>|null>, 1: class-string, 2: callable(SecurityTxt):callable, 3: callable(SecurityTxt):callable, 4: callable}>
+	 * @return array<string, array{0: array<string, class-string<SecurityTxtSpecViolation>|null>, 1: class-string, 2: callable(SecurityTxt):callable, 3: callable(SecurityTxt):(callable():list<SecurityTxtUriField>), 4: callable}>
 	 * @noinspection HttpUrlsUsage
 	 */
 	public function getAddFieldValues(): array
@@ -140,7 +144,7 @@ final class SecurityTxtTest extends TestCase
 	 * @param array<string, class-string<SecurityTxtSpecViolation>|null> $values
 	 * @param class-string $fieldClass
 	 * @param callable(SecurityTxt): callable $addFactory
-	 * @param callable(SecurityTxt): callable $getFieldFactory
+	 * @param callable(SecurityTxt): (callable(): list<SecurityTxtUriField>) $getFieldFactory
 	 * @param callable $getValue
 	 * @dataProvider getAddFieldValues
 	 */
@@ -152,14 +156,16 @@ final class SecurityTxtTest extends TestCase
 
 		foreach ($values as $value => $violation) {
 			$allValues[] = $value;
-			if ($violation) {
+			if ($violation !== null) {
 				$e = Assert::throws(function () use ($securityTxt, $value, $fieldClass, $addFactory): void {
 					$addFactory($securityTxt)(new $fieldClass($value));
 				}, SecurityTxtError::class);
+				assert($e instanceof SecurityTxtError);
 				Assert::type($violation, $e->getViolation());
 				$e = Assert::throws(function () use ($securityTxtWithInvalidValues, $value, $fieldClass, $addFactory): void {
 					$addFactory($securityTxtWithInvalidValues)(new $fieldClass($value));
 				}, SecurityTxtError::class);
+				assert($e instanceof SecurityTxtError);
 				Assert::type($violation, $e->getViolation());
 			} else {
 				$validValues[] = $value;
@@ -174,7 +180,7 @@ final class SecurityTxtTest extends TestCase
 
 
 	/**
-	 * @return array<string, array{0: list<string>, 1: class-string<SecurityTxtSpecViolation>}>
+	 * @return array<string, array{0: list<string>, 1: class-string<SecurityTxtSpecViolation>|null}>
 	 */
 	public function getPreferredLanguageValues(): array
 	{
@@ -199,26 +205,28 @@ final class SecurityTxtTest extends TestCase
 		$securityTxt = new SecurityTxt();
 		$securityTxtWithInvalidValues = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
 
-		if ($violation) {
-			$e = Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
+		if ($violation !== null) {
+			$e = Assert::throws(function () use ($languages, $securityTxt): void {
 				$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
 			}, SecurityTxtError::class);
+			assert($e instanceof SecurityTxtError);
 			Assert::type($violation, $e->getViolation());
-			$e = Assert::throws(function () use ($languages, $securityTxt, $securityTxtWithInvalidValues): void {
+			$e = Assert::throws(function () use ($languages, $securityTxtWithInvalidValues): void {
 				$securityTxtWithInvalidValues->setPreferredLanguages(new PreferredLanguages($languages));
 			}, SecurityTxtError::class);
+			assert($e instanceof SecurityTxtError);
 			Assert::type($violation, $e->getViolation());
 		} else {
 			$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
 			$securityTxtWithInvalidValues->setPreferredLanguages(new PreferredLanguages($languages));
 		}
 
-		if ($violation) {
+		if ($violation !== null) {
 			Assert::null($securityTxt->getPreferredLanguages());
 		} else {
-			Assert::same($languages, $securityTxt->getPreferredLanguages()->getLanguages());
+			Assert::same($languages, $securityTxt->getPreferredLanguages()?->getLanguages());
 		}
-		Assert::same($languages, $securityTxtWithInvalidValues->getPreferredLanguages()->getLanguages());
+		Assert::same($languages, $securityTxtWithInvalidValues->getPreferredLanguages()?->getLanguages());
 	}
 
 
@@ -249,7 +257,7 @@ final class SecurityTxtTest extends TestCase
 		Assert::throws(function () use ($securityTxt, $expires): void {
 			$securityTxt->setExpires(new Expires($expires));
 		}, SecurityTxtError::class, 'The file is considered stale and should not be used');
-		Assert::equal($expires, $securityTxt->getExpires()->getDateTime());
+		Assert::equal($expires, $securityTxt->getExpires()?->getDateTime());
 	}
 
 
@@ -260,7 +268,7 @@ final class SecurityTxtTest extends TestCase
 		Assert::noError(function () use ($securityTxt, $expires): void {
 			$securityTxt->setExpires(new Expires($expires));
 		});
-		Assert::equal($expires, $securityTxt->getExpires()->getDateTime());
+		Assert::equal($expires, $securityTxt->getExpires()?->getDateTime());
 	}
 
 }

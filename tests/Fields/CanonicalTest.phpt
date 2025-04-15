@@ -14,15 +14,26 @@ final class CanonicalTest extends TestCase
 {
 
 	/**
+	 * @return list<list<string>>
 	 * @noinspection HttpUrlsUsage
-	 * @noinspection PhpExpressionResultUnusedInspection
 	 */
-	public function testValues(): void
+	public function getUris(): array
 	{
-		Assert::noError(function (): void {
-			new Canonical('http://example.com/.well-known/security.txt');
-			new Canonical('https://example.com/.well-known/security.txt');
-			new Canonical('ftp://foo.bar.example.net/security.txt');
+		return [
+			['http://example.com/.well-known/security.txt'],
+			['https://example.com/.well-known/security.txt'],
+			['ftp://foo.bar.example.net/security.txt'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getUris
+	 */
+	public function testValues(string $uri): void
+	{
+		Assert::noError(function () use ($uri): void {
+			Assert::same($uri, new Canonical($uri)->getUri());
 		});
 	}
 

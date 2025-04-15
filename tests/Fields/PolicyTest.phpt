@@ -14,16 +14,27 @@ final class PolicyTest extends TestCase
 {
 
 	/**
+	 * @return list<list<string>>
 	 * @noinspection HttpUrlsUsage
-	 * @noinspection PhpExpressionResultUnusedInspection
 	 */
-	public function testValues(): void
+	public function getUris(): array
 	{
-		Assert::noError(function (): void {
-			new Policy('http://example.com/policy.txt');
-			new Policy('https://example.com/policy.txt');
-			new Policy('ftp://foo.bar.example.net/policy.txt');
-			new Policy('totus tuus');
+		return [
+			['http://example.com/policy.txt'],
+			['https://example.com/policy.txt'],
+			['ftp://foo.bar.example.net/policy.txt'],
+			['totus tuus'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getUris
+	 */
+	public function testValues(string $uri): void
+	{
+		Assert::noError(function () use ($uri): void {
+			Assert::same($uri, new Policy($uri)->getUri());
 		});
 	}
 

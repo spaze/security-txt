@@ -38,7 +38,11 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		$fetchResultFactory = new SecurityTxtFetchResultFactory($json);
 		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory, $json, $fetchResultFactory);
 		$expectedResult = $this->getResult();
-		$actualResult = $resultFactory->createFromJsonValues(json_decode(json_encode($expectedResult), true));
+		$encoded = json_encode($expectedResult);
+		assert(is_string($encoded));
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		$actualResult = $resultFactory->createFromJsonValues($decoded);
 		$this->setExpiresInterval($expectedResult);
 		$this->setExpiresInterval($actualResult);
 		Assert::equal($expectedResult, $actualResult);
@@ -48,6 +52,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 	private function setExpiresInterval(SecurityTxtCheckHostResult $result): void
 	{
 		$expires = $result->getSecurityTxt()->getExpires();
+		assert($expires instanceof Expires);
 		$reflection = new ReflectionProperty($expires, 'interval');
 		$reflection->setValue($expires, new DateInterval('P30D'));
 	}

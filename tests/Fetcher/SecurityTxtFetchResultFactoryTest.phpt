@@ -31,7 +31,10 @@ final class SecurityTxtFetchResultFactoryTest extends TestCase
 			[new SecurityTxtTopLevelPathOnly()],
 		);
 		$json = json_encode($result);
-		Assert::equal($result, $resultFactory->createFromJsonValues(json_decode($json, true)));
+		assert(is_string($json));
+		$decoded = json_decode($json, true);
+		assert(is_array($decoded));
+		Assert::equal($result, $resultFactory->createFromJsonValues($decoded));
 	}
 
 }

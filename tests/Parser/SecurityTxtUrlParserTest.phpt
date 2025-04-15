@@ -5,6 +5,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
+use Override;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -17,12 +18,16 @@ final class SecurityTxtUrlParserTest extends TestCase
 	private SecurityTxtUrlParser $securityTxtUrlParser;
 
 
+	#[Override]
 	protected function setUp(): void
 	{
 		$this->securityTxtUrlParser = new SecurityTxtUrlParser();
 	}
 
 
+	/**
+	 * @return array<string, array{0:string, 1:string}>
+	 */
 	public function getHosts(): array
 	{
 		return [
@@ -44,6 +49,9 @@ final class SecurityTxtUrlParserTest extends TestCase
 	}
 
 
+	/**
+	 * @return list<array{0:string}>
+	 */
 	public function getBadHosts(): array
 	{
 		return [

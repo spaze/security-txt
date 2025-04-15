@@ -1,12 +1,16 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
 /** @noinspection PhpUnhandledExceptionInspection */
-/** @noinspection PhpFullyQualifiedNameUsageInspection */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Override;
+use ReflectionMethod;
+use ReflectionProperty;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
@@ -19,33 +23,28 @@ require __DIR__ . '/../bootstrap.php';
 final class SecurityTxtFetcherTest extends TestCase
 {
 
-	private SecurityTxtFetcher $securityTxtFetcher;
-	private SecurityTxtFetcherHttpClient $httpClient;
-
-
-	protected function setUp(): void
+	private function getHttpClient(SecurityTxtFetcherResponse $fetcherResponse): SecurityTxtFetcherHttpClient
 	{
-		$this->httpClient = new class () implements SecurityTxtFetcherHttpClient {
+		return new readonly class ($fetcherResponse) implements SecurityTxtFetcherHttpClient {
 
-			private SecurityTxtFetcherResponse $fetcherResponse;
+			public function __construct(private SecurityTxtFetcherResponse $fetcherResponse)
+			{
+			}
 
 
+			#[Override]
 			public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse;
 			}
 
-
-			public function setFetcherResponse(SecurityTxtFetcherResponse $fetcherResponse): void
-			{
-				$this->fetcherResponse = $fetcherResponse;
-			}
-
 		};
-		$this->securityTxtFetcher = new SecurityTxtFetcher($this->httpClient);
 	}
 
 
+	/**
+	 * @return array<string, array{0:int, 1:array<string, string>, 2:int, 3:string|null, 4:class-string<SecurityTxtFetcherException>|null}>
+	 */
 	public function getHeaders(): array
 	{
 		return [
@@ -103,8 +102,6 @@ final class SecurityTxtFetcherTest extends TestCase
 	 * @param array<string, string> $headers
 	 * @param class-string<SecurityTxtFetcherException>|null $expectedException
 	 * @dataProvider getHeaders
-	 * @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher
-	 * @noinspection PhpUndefinedFieldInspection Closure bound to $this->securityTxtFetcher
 	 */
 	public function testGetResponse(int $httpCode, array $headers, int $expectedHttpCode, ?string $expectedLocation, ?string $expectedException): void
 	{
@@ -112,25 +109,31 @@ final class SecurityTxtFetcherTest extends TestCase
 		foreach ($headers as $key => $value) {
 			$lowercaseHeaders[strtolower($key)] = $value;
 		}
-		/** @noinspection PhpPossiblePolymorphicInvocationInspection Using an anonymous class with the extra method */
-		$this->httpClient->setFetcherResponse(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents'));
-		Assert::with($this->securityTxtFetcher, function () use ($headers, $expectedHttpCode, $expectedLocation, $expectedException): void {
-			$template = 'https://%s/foo';
-			$host = 'host';
-			$this->redirects[$this->buildUrl($template, $host)] = [];
-			if ($expectedException) {
-				Assert::throws(function () use ($template, $host): void {
-					$this->getResponse('https://example.com/foo', $template, $host, true);
-				}, $expectedException);
-			} else {
-				$response = $this->getResponse('https://example.com/foo', $template, $host, true);
-				Assert::same($expectedHttpCode, $response->getHttpCode());
-				Assert::same($expectedLocation, $response->getHeader('location'));
-			}
-		});
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents'));
+		$fetcher = new SecurityTxtFetcher($httpClient);
+		$template = 'https://%s/foo';
+		$host = 'host';
+		$property = new ReflectionProperty($fetcher, 'redirects');
+		$redirects = $property->getValue($fetcher);
+		assert(is_array($redirects));
+		$property->setValue($fetcher, array_merge($redirects, [sprintf($template, $host) => []]));
+		$method = new ReflectionMethod($fetcher, 'getResponse');
+		if ($expectedException !== null) {
+			Assert::throws(function () use ($method, $fetcher, $template, $host): void {
+				$method->invoke($fetcher, 'https://example.com/foo', $template, $host, true);
+			}, $expectedException);
+		} else {
+			$response = $method->invoke($fetcher, 'https://example.com/foo', $template, $host, true);
+			assert($response instanceof SecurityTxtFetcherResponse);
+			Assert::same($expectedHttpCode, $response->getHttpCode());
+			Assert::same($expectedLocation, $response->getHeader('location'));
+		}
 	}
 
 
+	/**
+	 * @return array<string, array{0:string|null, 1:string|null, bool}>
+	 */
 	public function getContents(): array
 	{
 		return [
@@ -145,27 +148,28 @@ final class SecurityTxtFetcherTest extends TestCase
 	/** @dataProvider getContents */
 	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownWins): void
 	{
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
-		Assert::with($this->securityTxtFetcher, function () use ($wellKnown, $topLevel, $wellKnownWins): void {
-			$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
-			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
-			Assert::same($expected, $this->getResult($wellKnown, $topLevel)->getContents());
-		});
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
+		$fetcher = new SecurityTxtFetcher($httpClient);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
+		$method = new ReflectionMethod($fetcher, 'getResult');
+		$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
+		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
+		assert($result instanceof SecurityTxtFetchResult);
+		Assert::same($expected, $result->getContents());
 	}
 
 
-	/**
-	 * @throws \Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException Can't read security.txt: foo => 404, bar => 403
-	 */
 	public function testGetResultNotFound(): void
 	{
-		Assert::with($this->securityTxtFetcher, function (): void {
-			$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
-			$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
-			/** @noinspection PhpUndefinedMethodInspection Closure bound to $this->securityTxtFetcher */
-			$this->getResult($wellKnown, $topLevel);
-		});
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
+		$fetcher = new SecurityTxtFetcher($httpClient);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
+		$method = new ReflectionMethod($fetcher, 'getResult');
+		Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
+			$method->invoke($fetcher, $wellKnown, $topLevel);
+		}, SecurityTxtNotFoundException::class, "Can't read security.txt: foo => 404, bar => 403");
 	}
 
 }

@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
 /** @noinspection PhpUnhandledExceptionInspection */
 declare(strict_types = 1);
 
@@ -6,6 +7,7 @@ namespace Spaze\SecurityTxt\Parser;
 
 use DateTime;
 use DateTimeImmutable;
+use Override;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
@@ -38,6 +40,7 @@ final class SecurityTxtParserTest extends TestCase
 	private SecurityTxtParser $securityTxtParser;
 
 
+	#[Override]
 	protected function setUp(): void
 	{
 		$securityTxtValidator = new SecurityTxtValidator();
@@ -48,6 +51,9 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	/**
+	 * @return array<string, array{0:string, 1:bool, 2:array<int, list<class-string<SecurityTxtExpired>>>}>
+	 */
 	public function getExpiresField(): array
 	{
 		return [
@@ -57,12 +63,15 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
-	/** @dataProvider getExpiresField */
+	/**
+	 * @param array<int, list<class-string<SecurityTxtExpired>>> $errors
+	 * @dataProvider getExpiresField
+	 */
 	public function testParseStringExpiresField(string $fieldValue, bool $isExpired, array $errors): void
 	{
 		$contents = "Foo: bar\nExpires: " . new DateTime($fieldValue)->format(DATE_RFC3339) . "\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::same($isExpired, $parseResult->getSecurityTxt()->getExpires()->isExpired());
+		Assert::same($isExpired, $parseResult->getSecurityTxt()->getExpires()?->isExpired());
 		foreach ($parseResult->getLineErrors() as $lineNumber => $lineErrors) {
 			foreach ($lineErrors as $key => $lineError) {
 				Assert::type($errors[$lineNumber][$key], $lineError);
@@ -145,7 +154,7 @@ final class SecurityTxtParserTest extends TestCase
 			$contents = "Contact: {$mailto}\nExpires: {$expires}\n";
 			$parseResult = $this->securityTxtParser->parseString($contents);
 			Assert::same($mailto, $parseResult->getSecurityTxt()->getContact()[0]->getUri());
-			Assert::same($expires, $parseResult->getSecurityTxt()->getExpires()->getDateTime()->format(DATE_RFC3339));
+			Assert::same($expires, $parseResult->getSecurityTxt()->getExpires()?->getDateTime()->format(DATE_RFC3339));
 			Assert::count(0, $parseResult->getLineErrors());
 			Assert::count(0, $parseResult->getFileErrors());
 		};
@@ -200,7 +209,7 @@ final class SecurityTxtParserTest extends TestCase
 	{
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: en,CS\n");
 		Assert::count(0, $parseResult->getLineErrors());
-		Assert::same(['en', 'CS'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
+		Assert::same(['en', 'CS'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 	}
 
 
@@ -230,13 +239,13 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
 		Assert::same('The language tag #1 `CZ` in the `Preferred-Languages` field is not correct, the code for Czech language is `cs`, not `cz`', $error->getMessage());
-		Assert::same(['CZ', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
+		Assert::same(['CZ', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: CZ-Czechia,en\n");
 		$error = $parseResult->getLineErrors()[1][0];
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
 		Assert::same('cs-Czechia', $error->getCorrectValue());
-		Assert::same(['CZ-Czechia', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()->getLanguages());
+		Assert::same(['CZ-Czechia', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 	}
 
 
