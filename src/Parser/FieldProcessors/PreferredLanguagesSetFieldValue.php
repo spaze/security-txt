@@ -19,17 +19,17 @@ final class PreferredLanguagesSetFieldValue implements FieldProcessor
 		$regexp = '/\s*([,.;:])\s*/';
 		$separators = preg_match_all($regexp, $value, $matches);
 		$languages = @preg_split($regexp, $value); // intentionally @, converted to exception
-		if (!$languages) {
+		if ($languages === false) {
 			throw new LogicException('This should not happen');
 		}
-		if ($separators) {
+		if ($separators !== false && $separators > 0) {
 			$wrongSeparators = [];
 			foreach ($matches[1] as $key => $separator) {
 				if ($separator !== ',') {
 					$wrongSeparators[$key + 1] = $separator;
 				}
 			}
-			if ($wrongSeparators) {
+			if ($wrongSeparators !== []) {
 				throw new SecurityTxtError(new SecurityTxtPreferredLanguagesSeparatorNotComma($wrongSeparators, $languages));
 			}
 		}

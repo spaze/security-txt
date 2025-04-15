@@ -205,7 +205,9 @@ final class SecurityTxtCheckHostTest extends TestCase
 			'strictMode' => true,
 			'expiresWarningThreshold' => 15,
 		];
-		Assert::same($expected, json_decode(json_encode($result), true));
+		$json = json_encode($result);
+		assert(is_string($json));
+		Assert::same($expected, json_decode($json, true));
 	}
 
 

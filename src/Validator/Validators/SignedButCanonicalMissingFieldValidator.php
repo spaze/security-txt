@@ -17,7 +17,7 @@ final class SignedButCanonicalMissingFieldValidator implements FieldValidator
 	#[Override]
 	public function validate(SecurityTxt $securityTxt): void
 	{
-		if ($securityTxt->getSignatureVerifyResult() && !$securityTxt->getCanonical()) {
+		if ($securityTxt->getSignatureVerifyResult() !== null && $securityTxt->getCanonical() === []) {
 			throw new SecurityTxtWarning(new SecurityTxtSignedButNoCanonical());
 		}
 	}

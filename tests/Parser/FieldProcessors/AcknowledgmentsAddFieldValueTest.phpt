@@ -35,11 +35,13 @@ final class AcknowledgmentsAddFieldValueTest extends TestCase
 		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('http://no.https.example', $securityTxt);
 		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
 		Assert::type(SecurityTxtAcknowledgmentsNotHttps::class, $e->getViolation());
 
 		$e = Assert::throws(function () use ($processor, $securityTxt): void {
 			$processor->process('no.scheme', $securityTxt);
 		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
 		Assert::type(SecurityTxtAcknowledgmentsNotUri::class, $e->getViolation());
 	}
 

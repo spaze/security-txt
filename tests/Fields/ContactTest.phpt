@@ -14,17 +14,28 @@ final class ContactTest extends TestCase
 {
 
 	/**
+	 * @return list<list<string>>
 	 * @noinspection HttpUrlsUsage
-	 * @noinspection PhpExpressionResultUnusedInspection
 	 */
-	public function testValues(): void
+	public function getUris(): array
 	{
-		Assert::noError(function (): void {
-			new Contact('https://example.com/contact');
-			new Contact('http://example.com/contact');
-			new Contact('mailto:foo@example.com');
-			new Contact('foo@example.com');
-			new Contact('tel:+1-201-555-0123');
+		return [
+			['https://example.com/contact'],
+			['http://example.com/contact'],
+			['mailto:foo@example.com'],
+			['foo@example.com'],
+			['tel:+1-201-555-0123'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getUris
+	 */
+	public function testValues(string $uri): void
+	{
+		Assert::noError(function () use ($uri): void {
+			Assert::same($uri, new Contact($uri)->getUri());
 		});
 	}
 

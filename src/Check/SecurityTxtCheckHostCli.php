@@ -77,21 +77,21 @@ final readonly class SecurityTxtCheckHostCli
 		$onError = function (?int $line, string $message, string $howToFix, ?string $correctValue): void {
 			$this->consolePrinter->error(sprintf(
 				'%s%s%s (How to fix: %s%s)',
-				$line ? 'on line ' : '',
-				$line ? $this->consolePrinter->colorBold((string)$line) . ': ' : '',
+				$line !== null ? 'on line ' : '',
+				$line !== null ? $this->consolePrinter->colorBold((string)$line) . ': ' : '',
 				$message,
 				$howToFix,
-				$correctValue ? ", e.g. `{$correctValue}`" : '',
+				$correctValue !== null ? ", e.g. `{$correctValue}`" : '',
 			));
 		};
 		$onWarning = function (?int $line, string $message, string $howToFix, ?string $correctValue): void {
 			$this->consolePrinter->warning(sprintf(
 				'%s%s%s (How to fix: %s%s)',
-				$line ? 'on line ' : '',
-				$line ? $this->consolePrinter->colorBold((string)$line) . ': ' : '',
+				$line !== null ? 'on line ' : '',
+				$line !== null ? $this->consolePrinter->colorBold((string)$line) . ': ' : '',
 				$message,
 				$howToFix,
-				$correctValue ? ", e.g. `{$correctValue}`" : '',
+				$correctValue !== null ? ", e.g. `{$correctValue}`" : '',
 			));
 		};
 		$this->checkHost->addOnFetchError($onError);
@@ -104,7 +104,7 @@ final readonly class SecurityTxtCheckHostCli
 		if ($colors) {
 			$this->consolePrinter->enableColors();
 		}
-		if (!$url) {
+		if ($url === null) {
 			$this->consolePrinter->info("Usage: {$scriptName} <url or hostname> [days] [--colors] [--strict] [--no-ipv6] \nThe check will return 1 instead of 0 if any of the following is true: the file has expired, expires in less than <days>, has errors, has warnings when using --strict");
 			$this->exit(CheckExitStatus::NoFile);
 		}

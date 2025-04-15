@@ -17,7 +17,7 @@ final class PreferredLanguagesCheckMultipleFields implements FieldProcessor
 	#[Override]
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
-		if ($securityTxt->getPreferredLanguages()) {
+		if ($securityTxt->getPreferredLanguages() !== null) {
 			throw new SecurityTxtError(new SecurityTxtMultiplePreferredLanguages());
 		}
 	}

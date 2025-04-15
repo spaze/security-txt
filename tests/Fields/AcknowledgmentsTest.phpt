@@ -14,16 +14,27 @@ final class AcknowledgmentsTest extends TestCase
 {
 
 	/**
+	 * @return list<list<string>>
 	 * @noinspection HttpUrlsUsage
-	 * @noinspection PhpExpressionResultUnusedInspection
 	 */
-	public function testValues(): void
+	public function getUris(): array
 	{
-		Assert::noError(function (): void {
-			new Acknowledgments('http://example.com/ack.txt');
-			new Acknowledgments('https://example.com/ack.txt');
-			new Acknowledgments('ftp://foo.bar.example.net/ack.txt');
-			new Acknowledgments('fiat lux');
+		return [
+			['http://example.com/ack.txt'],
+			['https://example.com/ack.txt'],
+			['ftp://foo.bar.example.net/ack.txt'],
+			['fiat lux'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getUris
+	 */
+	public function testValues(string $uri): void
+	{
+		Assert::noError(function () use ($uri): void {
+			Assert::same($uri, new Acknowledgments($uri)->getUri());
 		});
 	}
 

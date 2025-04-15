@@ -121,7 +121,7 @@ final class SecurityTxtParser
 	{
 		$this->lineErrors = [];
 		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
-		if (!$lines) {
+		if ($lines === false) {
 			throw new LogicException('This should not happen');
 		}
 		$this->lines = $lines;
@@ -151,7 +151,7 @@ final class SecurityTxtParser
 				$this->processField($lineNumber, $fieldValue, $securityTxtFields[$fieldName], $securityTxt);
 			} else {
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
-				if ($suggestion) {
+				if ($suggestion !== null) {
 					$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
 				}
 			}
@@ -159,11 +159,11 @@ final class SecurityTxtParser
 		$validateResult = $this->validator->validate($securityTxt);
 		$expires = $securityTxt->getExpires();
 		$expiresSoon = $expiresWarningThreshold !== null && $expires?->inDays() < $expiresWarningThreshold;
-		$hasErrors = $this->lineErrors || $validateResult->getErrors();
-		$hasWarnings = $this->lineWarnings || $validateResult->getWarnings();
+		$hasErrors = $this->lineErrors !== [] || $validateResult->getErrors() !== [];
+		$hasWarnings = $this->lineWarnings !== [] || $validateResult->getWarnings() !== [];
 		return new SecurityTxtParseResult(
 			$securityTxt,
-			!$expires?->isExpired() && (!$strictMode || !$expiresSoon) && !$hasErrors && (!$strictMode || !$hasWarnings),
+			($expires === null || !$expires->isExpired()) && (!$strictMode || !$expiresSoon) && !$hasErrors && (!$strictMode || !$hasWarnings),
 			$strictMode,
 			$expiresWarningThreshold,
 			$expiresSoon,
@@ -252,7 +252,7 @@ final class SecurityTxtParser
 	{
 		return new SecurityTxtParseResult(
 			$parseResult->getSecurityTxt(),
-			$parseResult->isValid() && !$fetchResult->getErrors() && (!$strictMode || !$fetchResult->getWarnings()),
+			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult->isStrictMode(),
 			$parseResult->getExpiresWarningThreshold(),
 			$parseResult->isExpiresSoon(),

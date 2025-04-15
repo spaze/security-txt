@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
 /** @noinspection PhpUnhandledExceptionInspection */
 declare(strict_types = 1);
 
@@ -14,16 +15,28 @@ final class PreferredLanguagesTest extends TestCase
 {
 
 	/**
-	 * @noinspection PhpExpressionResultUnusedInspection
+	 * @return list<list<list<string>>>
 	 */
-	public function testValues(): void
+	public function getLanguages(): array
 	{
-		Assert::noError(function (): void {
-			new PreferredLanguages([]);
-			new PreferredLanguages(['en']);
-			new PreferredLanguages(['en', 'cs']);
-			new PreferredLanguages(['en', 'cz']);
-			new PreferredLanguages(['303']);
+		return [
+			[[]],
+			[['en']],
+			[['en', 'cs']],
+			[['en', 'cz']],
+			[['303']],
+		];
+	}
+
+
+	/**
+	 * @param list<string> $languages
+	 * @dataProvider getLanguages
+	 */
+	public function testValues(array $languages): void
+	{
+		Assert::noError(function () use ($languages): void {
+			Assert::same($languages, new PreferredLanguages($languages)->getLanguages());
 		});
 	}
 

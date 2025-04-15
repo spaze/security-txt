@@ -17,7 +17,7 @@ final class ExpiresMissingFieldValidator implements FieldValidator
 	#[Override]
 	public function validate(SecurityTxt $securityTxt): void
 	{
-		if (!$securityTxt->getExpires()) {
+		if ($securityTxt->getExpires() === null) {
 			throw new SecurityTxtError(new SecurityTxtNoExpires());
 		}
 	}

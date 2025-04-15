@@ -15,21 +15,21 @@ final class SecurityTxtUrlParser
 	{
 		// $url = https://example.com or https://example.com/foo
 		$components = parse_url($url);
-		if ($components && isset($components['host'])) {
+		if ($components !== false && isset($components['host'])) {
 			return $components['host'];
 		}
 
 		// $url = https:/example.com or https:/example.com/foo
-		if ($components && isset($components['scheme'], $components['path']) && !isset($components['host'])) {
+		if ($components !== false && isset($components['scheme'], $components['path']) && !isset($components['host'])) {
 			$host = parse_url("{$components['scheme']}:/{$components['path']}", PHP_URL_HOST);
-			if ($host) {
+			if ($host !== false && $host !== null) {
 				return $host;
 			}
 		}
 
 		// $url = example.com or example.com/foo
 		$components = parse_url("//$url", PHP_URL_HOST);
-		if ($components) {
+		if ($components !== false && $components !== null) {
 			return $components;
 		}
 

@@ -66,7 +66,7 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 	 */
 	public function getFetchErrors(): array
 	{
-		return $this->fetchResult ? $this->fetchResult->getErrors() : [];
+		return $this->fetchResult !== null ? $this->fetchResult->getErrors() : [];
 	}
 
 
@@ -90,7 +90,7 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 
 	public function hasErrors(): bool
 	{
-		return $this->getFetchErrors() || $this->getLineErrors() || $this->getFileErrors();
+		return $this->getFetchErrors() !== [] || $this->getLineErrors() !== [] || $this->getFileErrors() !== [];
 	}
 
 
@@ -99,7 +99,7 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 	 */
 	public function getFetchWarnings(): array
 	{
-		return $this->fetchResult ? $this->fetchResult->getWarnings() : [];
+		return $this->fetchResult !== null ? $this->fetchResult->getWarnings() : [];
 	}
 
 
@@ -123,7 +123,7 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 
 	public function hasWarnings(): bool
 	{
-		return $this->getFetchWarnings() || $this->getLineWarnings() || $this->getFileWarnings();
+		return $this->getFetchWarnings() !== [] || $this->getLineWarnings() !== [] || $this->getFileWarnings() !== [];
 	}
 
 

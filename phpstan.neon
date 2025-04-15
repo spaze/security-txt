@@ -2,11 +2,16 @@ parameters:
 	paths:
 		- src
 		- bin
+		- tests
+	fileExtensions:
+		- php
+		- phpt
 	level: max
 	checkMissingOverrideMethodAttribute: true
 
 includes:
 	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
+	- vendor/phpstan/phpstan-strict-rules/rules.neon
 	- vendor/spaze/phpstan-disallowed-calls/extension.neon
 	- vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
 	- vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon

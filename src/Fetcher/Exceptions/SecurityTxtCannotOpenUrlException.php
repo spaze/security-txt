@@ -15,8 +15,8 @@ final class SecurityTxtCannotOpenUrlException extends SecurityTxtFetcherExceptio
 	{
 		parent::__construct(
 			[$url, $redirects],
-			$redirects ? "Can't open %s (redirects: %s)" : "Can't open %s",
-			$redirects ? [$url, implode(' => ', $redirects)] : [$url],
+			$redirects !== [] ? "Can't open %s (redirects: %s)" : "Can't open %s",
+			$redirects !== [] ? [$url, implode(' => ', $redirects)] : [$url],
 			$url,
 			$redirects,
 			previous: $previous,

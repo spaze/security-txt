@@ -54,7 +54,7 @@ $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
 $checkHostCli->check(
 	$args[0],
 	$args[1] ?? null,
-	empty($args[2]) ? null : (int)$args[2],
+	isset($args[2]) && $args[2] !== '' ? (int)$args[2] : null,
 	in_array('--colors', $args, true),
 	in_array('--strict', $args, true),
 	in_array('--no-ipv6', $args, true),
