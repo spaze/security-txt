@@ -46,6 +46,6 @@
 			"@phpstan",
 			"@tester"
 		],
-		"tester": "vendor/nette/tester/src/tester -c tests/php-unix.ini --colors 1 tests/"
+		"tester": "vendor/nette/tester/src/tester -c tests/php-unix.ini -d zend.assertions=1 --colors 1 tests/"
 	}
 }
