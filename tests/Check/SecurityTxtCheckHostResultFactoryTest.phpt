@@ -14,7 +14,6 @@ use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\SecurityTxt;
-use Spaze\SecurityTxt\SecurityTxtFactory;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
@@ -33,10 +32,9 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 
 	public function testCreateFromJson(): void
 	{
-		$securityTxtFactory = new SecurityTxtFactory();
 		$json = new SecurityTxtJson();
 		$fetchResultFactory = new SecurityTxtFetchResultFactory($json);
-		$resultFactory = new SecurityTxtCheckHostResultFactory($securityTxtFactory, $json, $fetchResultFactory);
+		$resultFactory = new SecurityTxtCheckHostResultFactory($json, $fetchResultFactory);
 		$expectedResult = $this->getResult();
 		$encoded = json_encode($expectedResult);
 		assert(is_string($encoded));

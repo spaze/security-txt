@@ -7,13 +7,11 @@ use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseResult;
-use Spaze\SecurityTxt\SecurityTxtFactory;
 
 final readonly class SecurityTxtCheckHostResultFactory
 {
 
 	public function __construct(
-		private SecurityTxtFactory $securityTxtFactory,
 		private SecurityTxtJson $securityTxtJson,
 		private SecurityTxtFetchResultFactory $securityTxtFetchResultFactory,
 	) {
@@ -161,7 +159,7 @@ final readonly class SecurityTxtCheckHostResultFactory
 			$lineWarnings,
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fileErrors'])),
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fileWarnings'])),
-			$this->securityTxtFactory->createFromJsonValues($securityTxtFields),
+			$this->securityTxtJson->createFromJsonValues($securityTxtFields),
 			$values['expiresSoon'],
 			$values['expired'],
 			$values['expiryDays'],
