@@ -5,13 +5,14 @@ namespace Spaze\SecurityTxt\Violations;
 
 use DateTimeImmutable;
 use DateTimeInterface;
+use Spaze\SecurityTxt\Fields\Expires;
 
 final class SecurityTxtExpiresWrongFormat extends SecurityTxtSpecViolation
 {
 
 	public function __construct(?DateTimeInterface $expires = null)
 	{
-		$correctValue = $expires !== null ? $expires->format(DATE_RFC3339) : new DateTimeImmutable('+1 year midnight -1 sec')->format(DATE_RFC3339);
+		$correctValue = $expires !== null ? $expires->format(Expires::FORMAT) : new DateTimeImmutable('+1 year midnight -1 sec')->format(Expires::FORMAT);
 		parent::__construct(
 			func_get_args(),
 			'The format of the value of the `Expires` field is wrong',

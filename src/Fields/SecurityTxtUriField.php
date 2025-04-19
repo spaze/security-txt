@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Fields;
 use JsonSerializable;
 use Override;
 
-abstract class SecurityTxtUriField implements JsonSerializable
+abstract class SecurityTxtUriField implements SecurityTxtFieldValue, JsonSerializable
 {
 
 	final public function __construct(
@@ -16,6 +16,13 @@ abstract class SecurityTxtUriField implements JsonSerializable
 
 
 	public function getUri(): string
+	{
+		return $this->uri;
+	}
+
+
+	#[Override]
+	public function getValue(): string
 	{
 		return $this->uri;
 	}

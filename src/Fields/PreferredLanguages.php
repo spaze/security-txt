@@ -6,8 +6,11 @@ namespace Spaze\SecurityTxt\Fields;
 use JsonSerializable;
 use Override;
 
-final readonly class PreferredLanguages implements JsonSerializable
+final readonly class PreferredLanguages implements SecurityTxtFieldValue, JsonSerializable
 {
+
+	public const string SEPARATOR = ',';
+
 
 	/**
 	 * @param list<string> $languages
@@ -15,6 +18,20 @@ final readonly class PreferredLanguages implements JsonSerializable
 	public function __construct(
 		private array $languages,
 	) {
+	}
+
+
+	#[Override]
+	public function getField(): SecurityTxtField
+	{
+		return SecurityTxtField::PreferredLanguages;
+	}
+
+
+	#[Override]
+	public function getValue(): string
+	{
+		return implode(self::SEPARATOR, $this->languages);
 	}
 
 

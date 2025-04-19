@@ -8,8 +8,10 @@ use DateTimeImmutable;
 use JsonSerializable;
 use Override;
 
-final class Expires implements JsonSerializable
+final class Expires implements SecurityTxtFieldValue, JsonSerializable
 {
+
+	public const string FORMAT = DATE_RFC3339;
 
 	private DateInterval $interval;
 
@@ -18,6 +20,20 @@ final class Expires implements JsonSerializable
 		private readonly DateTimeImmutable $dateTime,
 	) {
 		$this->interval = new DateTimeImmutable()->diff($this->dateTime);
+	}
+
+
+	#[Override]
+	public function getField(): SecurityTxtField
+	{
+		return SecurityTxtField::Expires;
+	}
+
+
+	#[Override]
+	public function getValue(): string
+	{
+		return $this->dateTime->format(Expires::FORMAT);
 	}
 
 

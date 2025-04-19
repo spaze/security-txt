@@ -65,7 +65,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			"Hi-ring: https://example.com/hiring\nExpires: " . $dateTime->format(DATE_RFC3339),
+			"Hi-ring: https://example.com/hiring\nExpires: " . $dateTime->format(Expires::FORMAT),
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 		);

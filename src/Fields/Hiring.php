@@ -3,6 +3,15 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
 
-final class Hiring extends SecurityTxtUriField
+use Override;
+
+final class Hiring extends SecurityTxtUriField implements SecurityTxtFieldValue
 {
+
+	#[Override]
+	public function getField(): SecurityTxtField
+	{
+		return SecurityTxtField::Hiring;
+	}
+
 }

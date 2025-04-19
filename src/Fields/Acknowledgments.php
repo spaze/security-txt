@@ -3,6 +3,15 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
 
-final class Acknowledgments extends SecurityTxtUriField
+use Override;
+
+final class Acknowledgments extends SecurityTxtUriField implements SecurityTxtFieldValue
 {
+
+	#[Override]
+	public function getField(): SecurityTxtField
+	{
+		return SecurityTxtField::Acknowledgments;
+	}
+
 }

@@ -24,7 +24,7 @@ final class ExpiresSetFieldValue implements FieldProcessor
 	#[Override]
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
-		$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC3339, $value);
+		$expiresValue = DateTimeImmutable::createFromFormat(Expires::FORMAT, $value);
 		if ($expiresValue === false) {
 			$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC3339_EXTENDED, $value);
 			if ($expiresValue === false) {

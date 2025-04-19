@@ -25,7 +25,7 @@ final class PreferredLanguagesSetFieldValue implements FieldProcessor
 		if ($separators !== false && $separators > 0) {
 			$wrongSeparators = [];
 			foreach ($matches[1] as $key => $separator) {
-				if ($separator !== ',') {
+				if ($separator !== PreferredLanguages::SEPARATOR) {
 					$wrongSeparators[$key + 1] = $separator;
 				}
 			}

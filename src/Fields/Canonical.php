@@ -3,6 +3,15 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
 
-final class Canonical extends SecurityTxtUriField
+use Override;
+
+final class Canonical extends SecurityTxtUriField implements SecurityTxtFieldValue
 {
+
+	#[Override]
+	public function getField(): SecurityTxtField
+	{
+		return SecurityTxtField::Canonical;
+	}
+
 }
