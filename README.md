@@ -1,6 +1,8 @@
-# `security.txt` validator
+# `security.txt` validator and writer
 
-## How does it work
+# As a validator
+
+## How does the validation work
 This package can validate `security.txt` file either by providing
 - the file contents as a string by calling `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseString()`
 - a hostname like `example.com` to `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseHost()`
@@ -12,7 +14,7 @@ There's also a command line script in `bin` which uses `Spaze\SecurityTxt\Check\
 
 If you want to decouple fetching the `security.txt` file and parsing it, there's also a possibility to pass a `SecurityTxtFetchResult` object to `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseFetchResult()`.
 
-## How to use it
+## How to use the validator
 `Spaze\SecurityTxt\Check\SecurityTxtCheckHost::check()` is probably what you'd want to use as it provides the mos comprehensive checks, can pass a URL, not just a hostname, and also supports callbacks. It accepts these parameters:
 
 `string $url`
@@ -71,3 +73,36 @@ and decoded back with `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResultFactory
 ## The other methods
 Both `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseString()` and `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseHost()` return a `Spaze\SecurityTxt\Parser\SecurityTxtParseResult` object with similar methods as what's described above for `SecurityTxtCheckHostResult`.
 The result returned from `parseHost()` also contains `Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult` object.
+
+# As a writer
+You can create a `security.txt` file programmatically:
+1. Create a `SecurityTxt` object
+2. Add what's needed
+3. Pass it to `SecurityTxtWriter::write()` it will return the `security.txt` contents as a string
+
+Signing the file is not (yet) supported.
+
+## Value validation
+By default, values are validated when set, and an exception is thrown when they're invalid. You can set validation level in the `SecurityTxt` constructor using the `SecurityTxtValidationLevel` enum:
+- `NoInvalidValues` (an exception will be thrown, and the value won't be set, this is the default setting)
+- `AllowInvalidValues` (an exception will be thrown but the value will still be set)
+- `AllowInvalidValuesSilently` (an exception will not be thrown, and the value will be set)
+
+You can use the following `SecurityTxt` constants to serve the file with correct HTTP content type:
+- `SecurityTxt::CONTENT_TYPE_HEADER`, the value to be sent as `Content-Type` header value (`text/plain; charset=utf-8`);
+- `SecurityTxt::CONTENT_TYPE`, the correct content type `text/plain`
+- `SecurityTxt::CHARSET`, the correct charset as `charset=utf-8`
+
+## Example
+```php
+$securityTxt = new SecurityTxt();
+$securityTxt->addContact(new Contact('https://contact.example'));
+$securityTxt->addContact(Contact::phone('123456'));
+$securityTxt->addContact(Contact::email('email@com.example'));
+$securityTxt->addAcknowledgments(new Acknowledgments('https://ack1.example'));
+$securityTxt->setExpires(new Expires(new DateTimeImmutable('+3 months midnight')));
+$securityTxt->addAcknowledgments(new Acknowledgments('ftp://ack2.example'));
+$securityTxt->setPreferredLanguages(new PreferredLanguages(['en', 'cs-CZ']));
+header('Content-Type: ' . SecurityTxt::CONTENT_TYPE_HEADER);
+echo new SecurityTxtWriter()->write($securityTxt);
+```
