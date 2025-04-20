@@ -15,7 +15,7 @@ There's also a command line script in `bin` which uses `Spaze\SecurityTxt\Check\
 If you want to decouple fetching the `security.txt` file and parsing it, there's also a possibility to pass a `SecurityTxtFetchResult` object to `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseFetchResult()`.
 
 ## How to use the validator
-`Spaze\SecurityTxt\Check\SecurityTxtCheckHost::check()` is probably what you'd want to use as it provides the mos comprehensive checks, can pass a URL, not just a hostname, and also supports callbacks. It accepts these parameters:
+`Spaze\SecurityTxt\Check\SecurityTxtCheckHost::check()` is probably what you'd want to use as it provides the most comprehensive checks, can pass a URL, not just a hostname, and also supports callbacks. It accepts these parameters:
 
 `string $url`
 
