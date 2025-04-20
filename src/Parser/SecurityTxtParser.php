@@ -140,7 +140,7 @@ final class SecurityTxtParser
 			if (str_starts_with($line, '#')) {
 				continue;
 			}
-			$this->checkSignature($lineNumber, $line, $contents, $securityTxt);
+			$securityTxt = $this->checkSignature($lineNumber, $line, $contents, $securityTxt);
 			$field = explode(':', $line, 2);
 			if (count($field) !== 2) {
 				continue;
@@ -208,18 +208,19 @@ final class SecurityTxtParser
 	/**
 	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
-	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): void
+	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): SecurityTxt
 	{
 		if ($this->signature->isCleartextHeader($line)) {
 			try {
 				$result = $this->signature->verify($contents);
-				$securityTxt->setSignatureVerifyResult($result);
+				return $securityTxt->withSignatureVerifyResult($result);
 			} catch (SecurityTxtError $e) {
 				$this->lineErrors[$lineNumber][] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {
 				$this->lineWarnings[$lineNumber][] = $e->getViolation();
 			}
 		}
+		return $securityTxt;
 	}
 
 

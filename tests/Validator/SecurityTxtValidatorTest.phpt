@@ -49,7 +49,7 @@ final class SecurityTxtValidatorTest extends TestCase
 	{
 		$securityTxt = new SecurityTxt();
 		$securityTxt->setExpires(new Expires(new DateTimeImmutable('+1 month')));
-		$securityTxt->setSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('fingerprint', new DateTimeImmutable('-1 week')));
+		$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('fingerprint', new DateTimeImmutable('-1 week')));
 		$this->assertThrowable($securityTxt, SecurityTxtSignedButNoCanonical::class);
 	}
 
