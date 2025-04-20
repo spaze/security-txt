@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Fields\Expires;
 use Spaze\SecurityTxt\Fields\Hiring;
 use Spaze\SecurityTxt\Fields\Policy;
 use Spaze\SecurityTxt\Fields\PreferredLanguages;
+use Spaze\SecurityTxt\Fields\SecurityTxtFieldValue;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUri;
@@ -36,6 +37,10 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
 
 final class SecurityTxt implements JsonSerializable
 {
+
+	public const string CONTENT_TYPE = 'text/plain';
+	public const string CHARSET = 'charset=utf-8';
+	public const string CONTENT_TYPE_HEADER = self::CONTENT_TYPE . '; ' . self::CHARSET;
 
 	private ?Expires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
@@ -71,6 +76,11 @@ final class SecurityTxt implements JsonSerializable
 	 */
 	private array $encryption = [];
 
+	/**
+	 * @var list<SecurityTxtFieldValue>
+	 */
+	private array $orderedFields = [];
+
 
 	public function __construct(
 		private readonly SecurityTxtValidationLevel $validationLevel = SecurityTxtValidationLevel::NoInvalidValues,
@@ -85,8 +95,8 @@ final class SecurityTxt implements JsonSerializable
 	public function setExpires(Expires $expires): void
 	{
 		$this->setValue(
-			function () use ($expires): void {
-				$this->expires = $expires;
+			function () use ($expires): Expires {
+				return $this->expires = $expires;
 			},
 			function () use ($expires): void {
 				if ($expires->isExpired()) {
@@ -126,8 +136,8 @@ final class SecurityTxt implements JsonSerializable
 	public function addCanonical(Canonical $canonical): void
 	{
 		$this->setValue(
-			function () use ($canonical): void {
-				$this->canonical[] = $canonical;
+			function () use ($canonical): Canonical {
+				return $this->canonical[] = $canonical;
 			},
 			function () use ($canonical): void {
 				$this->checkUri($canonical->getUri(), SecurityTxtCanonicalNotUri::class, SecurityTxtCanonicalNotHttps::class);
@@ -151,8 +161,8 @@ final class SecurityTxt implements JsonSerializable
 	public function addContact(Contact $contact): void
 	{
 		$this->setValue(
-			function () use ($contact): void {
-				$this->contact[] = $contact;
+			function () use ($contact): Contact {
+				return $this->contact[] = $contact;
 			},
 			function () use ($contact): void {
 				$this->checkUri($contact->getUri(), SecurityTxtContactNotUri::class, SecurityTxtContactNotHttps::class);
@@ -176,8 +186,8 @@ final class SecurityTxt implements JsonSerializable
 	public function setPreferredLanguages(PreferredLanguages $preferredLanguages): void
 	{
 		$this->setValue(
-			function () use ($preferredLanguages): void {
-				$this->preferredLanguages = $preferredLanguages;
+			function () use ($preferredLanguages): PreferredLanguages {
+				return $this->preferredLanguages = $preferredLanguages;
 			},
 			function () use ($preferredLanguages): void {
 				if ($preferredLanguages->getLanguages() === []) {
@@ -219,8 +229,8 @@ final class SecurityTxt implements JsonSerializable
 	public function addAcknowledgments(Acknowledgments $acknowledgments): void
 	{
 		$this->setValue(
-			function () use ($acknowledgments): void {
-				$this->acknowledgments[] = $acknowledgments;
+			function () use ($acknowledgments): Acknowledgments {
+				return $this->acknowledgments[] = $acknowledgments;
 			},
 			function () use ($acknowledgments): void {
 				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUri::class, SecurityTxtAcknowledgmentsNotHttps::class);
@@ -244,8 +254,8 @@ final class SecurityTxt implements JsonSerializable
 	public function addHiring(Hiring $hiring): void
 	{
 		$this->setValue(
-			function () use ($hiring): void {
-				$this->hiring[] = $hiring;
+			function () use ($hiring): Hiring {
+				return $this->hiring[] = $hiring;
 			},
 			function () use ($hiring): void {
 				$this->checkUri($hiring->getUri(), SecurityTxtHiringNotUri::class, SecurityTxtHiringNotHttps::class);
@@ -269,8 +279,8 @@ final class SecurityTxt implements JsonSerializable
 	public function addPolicy(Policy $policy): void
 	{
 		$this->setValue(
-			function () use ($policy): void {
-				$this->policy[] = $policy;
+			function () use ($policy): Policy {
+				return $this->policy[] = $policy;
 			},
 			function () use ($policy): void {
 				$this->checkUri($policy->getUri(), SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class);
@@ -294,8 +304,8 @@ final class SecurityTxt implements JsonSerializable
 	public function addEncryption(Encryption $encryption): void
 	{
 		$this->setValue(
-			function () use ($encryption): void {
-				$this->encryption[] = $encryption;
+			function () use ($encryption): Encryption {
+				return $this->encryption[] = $encryption;
 			},
 			function () use ($encryption): void {
 				$this->checkUri($encryption->getUri(), SecurityTxtEncryptionNotUri::class, SecurityTxtEncryptionNotHttps::class);
@@ -314,7 +324,7 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @param callable(): void $setValue
+	 * @param callable(): SecurityTxtFieldValue $setValue
 	 * @param callable(): void $validator
 	 * @param (callable(): void)|null $warnings
 	 * @return void
@@ -322,15 +332,15 @@ final class SecurityTxt implements JsonSerializable
 	private function setValue(callable $setValue, callable $validator, ?callable $warnings = null): void
 	{
 		if ($this->validationLevel === SecurityTxtValidationLevel::AllowInvalidValuesSilently) {
-			$setValue();
+			$this->orderedFields[] = $setValue();
 			return;
 		}
 		if ($this->validationLevel === SecurityTxtValidationLevel::AllowInvalidValues) {
-			$setValue();
+			$this->orderedFields[] = $setValue();
 			$validator();
 		} else {
 			$validator();
-			$setValue();
+			$this->orderedFields[] = $setValue();
 		}
 		if ($warnings !== null) {
 			$warnings();
@@ -352,6 +362,15 @@ final class SecurityTxt implements JsonSerializable
 		if (strtolower($scheme) === 'http') {
 			throw new SecurityTxtError(new $notHttpsError($uri));
 		}
+	}
+
+
+	/**
+	 * @return list<SecurityTxtFieldValue>
+	 */
+	public function getOrderedFields(): array
+	{
+		return $this->orderedFields;
 	}
 
 

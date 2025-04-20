@@ -45,7 +45,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			],
 			'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
 			'finalUrl' => 'https://www.example.com/.well-known/security.txt',
-			'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(DATE_RFC3339),
+			'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(Expires::FORMAT),
 			'fetchResult' => [
 				'class' => 'Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult',
 				'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
@@ -53,7 +53,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				'redirects' => [
 					'http://example.com' => ['https://example.com', 'https://www.example.com'],
 				],
-				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(DATE_RFC3339),
+				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(Expires::FORMAT),
 				'errors' => [
 					[
 						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps',
@@ -188,7 +188,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				],
 			],
 			'securityTxt' => [
-				'expires' => ['dateTime' => $this->expires->format(DATE_RFC3339)],
+				'expires' => ['dateTime' => $this->expires->format(Expires::FORMAT)],
 				'signatureVerifyResult' => null,
 				'preferredLanguages' => null,
 				'canonical' => [],
@@ -219,7 +219,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			"Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(DATE_RFC3339),
+			"Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(Expires::FORMAT),
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 		);

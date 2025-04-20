@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledE
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
+use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps;
@@ -192,9 +193,9 @@ final class SecurityTxtFetcher
 		$headerParts = $contentTypeHeader !== null ? explode(';', $contentTypeHeader, 2) : [];
 		$contentType = isset($headerParts[0]) ? trim($headerParts[0]) : null;
 		$charset = isset($headerParts[1]) ? trim($headerParts[1]) : null;
-		if ($contentType === null || strtolower($contentType) !== 'text/plain') {
+		if ($contentType === null || strtolower($contentType) !== SecurityTxt::CONTENT_TYPE) {
 			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl(), $contentType);
-		} elseif ($charset === null || strtolower($charset) !== 'charset=utf-8') {
+		} elseif ($charset === null || strtolower($charset) !== SecurityTxt::CHARSET) {
 			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentType, $charset);
 		}
 		$scheme = parse_url($result->getUrl(), PHP_URL_SCHEME);
