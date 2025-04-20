@@ -116,7 +116,7 @@ final class SecurityTxtJson
 				} catch (Exception $e) {
 					throw new SecurityTxtCannotParseJsonException('signatureVerifyResult > dateTime is wrong format', $e);
 				}
-				$securityTxt->setSignatureVerifyResult(new SecurityTxtSignatureVerifyResult($values['signatureVerifyResult']['keyFingerprint'], $dateTime));
+				$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult($values['signatureVerifyResult']['keyFingerprint'], $dateTime));
 			}
 			if (isset($values['preferredLanguages'])) {
 				if (!is_array($values['preferredLanguages'])) {

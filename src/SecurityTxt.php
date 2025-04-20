@@ -118,9 +118,11 @@ final class SecurityTxt implements JsonSerializable
 	}
 
 
-	public function setSignatureVerifyResult(SecurityTxtSignatureVerifyResult $signatureVerifyResult): void
+	public function withSignatureVerifyResult(SecurityTxtSignatureVerifyResult $signatureVerifyResult): self
 	{
-		$this->signatureVerifyResult = $signatureVerifyResult;
+		$clone = clone $this;
+		$clone->signatureVerifyResult = $signatureVerifyResult;
+		return $clone;
 	}
 
 
