@@ -8,14 +8,14 @@ use Exception;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
-use Spaze\SecurityTxt\Fields\Acknowledgments;
-use Spaze\SecurityTxt\Fields\Canonical;
-use Spaze\SecurityTxt\Fields\Contact;
-use Spaze\SecurityTxt\Fields\Encryption;
-use Spaze\SecurityTxt\Fields\Expires;
-use Spaze\SecurityTxt\Fields\Hiring;
-use Spaze\SecurityTxt\Fields\Policy;
-use Spaze\SecurityTxt\Fields\PreferredLanguages;
+use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
+use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
+use Spaze\SecurityTxt\Fields\SecurityTxtContact;
+use Spaze\SecurityTxt\Fields\SecurityTxtEncryption;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
+use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
+use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Fields\SecurityTxtUriField;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
@@ -95,7 +95,7 @@ final class SecurityTxtJson
 				} catch (Exception $e) {
 					throw new SecurityTxtCannotParseJsonException('expires > dateTime is wrong format', $e);
 				}
-				$securityTxt->setExpires(new Expires($dateTime));
+				$securityTxt->setExpires(new SecurityTxtExpires($dateTime));
 			}
 			if (isset($values['signatureVerifyResult'])) {
 				if (!is_array($values['signatureVerifyResult'])) {
@@ -134,14 +134,14 @@ final class SecurityTxtJson
 					}
 					$languages[] = $language;
 				}
-				$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
+				$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages($languages));
 			}
-			$this->addSecurityTxtUriField($values, 'canonical', Canonical::class, $securityTxt->addCanonical(...));
-			$this->addSecurityTxtUriField($values, 'contact', Contact::class, $securityTxt->addContact(...));
-			$this->addSecurityTxtUriField($values, 'acknowledgments', Acknowledgments::class, $securityTxt->addAcknowledgments(...));
-			$this->addSecurityTxtUriField($values, 'hiring', Hiring::class, $securityTxt->addHiring(...));
-			$this->addSecurityTxtUriField($values, 'policy', Policy::class, $securityTxt->addPolicy(...));
-			$this->addSecurityTxtUriField($values, 'encryption', Encryption::class, $securityTxt->addEncryption(...));
+			$this->addSecurityTxtUriField($values, 'canonical', SecurityTxtCanonical::class, $securityTxt->addCanonical(...));
+			$this->addSecurityTxtUriField($values, 'contact', SecurityTxtContact::class, $securityTxt->addContact(...));
+			$this->addSecurityTxtUriField($values, 'acknowledgments', SecurityTxtAcknowledgments::class, $securityTxt->addAcknowledgments(...));
+			$this->addSecurityTxtUriField($values, 'hiring', SecurityTxtHiring::class, $securityTxt->addHiring(...));
+			$this->addSecurityTxtUriField($values, 'policy', SecurityTxtPolicy::class, $securityTxt->addPolicy(...));
+			$this->addSecurityTxtUriField($values, 'encryption', SecurityTxtEncryption::class, $securityTxt->addEncryption(...));
 		} catch (SecurityTxtError | SecurityTxtWarning $e) {
 			throw new SecurityTxtCannotParseJsonException($e->getMessage(), $e);
 		}

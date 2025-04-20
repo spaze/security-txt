@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Fields\Canonical;
+use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
 use Spaze\SecurityTxt\SecurityTxt;
 
 final class CanonicalAddFieldValue implements FieldProcessor
@@ -17,7 +17,7 @@ final class CanonicalAddFieldValue implements FieldProcessor
 	#[Override]
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
-		$canonical = new Canonical($value);
+		$canonical = new SecurityTxtCanonical($value);
 		$securityTxt->addCanonical($canonical);
 	}
 

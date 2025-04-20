@@ -5,7 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Fields\Policy;
+use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotUri;
@@ -29,7 +29,7 @@ final class PolicyAddFieldValueTest extends TestCase
 		$processor->process($uri1, $securityTxt);
 		$processor->process($uri2, $securityTxt);
 		$processor->process($uri3, $securityTxt);
-		$actual = array_map(fn(Policy $field): string => $field->getUri(), $securityTxt->getPolicy());
+		$actual = array_map(fn(SecurityTxtPolicy $field): string => $field->getUri(), $securityTxt->getPolicy());
 		Assert::equal([$uri1, $uri2, $uri3], $actual);
 
 		$e = Assert::throws(function () use ($processor, $securityTxt): void {

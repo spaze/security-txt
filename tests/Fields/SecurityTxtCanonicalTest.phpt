@@ -10,7 +10,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-final class CanonicalTest extends TestCase
+final class SecurityTxtCanonicalTest extends TestCase
 {
 
 	/**
@@ -33,10 +33,10 @@ final class CanonicalTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new Canonical($uri)->getUri());
+			Assert::same($uri, new SecurityTxtCanonical($uri)->getUri());
 		});
 	}
 
 }
 
-new CanonicalTest()->run();
+new SecurityTxtCanonicalTest()->run();

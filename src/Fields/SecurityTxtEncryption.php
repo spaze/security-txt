@@ -5,13 +5,13 @@ namespace Spaze\SecurityTxt\Fields;
 
 use Override;
 
-final class Canonical extends SecurityTxtUriField implements SecurityTxtFieldValue
+final class SecurityTxtEncryption extends SecurityTxtUriField implements SecurityTxtFieldValue
 {
 
 	#[Override]
 	public function getField(): SecurityTxtField
 	{
-		return SecurityTxtField::Canonical;
+		return SecurityTxtField::Encryption;
 	}
 
 }

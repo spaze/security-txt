@@ -96,13 +96,13 @@ You can use the following `SecurityTxt` constants to serve the file with correct
 ## Example
 ```php
 $securityTxt = new SecurityTxt();
-$securityTxt->addContact(new Contact('https://contact.example'));
-$securityTxt->addContact(Contact::phone('123456'));
-$securityTxt->addContact(Contact::email('email@com.example'));
-$securityTxt->addAcknowledgments(new Acknowledgments('https://ack1.example'));
-$securityTxt->setExpires(new Expires(new DateTimeImmutable('+3 months midnight')));
-$securityTxt->addAcknowledgments(new Acknowledgments('ftp://ack2.example'));
-$securityTxt->setPreferredLanguages(new PreferredLanguages(['en', 'cs-CZ']));
+$securityTxt->addContact(new SecurityTxtContact('https://contact.example'));
+$securityTxt->addContact(SecurityTxtContact::phone('123456'));
+$securityTxt->addContact(SecurityTxtContact::email('email@com.example'));
+$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://ack1.example'));
+$securityTxt->setExpires(new SecurityTxtExpires(new DateTimeImmutable('+3 months midnight')));
+$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('ftp://ack2.example'));
+$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs-CZ']));
 header('Content-Type: ' . SecurityTxt::CONTENT_TYPE_HEADER);
 echo new SecurityTxtWriter()->write($securityTxt);
 ```

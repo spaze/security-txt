@@ -10,7 +10,7 @@ use DateTimeImmutable;
 use ReflectionProperty;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
-use Spaze\SecurityTxt\Fields\Expires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -50,7 +50,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 	private function setExpiresInterval(SecurityTxtCheckHostResult $result): void
 	{
 		$expires = $result->getSecurityTxt()->getExpires();
-		assert($expires instanceof Expires);
+		assert($expires instanceof SecurityTxtExpires);
 		$reflection = new ReflectionProperty($expires, 'interval');
 		$reflection->setValue($expires, new DateInterval('P30D'));
 	}
@@ -60,12 +60,12 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 	{
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		$dateTime = new DateTimeImmutable('2022-08-08T02:40:54+00:00');
-		$securityTxt->setExpires(new Expires($dateTime));
+		$securityTxt->setExpires(new SecurityTxtExpires($dateTime));
 		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			"Hi-ring: https://example.com/hiring\nExpires: " . $dateTime->format(Expires::FORMAT),
+			"Hi-ring: https://example.com/hiring\nExpires: " . $dateTime->format(SecurityTxtExpires::FORMAT),
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 		);

@@ -4,14 +4,14 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Violations;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Fields\Expires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 
 final class SecurityTxtExpiresTooLong extends SecurityTxtSpecViolation
 {
 
 	public function __construct()
 	{
-		$correctValue = new DateTimeImmutable('+1 year midnight -1 sec')->format(Expires::FORMAT);
+		$correctValue = new DateTimeImmutable('+1 year midnight -1 sec')->format(SecurityTxtExpires::FORMAT);
 		parent::__construct(
 			func_get_args(),
 			'The value of the `Expires` should be less than a year into the future to avoid staleness',

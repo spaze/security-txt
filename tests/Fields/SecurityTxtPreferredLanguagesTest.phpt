@@ -11,7 +11,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-final class PreferredLanguagesTest extends TestCase
+final class SecurityTxtPreferredLanguagesTest extends TestCase
 {
 
 	/**
@@ -36,10 +36,10 @@ final class PreferredLanguagesTest extends TestCase
 	public function testValues(array $languages): void
 	{
 		Assert::noError(function () use ($languages): void {
-			Assert::same($languages, new PreferredLanguages($languages)->getLanguages());
+			Assert::same($languages, new SecurityTxtPreferredLanguages($languages)->getLanguages());
 		});
 	}
 
 }
 
-new PreferredLanguagesTest()->run();
+new SecurityTxtPreferredLanguagesTest()->run();

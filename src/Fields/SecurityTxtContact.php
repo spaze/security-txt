@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Fields;
 
 use Override;
 
-final class Contact extends SecurityTxtUriField implements SecurityTxtFieldValue
+final class SecurityTxtContact extends SecurityTxtUriField implements SecurityTxtFieldValue
 {
 
 	#[Override]

@@ -7,7 +7,7 @@ namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
-use Spaze\SecurityTxt\Fields\Expires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
@@ -45,7 +45,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			],
 			'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
 			'finalUrl' => 'https://www.example.com/.well-known/security.txt',
-			'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(Expires::FORMAT),
+			'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
 			'fetchResult' => [
 				'class' => 'Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult',
 				'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
@@ -53,7 +53,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				'redirects' => [
 					'http://example.com' => ['https://example.com', 'https://www.example.com'],
 				],
-				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(Expires::FORMAT),
+				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
 				'errors' => [
 					[
 						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps',
@@ -188,7 +188,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				],
 			],
 			'securityTxt' => [
-				'expires' => ['dateTime' => $this->expires->format(Expires::FORMAT)],
+				'expires' => ['dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT)],
 				'signatureVerifyResult' => null,
 				'preferredLanguages' => null,
 				'canonical' => [],
@@ -214,12 +214,12 @@ final class SecurityTxtCheckHostTest extends TestCase
 	private function getResult(): SecurityTxtCheckHostResult
 	{
 		$securityTxt = new SecurityTxt();
-		$securityTxt->setExpires(new Expires($this->expires));
+		$securityTxt->setExpires(new SecurityTxtExpires($this->expires));
 		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			"Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(Expires::FORMAT),
+			"Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 		);

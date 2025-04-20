@@ -6,10 +6,10 @@ namespace Spaze\SecurityTxt\Parser;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Fields\Acknowledgments;
-use Spaze\SecurityTxt\Fields\Contact;
-use Spaze\SecurityTxt\Fields\Expires;
-use Spaze\SecurityTxt\Fields\PreferredLanguages;
+use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
+use Spaze\SecurityTxt\Fields\SecurityTxtContact;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Writer\SecurityTxtWriter;
@@ -42,13 +42,13 @@ final class SecurityTxtWriterTest extends TestCase
 	{
 		$dateTime = new DateTimeImmutable('+3 months midnight');
 		$securityTxt = new SecurityTxt();
-		$securityTxt->addContact(new Contact('https://contact.example'));
-		$securityTxt->addContact(Contact::phone('123456'));
-		$securityTxt->addContact(Contact::email('email@com.example'));
-		$securityTxt->addAcknowledgments(new Acknowledgments('https://ack1.example'));
-		$securityTxt->setExpires(new Expires($dateTime));
-		$securityTxt->addAcknowledgments(new Acknowledgments('ftp://ack2.example'));
-		$securityTxt->setPreferredLanguages(new PreferredLanguages(['en', 'cs-CZ']));
+		$securityTxt->addContact(new SecurityTxtContact('https://contact.example'));
+		$securityTxt->addContact(SecurityTxtContact::phone('123456'));
+		$securityTxt->addContact(SecurityTxtContact::email('email@com.example'));
+		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://ack1.example'));
+		$securityTxt->setExpires(new SecurityTxtExpires($dateTime));
+		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('ftp://ack2.example'));
+		$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs-CZ']));
 		$expected = "Contact: https://contact.example\n"
 			. "Contact: tel:123456\n"
 			. "Contact: mailto:email@com.example\n"
@@ -63,16 +63,16 @@ final class SecurityTxtWriterTest extends TestCase
 	public function testWriteDefaultValidationLevel(): void
 	{
 		$securityTxt = new SecurityTxt();
-		$securityTxt->addContact(new Contact('https://contact.example.com'));
+		$securityTxt->addContact(new SecurityTxtContact('https://contact.example.com'));
 		Assert::throws(function () use ($securityTxt): void {
-			$securityTxt->addContact(new Contact('//no.scheme.example'));
+			$securityTxt->addContact(new SecurityTxtContact('//no.scheme.example'));
 		}, SecurityTxtError::class, "The `Contact` value (`//no.scheme.example`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
 		Assert::same("Contact: https://contact.example.com\n", $this->securityTxtWriter->write($securityTxt));
 
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::NoInvalidValues);
-		$securityTxt->addContact(new Contact('https://contact.example.com'));
+		$securityTxt->addContact(new SecurityTxtContact('https://contact.example.com'));
 		Assert::throws(function () use ($securityTxt): void {
-			$securityTxt->addContact(new Contact('//no.scheme.example'));
+			$securityTxt->addContact(new SecurityTxtContact('//no.scheme.example'));
 		}, SecurityTxtError::class, "The `Contact` value (`//no.scheme.example`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
 		Assert::same("Contact: https://contact.example.com\n", $this->securityTxtWriter->write($securityTxt));
 	}
@@ -81,9 +81,9 @@ final class SecurityTxtWriterTest extends TestCase
 	public function testWriteAllowInvalidValues(): void
 	{
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
-		$securityTxt->addContact(new Contact('https://contact.example.com'));
+		$securityTxt->addContact(new SecurityTxtContact('https://contact.example.com'));
 		Assert::throws(function () use ($securityTxt): void {
-			$securityTxt->addContact(new Contact('//no.scheme.example'));
+			$securityTxt->addContact(new SecurityTxtContact('//no.scheme.example'));
 		}, SecurityTxtError::class, "The `Contact` value (`//no.scheme.example`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
 		Assert::same("Contact: https://contact.example.com\nContact: //no.scheme.example\n", $this->securityTxtWriter->write($securityTxt));
 	}
@@ -92,8 +92,8 @@ final class SecurityTxtWriterTest extends TestCase
 	public function testWriteAllowInvalidValuesSilently(): void
 	{
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
-		$securityTxt->addContact(new Contact('https://contact.example.com'));
-		$securityTxt->addContact(new Contact('//no.scheme.example'));
+		$securityTxt->addContact(new SecurityTxtContact('https://contact.example.com'));
+		$securityTxt->addContact(new SecurityTxtContact('//no.scheme.example'));
 		Assert::same("Contact: https://contact.example.com\nContact: //no.scheme.example\n", $this->securityTxtWriter->write($securityTxt));
 	}
 

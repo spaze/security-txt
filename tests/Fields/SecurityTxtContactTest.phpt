@@ -10,7 +10,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-final class PolicyTest extends TestCase
+final class SecurityTxtContactTest extends TestCase
 {
 
 	/**
@@ -20,10 +20,11 @@ final class PolicyTest extends TestCase
 	public function getUris(): array
 	{
 		return [
-			['http://example.com/policy.txt'],
-			['https://example.com/policy.txt'],
-			['ftp://foo.bar.example.net/policy.txt'],
-			['totus tuus'],
+			['https://example.com/contact'],
+			['http://example.com/contact'],
+			['mailto:foo@example.com'],
+			['foo@example.com'],
+			['tel:+1-201-555-0123'],
 		];
 	}
 
@@ -34,10 +35,10 @@ final class PolicyTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new Policy($uri)->getUri());
+			Assert::same($uri, new SecurityTxtContact($uri)->getUri());
 		});
 	}
 
 }
 
-new PolicyTest()->run();
+new SecurityTxtContactTest()->run();

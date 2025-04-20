@@ -14,7 +14,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-final class ExpiresTest extends TestCase
+final class SecurityTxtExpiresTest extends TestCase
 {
 
 	/**
@@ -35,7 +35,7 @@ final class ExpiresTest extends TestCase
 	/** @dataProvider getExpiresField */
 	public function testIsExpiredInDays(DateTimeImmutable $now, DateTimeImmutable $expires, bool $isExpired, int $expireDays): void
 	{
-		$expiresObject = new Expires($expires);
+		$expiresObject = new SecurityTxtExpires($expires);
 		new ReflectionProperty($expiresObject, 'interval')->setValue($expiresObject, $now->diff($expires));
 		Assert::same($isExpired, $expiresObject->isExpired());
 		Assert::same($expireDays, $expiresObject->inDays());
@@ -43,4 +43,4 @@ final class ExpiresTest extends TestCase
 
 }
 
-new ExpiresTest()->run();
+new SecurityTxtExpiresTest()->run();

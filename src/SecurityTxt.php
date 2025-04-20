@@ -7,15 +7,15 @@ use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
-use Spaze\SecurityTxt\Fields\Acknowledgments;
-use Spaze\SecurityTxt\Fields\Canonical;
-use Spaze\SecurityTxt\Fields\Contact;
-use Spaze\SecurityTxt\Fields\Encryption;
-use Spaze\SecurityTxt\Fields\Expires;
-use Spaze\SecurityTxt\Fields\Hiring;
-use Spaze\SecurityTxt\Fields\Policy;
-use Spaze\SecurityTxt\Fields\PreferredLanguages;
+use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
+use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
+use Spaze\SecurityTxt\Fields\SecurityTxtContact;
+use Spaze\SecurityTxt\Fields\SecurityTxtEncryption;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtFieldValue;
+use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
+use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
+use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUri;
@@ -42,37 +42,37 @@ final class SecurityTxt implements JsonSerializable
 	public const string CHARSET = 'charset=utf-8';
 	public const string CONTENT_TYPE_HEADER = self::CONTENT_TYPE . '; ' . self::CHARSET;
 
-	private ?Expires $expires = null;
+	private ?SecurityTxtExpires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
-	private ?PreferredLanguages $preferredLanguages = null;
+	private ?SecurityTxtPreferredLanguages $preferredLanguages = null;
 
 	/**
-	 * @var list<Canonical>
+	 * @var list<SecurityTxtCanonical>
 	 */
 	private array $canonical = [];
 
 	/**
-	 * @var list<Contact>
+	 * @var list<SecurityTxtContact>
 	 */
 	private array $contact = [];
 
 	/**
-	 * @var list<Acknowledgments>
+	 * @var list<SecurityTxtAcknowledgments>
 	 */
 	private array $acknowledgments = [];
 
 	/**
-	 * @var list<Hiring>
+	 * @var list<SecurityTxtHiring>
 	 */
 	private array $hiring = [];
 
 	/**
-	 * @var list<Policy>
+	 * @var list<SecurityTxtPolicy>
 	 */
 	private array $policy = [];
 
 	/**
-	 * @var list<Encryption>
+	 * @var list<SecurityTxtEncryption>
 	 */
 	private array $encryption = [];
 
@@ -92,10 +92,10 @@ final class SecurityTxt implements JsonSerializable
 	 * @throws SecurityTxtError
 	 * @throws SecurityTxtWarning
 	 */
-	public function setExpires(Expires $expires): void
+	public function setExpires(SecurityTxtExpires $expires): void
 	{
 		$this->setValue(
-			function () use ($expires): Expires {
+			function () use ($expires): SecurityTxtExpires {
 				return $this->expires = $expires;
 			},
 			function () use ($expires): void {
@@ -112,7 +112,7 @@ final class SecurityTxt implements JsonSerializable
 	}
 
 
-	public function getExpires(): ?Expires
+	public function getExpires(): ?SecurityTxtExpires
 	{
 		return $this->expires;
 	}
@@ -135,10 +135,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @throws SecurityTxtError
 	 */
-	public function addCanonical(Canonical $canonical): void
+	public function addCanonical(SecurityTxtCanonical $canonical): void
 	{
 		$this->setValue(
-			function () use ($canonical): Canonical {
+			function () use ($canonical): SecurityTxtCanonical {
 				return $this->canonical[] = $canonical;
 			},
 			function () use ($canonical): void {
@@ -149,7 +149,7 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @return list<Canonical>
+	 * @return list<SecurityTxtCanonical>
 	 */
 	public function getCanonical(): array
 	{
@@ -160,10 +160,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @throws SecurityTxtError
 	 */
-	public function addContact(Contact $contact): void
+	public function addContact(SecurityTxtContact $contact): void
 	{
 		$this->setValue(
-			function () use ($contact): Contact {
+			function () use ($contact): SecurityTxtContact {
 				return $this->contact[] = $contact;
 			},
 			function () use ($contact): void {
@@ -174,7 +174,7 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @return list<Contact>
+	 * @return list<SecurityTxtContact>
 	 */
 	public function getContact(): array
 	{
@@ -185,10 +185,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @throws SecurityTxtError
 	 */
-	public function setPreferredLanguages(PreferredLanguages $preferredLanguages): void
+	public function setPreferredLanguages(SecurityTxtPreferredLanguages $preferredLanguages): void
 	{
 		$this->setValue(
-			function () use ($preferredLanguages): PreferredLanguages {
+			function () use ($preferredLanguages): SecurityTxtPreferredLanguages {
 				return $this->preferredLanguages = $preferredLanguages;
 			},
 			function () use ($preferredLanguages): void {
@@ -219,7 +219,7 @@ final class SecurityTxt implements JsonSerializable
 	}
 
 
-	public function getPreferredLanguages(): ?PreferredLanguages
+	public function getPreferredLanguages(): ?SecurityTxtPreferredLanguages
 	{
 		return $this->preferredLanguages;
 	}
@@ -228,10 +228,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @throws SecurityTxtError
 	 */
-	public function addAcknowledgments(Acknowledgments $acknowledgments): void
+	public function addAcknowledgments(SecurityTxtAcknowledgments $acknowledgments): void
 	{
 		$this->setValue(
-			function () use ($acknowledgments): Acknowledgments {
+			function () use ($acknowledgments): SecurityTxtAcknowledgments {
 				return $this->acknowledgments[] = $acknowledgments;
 			},
 			function () use ($acknowledgments): void {
@@ -242,7 +242,7 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @return list<Acknowledgments>
+	 * @return list<SecurityTxtAcknowledgments>
 	 */
 	public function getAcknowledgments(): array
 	{
@@ -253,10 +253,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @throws SecurityTxtError
 	 */
-	public function addHiring(Hiring $hiring): void
+	public function addHiring(SecurityTxtHiring $hiring): void
 	{
 		$this->setValue(
-			function () use ($hiring): Hiring {
+			function () use ($hiring): SecurityTxtHiring {
 				return $this->hiring[] = $hiring;
 			},
 			function () use ($hiring): void {
@@ -267,7 +267,7 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @return list<Hiring>
+	 * @return list<SecurityTxtHiring>
 	 */
 	public function getHiring(): array
 	{
@@ -278,10 +278,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @throws SecurityTxtError
 	 */
-	public function addPolicy(Policy $policy): void
+	public function addPolicy(SecurityTxtPolicy $policy): void
 	{
 		$this->setValue(
-			function () use ($policy): Policy {
+			function () use ($policy): SecurityTxtPolicy {
 				return $this->policy[] = $policy;
 			},
 			function () use ($policy): void {
@@ -292,7 +292,7 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @return list<Policy>
+	 * @return list<SecurityTxtPolicy>
 	 */
 	public function getPolicy(): array
 	{
@@ -303,10 +303,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @throws SecurityTxtError
 	 */
-	public function addEncryption(Encryption $encryption): void
+	public function addEncryption(SecurityTxtEncryption $encryption): void
 	{
 		$this->setValue(
-			function () use ($encryption): Encryption {
+			function () use ($encryption): SecurityTxtEncryption {
 				return $this->encryption[] = $encryption;
 			},
 			function () use ($encryption): void {
@@ -317,7 +317,7 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
-	 * @return list<Encryption>
+	 * @return list<SecurityTxtEncryption>
 	 */
 	public function getEncryption(): array
 	{

@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use JsonSerializable;
 use Override;
 
-final class Expires implements SecurityTxtFieldValue, JsonSerializable
+final class SecurityTxtExpires implements SecurityTxtFieldValue, JsonSerializable
 {
 
 	/**
@@ -36,7 +36,7 @@ final class Expires implements SecurityTxtFieldValue, JsonSerializable
 	#[Override]
 	public function getValue(): string
 	{
-		return $this->dateTime->format(Expires::FORMAT);
+		return $this->dateTime->format(SecurityTxtExpires::FORMAT);
 	}
 
 

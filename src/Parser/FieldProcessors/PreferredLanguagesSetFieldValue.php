@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 use LogicException;
 use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Fields\PreferredLanguages;
+use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 
@@ -25,7 +25,7 @@ final class PreferredLanguagesSetFieldValue implements FieldProcessor
 		if ($separators !== false && $separators > 0) {
 			$wrongSeparators = [];
 			foreach ($matches[1] as $key => $separator) {
-				if ($separator !== PreferredLanguages::SEPARATOR) {
+				if ($separator !== SecurityTxtPreferredLanguages::SEPARATOR) {
 					$wrongSeparators[$key + 1] = $separator;
 				}
 			}
@@ -33,7 +33,7 @@ final class PreferredLanguagesSetFieldValue implements FieldProcessor
 				throw new SecurityTxtError(new SecurityTxtPreferredLanguagesSeparatorNotComma($wrongSeparators, $languages));
 			}
 		}
-		$securityTxt->setPreferredLanguages(new PreferredLanguages($languages));
+		$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages($languages));
 	}
 
 }

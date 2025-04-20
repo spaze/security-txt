@@ -5,7 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
-use Spaze\SecurityTxt\Fields\Acknowledgments;
+use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtAcknowledgmentsNotUri;
@@ -29,7 +29,7 @@ final class AcknowledgmentsAddFieldValueTest extends TestCase
 		$processor->process($uri1, $securityTxt);
 		$processor->process($uri2, $securityTxt);
 		$processor->process($uri3, $securityTxt);
-		$actual = array_map(fn(Acknowledgments $field): string => $field->getUri(), $securityTxt->getAcknowledgments());
+		$actual = array_map(fn(SecurityTxtAcknowledgments $field): string => $field->getUri(), $securityTxt->getAcknowledgments());
 		Assert::equal([$uri1, $uri2, $uri3], $actual);
 
 		$e = Assert::throws(function () use ($processor, $securityTxt): void {
