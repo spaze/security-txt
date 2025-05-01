@@ -2,10 +2,8 @@
 <?php
 declare(strict_types = 1);
 
-use Spaze\SecurityTxt\Check\ConsolePrinter;
-use Spaze\SecurityTxt\Check\SecurityTxtCheckHost;
-use Spaze\SecurityTxt\Check\SecurityTxtCheckHostCli;
-use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResultFactory;
+namespace Spaze\SecurityTxt\Check;
+
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
