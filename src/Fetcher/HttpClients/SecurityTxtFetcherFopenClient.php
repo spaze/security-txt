@@ -13,6 +13,12 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 final class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClient
 {
 
+	public function __construct(
+		private readonly ?string $userAgent = null,
+	) {
+	}
+
+
 	/**
 	 * @throws SecurityTxtCannotReadUrlException
 	 * @throws SecurityTxtCannotOpenUrlException
@@ -26,7 +32,7 @@ final class SecurityTxtFetcherFopenClient implements SecurityTxtFetcherHttpClien
 			'http' => [
 				'follow_location' => false,
 				'ignore_errors' => true,
-				'user_agent' => 'spaze/security-txt',
+				'user_agent' => $this->userAgent ?? 'spaze/security-txt',
 			],
 		];
 		if ($contextHost !== null) {
