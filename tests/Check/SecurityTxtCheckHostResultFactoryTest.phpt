@@ -72,10 +72,6 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 
 		return new SecurityTxtCheckHostResult(
 			'www.example.com',
-			$fetchResult->getRedirects(),
-			$fetchResult->getConstructedUrl(),
-			$fetchResult->getFinalUrl(),
-			$fetchResult->getContents(),
 			$fetchResult,
 			$fetchResult->getErrors(),
 			$fetchResult->getWarnings(),

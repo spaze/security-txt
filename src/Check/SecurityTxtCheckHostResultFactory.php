@@ -22,10 +22,6 @@ final readonly class SecurityTxtCheckHostResultFactory
 	{
 		return new SecurityTxtCheckHostResult(
 			$host,
-			$parseResult->getFetchResult()?->getRedirects() ?? [],
-			$parseResult->getFetchResult()?->getConstructedUrl(),
-			$parseResult->getFetchResult()?->getFinalUrl(),
-			$parseResult->getFetchResult()?->getContents(),
 			$parseResult->getFetchResult(),
 			$parseResult->getFetchErrors(),
 			$parseResult->getFetchWarnings(),
@@ -58,21 +54,6 @@ final readonly class SecurityTxtCheckHostResultFactory
 		}
 		if (!is_string($values['host'])) {
 			throw new SecurityTxtCannotParseJsonException('host is not a string');
-		}
-		if ($values['redirects'] !== null) {
-			if (!is_array($values['redirects'])) {
-				throw new SecurityTxtCannotParseJsonException('redirects is not an array');
-			}
-			$redirects = $this->securityTxtJson->createRedirectsFromJsonValues($values['redirects']);
-		}
-		if ($values['constructedUrl'] !== null && !is_string($values['constructedUrl'])) {
-			throw new SecurityTxtCannotParseJsonException('constructedUrl is not a string');
-		}
-		if ($values['finalUrl'] !== null && !is_string($values['finalUrl'])) {
-			throw new SecurityTxtCannotParseJsonException('finalUrl is not a string');
-		}
-		if ($values['contents'] !== null && !is_string($values['contents'])) {
-			throw new SecurityTxtCannotParseJsonException('contents is not a string');
 		}
 		if (!is_array($values['fetchResult'])) {
 			throw new SecurityTxtCannotParseJsonException('fetchResult is not an array');
@@ -148,10 +129,6 @@ final readonly class SecurityTxtCheckHostResultFactory
 		}
 		return new SecurityTxtCheckHostResult(
 			$values['host'],
-			$redirects ?? null,
-			$values['constructedUrl'],
-			$values['finalUrl'],
-			$values['contents'],
 			$this->securityTxtFetchResultFactory->createFromJsonValues($values['fetchResult']),
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fetchErrors'])),
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['fetchWarnings'])),

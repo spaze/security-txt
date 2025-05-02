@@ -13,7 +13,6 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 {
 
 	/**
-	 * @param array<string, list<string>> $redirects
 	 * @param list<SecurityTxtSpecViolation> $fetchErrors
 	 * @param list<SecurityTxtSpecViolation> $fetchWarnings
 	 * @param array<int, list<SecurityTxtSpecViolation>> $lineErrors
@@ -23,10 +22,6 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	 */
 	public function __construct(
 		private string $host,
-		private ?array $redirects,
-		private ?string $constructedUrl,
-		private ?string $finalUrl,
-		private ?string $contents,
 		private ?SecurityTxtFetchResult $fetchResult,
 		private array $fetchErrors,
 		private array $fetchWarnings,
@@ -52,29 +47,29 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 
 
 	/**
-	 * @return array<string, list<string>>|null
+	 * @return array<string, list<string>>
 	 */
-	public function getRedirects(): ?array
+	public function getRedirects(): array
 	{
-		return $this->redirects;
+		return $this->getFetchResult()?->getRedirects() ?? [];
 	}
 
 
 	public function getConstructedUrl(): ?string
 	{
-		return $this->constructedUrl;
+		return $this->getFetchResult()?->getConstructedUrl();
 	}
 
 
 	public function getFinalUrl(): ?string
 	{
-		return $this->finalUrl;
+		return $this->getFetchResult()?->getFinalUrl();
 	}
 
 
 	public function getContents(): ?string
 	{
-		return $this->contents;
+		return $this->getFetchResult()?->getContents();
 	}
 
 
@@ -189,10 +184,6 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 		return [
 			'class' => $this::class,
 			'host' => $this->getHost(),
-			'redirects' => $this->getRedirects(),
-			'constructedUrl' => $this->getConstructedUrl(),
-			'finalUrl' => $this->getFinalUrl(),
-			'contents' => $this->getContents(),
 			'fetchResult' => $this->getFetchResult(),
 			'fetchErrors' => $this->getFetchErrors(),
 			'fetchWarnings' => $this->getFetchWarnings(),

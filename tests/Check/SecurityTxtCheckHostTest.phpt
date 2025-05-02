@@ -40,12 +40,6 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$expected = [
 			'class' => 'Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult',
 			'host' => 'www.example.com',
-			'redirects' => [
-				'http://example.com' => ['https://example.com', 'https://www.example.com'],
-			],
-			'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
-			'finalUrl' => 'https://www.example.com/.well-known/security.txt',
-			'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
 			'fetchResult' => [
 				'class' => 'Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult',
 				'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
@@ -225,10 +219,6 @@ final class SecurityTxtCheckHostTest extends TestCase
 		);
 		return new SecurityTxtCheckHostResult(
 			'www.example.com',
-			$fetchResult->getRedirects(),
-			$fetchResult->getConstructedUrl(),
-			$fetchResult->getFinalUrl(),
-			$fetchResult->getContents(),
 			$fetchResult,
 			$fetchResult->getErrors(),
 			$fetchResult->getWarnings(),
