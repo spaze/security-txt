@@ -3,12 +3,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
 
-use DateInterval;
 use DateTimeImmutable;
 use JsonSerializable;
 use Override;
 
-final class SecurityTxtExpires implements SecurityTxtFieldValue, JsonSerializable
+final readonly class SecurityTxtExpires implements SecurityTxtFieldValue, JsonSerializable
 {
 
 	/**
@@ -16,13 +15,15 @@ final class SecurityTxtExpires implements SecurityTxtFieldValue, JsonSerializabl
 	 */
 	public const string FORMAT = DATE_RFC3339;
 
-	private DateInterval $interval;
 
-
+	/**
+	 * @internal Use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory::create()
+	 */
 	public function __construct(
-		private readonly DateTimeImmutable $dateTime,
+		private DateTimeImmutable $dateTime,
+		private bool $isExpired,
+		private int $inDays,
 	) {
-		$this->interval = new DateTimeImmutable()->diff($this->dateTime);
 	}
 
 
@@ -42,14 +43,13 @@ final class SecurityTxtExpires implements SecurityTxtFieldValue, JsonSerializabl
 
 	public function isExpired(): bool
 	{
-		return $this->interval->invert === 1;
+		return $this->isExpired;
 	}
 
 
 	public function inDays(): int
 	{
-		$days = (int)$this->interval->days; // $this->interval is created by diff() so days is always set
-		return $this->isExpired() ? -$days : $days;
+		return $this->inDays;
 	}
 
 
@@ -67,6 +67,8 @@ final class SecurityTxtExpires implements SecurityTxtFieldValue, JsonSerializabl
 	{
 		return [
 			'dateTime' => $this->getDateTime()->format(DATE_RFC3339),
+			'isExpired' => $this->isExpired(),
+			'inDays' => $this->inDays(),
 		];
 	}
 

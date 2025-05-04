@@ -9,12 +9,19 @@ use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 
-final class ExpiresSetFieldValue implements FieldProcessor
+final readonly class ExpiresSetFieldValue implements FieldProcessor
 {
+
+	public function __construct(
+		private SecurityTxtExpiresFactory $expiresFactory,
+	) {
+	}
+
 
 	/**
 	 * @throws SecurityTxtError
@@ -41,7 +48,7 @@ final class ExpiresSetFieldValue implements FieldProcessor
 				}
 			}
 		}
-		$expires = new SecurityTxtExpires(new DateTimeImmutable($value));
+		$expires = $this->expiresFactory->create(new DateTimeImmutable($value));
 		$securityTxt->setExpires($expires);
 	}
 

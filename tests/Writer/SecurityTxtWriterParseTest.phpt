@@ -11,7 +11,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
 use Spaze\SecurityTxt\Fields\SecurityTxtEncryption;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
 use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
@@ -30,6 +30,7 @@ final class SecurityTxtWriterParseTest extends TestCase
 
 	private SecurityTxtParser $securityTxtParser;
 	private SecurityTxtWriter $securityTxtWriter;
+	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
 
 
 	public function __construct()
@@ -38,7 +39,8 @@ final class SecurityTxtWriterParseTest extends TestCase
 		$securityTxtSignature = new SecurityTxtSignature();
 		$securityTxtFetcherHttpClient = new SecurityTxtFetcherFopenClient();
 		$securityTxtFetcher = new SecurityTxtFetcher($securityTxtFetcherHttpClient);
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtFetcher);
+		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtFetcher, $this->securityTxtExpiresFactory);
 		$this->securityTxtWriter = new SecurityTxtWriter();
 	}
 
@@ -56,7 +58,7 @@ final class SecurityTxtWriterParseTest extends TestCase
 		$securityTxt->addContact(SecurityTxtContact::email('email@com.example'));
 		$securityTxt->addEncryption(new SecurityTxtEncryption('https://encryption1.example'));
 		$securityTxt->addEncryption(new SecurityTxtEncryption('https://encryption2.example'));
-		$securityTxt->setExpires(new SecurityTxtExpires($dateTime));
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
 		$securityTxt->addHiring(new SecurityTxtHiring('https://hiring1.example'));
 		$securityTxt->addHiring(new SecurityTxtHiring('https://hiring2.example'));
 		$securityTxt->addPolicy(new SecurityTxtPolicy('https://policy1.example'));

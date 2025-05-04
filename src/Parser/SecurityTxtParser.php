@@ -18,6 +18,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledE
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\FieldProcessors\AcknowledgmentsAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\CanonicalAddFieldValue;
@@ -61,6 +62,7 @@ final class SecurityTxtParser
 		private readonly SecurityTxtValidator $validator,
 		private readonly SecurityTxtSignature $signature,
 		private readonly SecurityTxtFetcher $fetcher,
+		private readonly SecurityTxtExpiresFactory $expiresFactory,
 	) {
 	}
 
@@ -84,7 +86,7 @@ final class SecurityTxtParser
 		];
 		$this->fieldProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),
-			new ExpiresSetFieldValue(),
+			new ExpiresSetFieldValue($this->expiresFactory),
 		];
 		$this->fieldProcessors[SecurityTxtField::Hiring->value] = [
 			new HiringAddFieldValue(),

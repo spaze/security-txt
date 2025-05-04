@@ -95,7 +95,13 @@ final class SecurityTxtJson
 				} catch (Exception $e) {
 					throw new SecurityTxtCannotParseJsonException('expires > dateTime is wrong format', $e);
 				}
-				$securityTxt->setExpires(new SecurityTxtExpires($dateTime));
+				if (!is_bool($values['expires']['isExpired'])) {
+					throw new SecurityTxtCannotParseJsonException('expires > isExpired is not a bool');
+				}
+				if (!is_int($values['expires']['inDays'])) {
+					throw new SecurityTxtCannotParseJsonException('expires > inDays is not an int');
+				}
+				$securityTxt->setExpires(new SecurityTxtExpires($dateTime, $values['expires']['isExpired'], $values['expires']['inDays']));
 			}
 			if (isset($values['signatureVerifyResult'])) {
 				if (!is_array($values['signatureVerifyResult'])) {

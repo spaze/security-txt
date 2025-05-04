@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
@@ -23,11 +23,13 @@ final class SecurityTxtWriterTest extends TestCase
 {
 
 	private SecurityTxtWriter $securityTxtWriter;
+	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
 
 
 	public function __construct()
 	{
 		$this->securityTxtWriter = new SecurityTxtWriter();
+		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 	}
 
 
@@ -46,7 +48,7 @@ final class SecurityTxtWriterTest extends TestCase
 		$securityTxt->addContact(SecurityTxtContact::phone('123456'));
 		$securityTxt->addContact(SecurityTxtContact::email('email@com.example'));
 		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://ack1.example'));
-		$securityTxt->setExpires(new SecurityTxtExpires($dateTime));
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
 		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('ftp://ack2.example'));
 		$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs-CZ']));
 		$expected = "Contact: https://contact.example\n"

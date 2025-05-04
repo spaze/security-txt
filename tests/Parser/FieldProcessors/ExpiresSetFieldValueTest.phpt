@@ -7,6 +7,7 @@ namespace Spaze\SecurityTxt\Parser\FieldProcessors;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
@@ -22,7 +23,7 @@ final class ExpiresSetFieldValueTest extends TestCase
 	public function testProcess(): void
 	{
 		$securityTxt = new SecurityTxt();
-		$processor = new ExpiresSetFieldValue();
+		$processor = new ExpiresSetFieldValue(new SecurityTxtExpiresFactory());
 		$expires = new DateTimeImmutable('+2 weeks');
 
 		$processor->process($expires->format(SecurityTxtExpires::FORMAT), $securityTxt);

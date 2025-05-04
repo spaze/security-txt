@@ -11,6 +11,7 @@ use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
@@ -46,7 +47,8 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtSignature = new SecurityTxtSignature();
 		$securityTxtFetcherHttpClient = new SecurityTxtFetcherFopenClient();
 		$securityTxtFetcher = new SecurityTxtFetcher($securityTxtFetcherHttpClient);
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtFetcher);
+		$securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtFetcher, $securityTxtExpiresFactory);
 	}
 
 

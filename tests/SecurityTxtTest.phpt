@@ -10,7 +10,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Fields\SecurityTxtUriField;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotHttps;
@@ -31,11 +31,20 @@ require __DIR__ . '/bootstrap.php';
 final class SecurityTxtTest extends TestCase
 {
 
+	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
+
+
+	public function __construct()
+	{
+		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
+	}
+
+
 	public function testSetExpires(): void
 	{
 		$securityTxt = new SecurityTxt();
-		$in2Weeks = new SecurityTxtExpires(new DateTimeImmutable('+2 weeks'));
-		$in3Weeks = new SecurityTxtExpires(new DateTimeImmutable('+3 weeks'));
+		$in2Weeks = $this->securityTxtExpiresFactory->create(new DateTimeImmutable('+2 weeks'));
+		$in3Weeks = $this->securityTxtExpiresFactory->create(new DateTimeImmutable('+3 weeks'));
 		$securityTxt->setExpires($in2Weeks);
 		$securityTxt->setExpires($in3Weeks);
 		Assert::equal($in3Weeks, $securityTxt->getExpires());
@@ -58,7 +67,7 @@ final class SecurityTxtTest extends TestCase
 	public function testSetExpiresTooLong(SecurityTxtValidationLevel $validationLevel): void
 	{
 		$securityTxt = new SecurityTxt($validationLevel);
-		$future = new SecurityTxtExpires(new DateTimeImmutable('+1 year +1 month'));
+		$future = $this->securityTxtExpiresFactory->create(new DateTimeImmutable('+1 year +1 month'));
 		$e = Assert::throws(function () use ($securityTxt, $future): void {
 			$securityTxt->setExpires($future);
 		}, SecurityTxtWarning::class);
@@ -71,7 +80,7 @@ final class SecurityTxtTest extends TestCase
 	public function testSetExpired(): void
 	{
 		$securityTxt = new SecurityTxt();
-		$past = new SecurityTxtExpires(new DateTimeImmutable('-1 month'));
+		$past = $this->securityTxtExpiresFactory->create(new DateTimeImmutable('-1 month'));
 		$e = Assert::throws(function () use ($securityTxt, $past): void {
 			$securityTxt->setExpires($past);
 		}, SecurityTxtError::class);
@@ -80,7 +89,7 @@ final class SecurityTxtTest extends TestCase
 		Assert::null($securityTxt->getExpires());
 
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
-		$past = new SecurityTxtExpires(new DateTimeImmutable('-1 month'));
+		$past = $this->securityTxtExpiresFactory->create(new DateTimeImmutable('-1 month'));
 		$e = Assert::throws(function () use ($securityTxt, $past): void {
 			$securityTxt->setExpires($past);
 		}, SecurityTxtError::class);
@@ -234,7 +243,7 @@ final class SecurityTxtTest extends TestCase
 	{
 		$securityTxt = new SecurityTxt();
 		Assert::throws(function () use ($securityTxt): void {
-			$securityTxt->setExpires(new SecurityTxtExpires(new DateTimeImmutable('-1 month')));
+			$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('-1 month')));
 		}, SecurityTxtError::class, 'The file is considered stale and should not be used');
 		Assert::null($securityTxt->getExpires());
 	}
@@ -244,7 +253,7 @@ final class SecurityTxtTest extends TestCase
 	{
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::NoInvalidValues);
 		Assert::throws(function () use ($securityTxt): void {
-			$securityTxt->setExpires(new SecurityTxtExpires(new DateTimeImmutable('-1 month')));
+			$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('-1 month')));
 		}, SecurityTxtError::class, 'The file is considered stale and should not be used');
 		Assert::null($securityTxt->getExpires());
 	}
@@ -255,7 +264,7 @@ final class SecurityTxtTest extends TestCase
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
 		$expires = new DateTimeImmutable('-1 month');
 		Assert::throws(function () use ($securityTxt, $expires): void {
-			$securityTxt->setExpires(new SecurityTxtExpires($expires));
+			$securityTxt->setExpires($this->securityTxtExpiresFactory->create($expires));
 		}, SecurityTxtError::class, 'The file is considered stale and should not be used');
 		Assert::equal($expires, $securityTxt->getExpires()?->getDateTime());
 	}
@@ -266,7 +275,7 @@ final class SecurityTxtTest extends TestCase
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		$expires = new DateTimeImmutable('-1 month');
 		Assert::noError(function () use ($securityTxt, $expires): void {
-			$securityTxt->setExpires(new SecurityTxtExpires($expires));
+			$securityTxt->setExpires($this->securityTxtExpiresFactory->create($expires));
 		});
 		Assert::equal($expires, $securityTxt->getExpires()?->getDateTime());
 	}

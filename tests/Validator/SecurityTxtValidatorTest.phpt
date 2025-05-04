@@ -5,7 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
@@ -23,11 +23,13 @@ final class SecurityTxtValidatorTest extends TestCase
 {
 
 	private SecurityTxtValidator $securityTxtValidator;
+	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
 
 
 	public function __construct()
 	{
 		$this->securityTxtValidator = new SecurityTxtValidator();
+		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 	}
 
 
@@ -48,7 +50,7 @@ final class SecurityTxtValidatorTest extends TestCase
 	public function testValidateMissingCanonicalWhenSigned(): void
 	{
 		$securityTxt = new SecurityTxt();
-		$securityTxt->setExpires(new SecurityTxtExpires(new DateTimeImmutable('+1 month')));
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('+1 month')));
 		$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('fingerprint', new DateTimeImmutable('-1 week')));
 		$this->assertThrowable($securityTxt, SecurityTxtSignedButNoCanonical::class);
 	}

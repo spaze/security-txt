@@ -7,7 +7,6 @@ namespace Spaze\SecurityTxt\Fields;
 
 use DateInterval;
 use DateTimeImmutable;
-use ReflectionProperty;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -35,8 +34,10 @@ final class SecurityTxtExpiresTest extends TestCase
 	/** @dataProvider getExpiresField */
 	public function testIsExpiredInDays(DateTimeImmutable $now, DateTimeImmutable $expires, bool $isExpired, int $expireDays): void
 	{
-		$expiresObject = new SecurityTxtExpires($expires);
-		new ReflectionProperty($expiresObject, 'interval')->setValue($expiresObject, $now->diff($expires));
+		$interval = $now->diff($expires);
+		$negativePeriod = $interval->invert === 1;
+		$days = (int)$interval->days;
+		$expiresObject = new SecurityTxtExpires($expires, $negativePeriod, $negativePeriod ? -$days : $days);
 		Assert::same($isExpired, $expiresObject->isExpired());
 		Assert::same($expireDays, $expiresObject->inDays());
 	}

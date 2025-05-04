@@ -8,6 +8,7 @@ namespace Spaze\SecurityTxt\Check;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
@@ -26,11 +27,13 @@ final class SecurityTxtCheckHostTest extends TestCase
 {
 
 	private DateTimeImmutable $expires;
+	private SecurityTxtExpiresFactory $expiresFactory;
 
 
 	public function __construct()
 	{
 		$this->expires = new DateTimeImmutable('+1 month');
+		$this->expiresFactory = new SecurityTxtExpiresFactory();
 	}
 
 
@@ -182,7 +185,11 @@ final class SecurityTxtCheckHostTest extends TestCase
 				],
 			],
 			'securityTxt' => [
-				'expires' => ['dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT)],
+				'expires' => [
+					'dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT),
+					'isExpired' => false,
+					'inDays' => 30,
+				],
 				'signatureVerifyResult' => null,
 				'preferredLanguages' => null,
 				'canonical' => [],
@@ -208,7 +215,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 	private function getResult(): SecurityTxtCheckHostResult
 	{
 		$securityTxt = new SecurityTxt();
-		$securityTxt->setExpires(new SecurityTxtExpires($this->expires));
+		$securityTxt->setExpires($this->expiresFactory->create($this->expires));
 		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
