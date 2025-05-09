@@ -17,16 +17,14 @@
 		"phpstan/phpstan-strict-rules": "^2.0",
 		"psalm/phar": "^6.10",
 		"spaze/coding-standard": "^1.6",
+		"spaze/phpcs-phar": "^3.12",
 		"spaze/phpstan-disallowed-calls": "^4.5"
 	},
 	"suggest": {
 		"ext-gnupg": "Needed to verify and create signatures"
 	},
 	"config": {
-		"sort-packages": true,
-		"allow-plugins": {
-			"dealerdirect/phpcodesniffer-composer-installer": true
-		}
+		"sort-packages": true
 	},
 	"autoload": {
 		"psr-4": {
