@@ -35,11 +35,11 @@
 		"bin/checksecuritytxt.php"
 	],
 	"scripts": {
-		"cs-fix": "vendor/squizlabs/php_codesniffer/bin/phpcbf bin/ src/ tests/",
-		"lint": "vendor/php-parallel-lint/php-parallel-lint/parallel-lint --colors bin/ src/ tests/",
-		"phpcs": "vendor/squizlabs/php_codesniffer/bin/phpcs bin/ src/ tests/",
-		"phpstan": "vendor/phpstan/phpstan/phpstan -vvv --ansi analyse --configuration phpstan.neon",
-		"psalm": "vendor/psalm/phar/psalm.phar",
+		"cs-fix": "vendor/bin/phpcbf bin/ src/ tests/",
+		"lint": "vendor/bin/parallel-lint --colors bin/ src/ tests/",
+		"phpcs": "vendor/bin/phpcs bin/ src/ tests/",
+		"phpstan": "vendor/bin/phpstan -vvv --ansi analyse --configuration phpstan.neon",
+		"psalm": "vendor/bin/psalm.phar",
 		"test": [
 			"@lint",
 			"@phpcs",
@@ -47,6 +47,6 @@
 			"@psalm",
 			"@tester"
 		],
-		"tester": "vendor/nette/tester/src/tester -c tests/php-unix.ini -d zend.assertions=1 --colors 1 tests/"
+		"tester": "vendor/bin/tester -c tests/php-unix.ini -d zend.assertions=1 --colors 1 tests/"
 	}
 }
