@@ -314,7 +314,7 @@ final class SecurityTxtParserTest extends TestCase
 			[new SecurityTxtTopLevelPathOnly()],
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
-		Assert::same("The line (`Expires: 2020-12-31T23:59:59.000Z`) doesn't end with neither <CRLF> nor <LF>", $parseResult->getLineErrors()[2][0]->getMessage());
+		Assert::same("The line (`Expires: 2020-12-31T23:59:59.000Z`) doesn't end with neither `<CRLF>` nor `<LF>`", $parseResult->getLineErrors()[2][0]->getMessage());
 		Assert::same("The file is considered stale and should not be used", $parseResult->getLineErrors()[2][1]->getMessage());
 		Assert::same([], $parseResult->getLineWarnings());
 		Assert::same([], $parseResult->getFileErrors());

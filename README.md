@@ -106,3 +106,7 @@ $securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs
 header('Content-Type: ' . SecurityTxt::CONTENT_TYPE_HEADER);
 echo new SecurityTxtWriter()->write($securityTxt);
 ```
+
+# Exceptions
+The messages in the exceptions as thrown by this library are safe to display to the user using the `getMessage()` method.
+The messages contain formatting characters like the backtick (`` ` ``) and can be formatted with a Markdown formatter or similar, if required.

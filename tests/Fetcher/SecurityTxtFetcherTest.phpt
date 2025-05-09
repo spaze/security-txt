@@ -170,7 +170,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
 			$method->invoke($fetcher, $wellKnown, $topLevel);
-		}, SecurityTxtNotFoundException::class, "Can't read security.txt: foo => 404, bar => 403");
+		}, SecurityTxtNotFoundException::class, "Can't read `security.txt`: `foo` => `404`, `bar` => `403`");
 	}
 
 }
