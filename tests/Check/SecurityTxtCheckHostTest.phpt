@@ -125,7 +125,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 						'messageFormat' => "The line (`%s`) doesn't end with neither `<CRLF>` nor `<LF>`",
 						'messageValues' => ['Contact: https://example.com/contact'],
 						'since' => 'draft-foudil-securitytxt-03',
-						'correctValue' => 'Contact: https://example.com/contact`<LF>`',
+						'correctValue' => 'Contact: https://example.com/contact<LF>',
 						'howToFix' => 'End the line with either `<CRLF>` or `<LF>`',
 						'howToFixFormat' => 'End the line with either `<CRLF>` or `<LF>`',
 						'howToFixValues' => [],
