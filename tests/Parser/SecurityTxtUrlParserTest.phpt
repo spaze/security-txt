@@ -67,6 +67,54 @@ final class SecurityTxtUrlParserTest extends TestCase
 		$this->securityTxtUrlParser->getHostFromUrl($input);
 	}
 
+
+	/**
+	 * @return list<array{0:string, 1:string, 2:string}>
+	 */
+	public function getRedirects(): array
+	{
+		return [
+			['/new', 'https://example.com/bar', 'https://example.com/new'],
+			['new', 'https://example.com/bar', 'https://example.com/new'],
+			['/new', 'https://example.com/foo/bar', 'https://example.com/new'],
+			['new', 'https://example.com/foo/bar', 'https://example.com/foo/new'],
+			['new', 'https://example.com/foo/bar.ext', 'https://example.com/foo/new'],
+			['/new1/new2', 'https://example.com/foo/bar/baz', 'https://example.com/new1/new2'],
+			['/new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/new1/new2'],
+			['new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/foo/new1/new2'],
+			['/', 'https://example.com/foo/bar', 'https://example.com/'],
+			['../new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/foo/../new1/new2'],
+			['../new1/new2', 'https://example.com/', 'https://example.com/../new1/new2'],
+			['/../new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/../new1/new2'],
+			['/../new1/new2', 'https://example.com/', 'https://example.com/../new1/new2'],
+			['/new1/new2/new3', 'https://example.com/foo/bar.ext', 'https://example.com/new1/new2/new3'],
+			['/new1/new2?new=query', 'https://example.com/foo/bar/baz', 'https://example.com/new1/new2?new=query'],
+			['/new1/new2?new=query', 'https://example.com/foo/bar/baz?old=query', 'https://example.com/new1/new2?new=query'],
+			['/new1/new2?new=query', 'https://example.com/foo/bar/baz?old=query', 'https://example.com/new1/new2?new=query'],
+			['/new1/new2#fragment', 'https://example.com/foo/bar/baz', 'https://example.com/new1/new2#fragment'],
+			['/new1/new2#fragment', 'https://example.com/foo/bar/baz?old=query#frag', 'https://example.com/new1/new2#fragment'],
+			['/new1/new2', 'https://example.com/foo/bar/baz#frag', 'https://example.com/new1/new2'],
+			['/new1/new2?new=query#fragment', 'https://example.com/foo/bar/baz?old=query#frag', 'https://example.com/new1/new2?new=query#fragment'],
+			['/new1/new2', 'https://example.com/foo/bar/baz?old=query#frag', 'https://example.com/new1/new2'],
+			['https://new.test/new', 'https://example.com/bar', 'https://new.test/new'],
+			['https://new.test/new', 'https://example.com:303/bar', 'https://new.test/new'],
+			['https://new.test:808/new', 'https://example.com/bar', 'https://new.test:808/new'],
+			['https://new.test/new?query', 'https://example.com/bar', 'https://new.test/new?query'],
+			['https://new.test/new?query#fragment', 'https://example.com/bar', 'https://new.test/new?query#fragment'],
+			['//new.test/new', 'https://example.com/bar', '//new.test/new'], // up to the client to deal with an empty scheme
+			['https://new.test', 'https://example.com/bar', 'https://new.test'], // up to the client to deal with an empty path
+		];
+	}
+
+
+	/**
+	 * @dataProvider getRedirects
+	 */
+	public function testGetRedirectUrl(string $location, string $url, string $expected): void
+	{
+		Assert::same($expected, $this->securityTxtUrlParser->getRedirectUrl($location, $url));
+	}
+
 }
 
 new SecurityTxtUrlParserTest()->run();

@@ -14,6 +14,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
+use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -110,7 +111,8 @@ final class SecurityTxtFetcherTest extends TestCase
 			$lowercaseHeaders[strtolower($key)] = $value;
 		}
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents'));
-		$fetcher = new SecurityTxtFetcher($httpClient);
+		$urlParser = new SecurityTxtUrlParser();
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser);
 		$template = 'https://%s/foo';
 		$host = 'host';
 		$property = new ReflectionProperty($fetcher, 'redirects');
@@ -150,7 +152,8 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownWins): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
-		$fetcher = new SecurityTxtFetcher($httpClient);
+		$urlParser = new SecurityTxtUrlParser();
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
@@ -164,7 +167,8 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResultNotFound(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
-		$fetcher = new SecurityTxtFetcher($httpClient);
+		$urlParser = new SecurityTxtUrlParser();
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
 		$method = new ReflectionMethod($fetcher, 'getResult');
