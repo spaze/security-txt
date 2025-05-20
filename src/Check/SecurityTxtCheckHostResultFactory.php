@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Check;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
-use Spaze\SecurityTxt\Parser\SecurityTxtParseResult;
+use Spaze\SecurityTxt\Parser\SecurityTxtParseHostResult;
 
 final readonly class SecurityTxtCheckHostResultFactory
 {
@@ -18,7 +18,7 @@ final readonly class SecurityTxtCheckHostResultFactory
 	}
 
 
-	public function create(string $host, SecurityTxtParseResult $parseResult): SecurityTxtCheckHostResult
+	public function create(string $host, SecurityTxtParseHostResult $parseResult): SecurityTxtCheckHostResult
 	{
 		return new SecurityTxtCheckHostResult(
 			$host,

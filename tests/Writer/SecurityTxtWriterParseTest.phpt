@@ -62,8 +62,6 @@ final class SecurityTxtWriterParseTest extends TestCase
 		$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs']));
 		$parsed = $this->securityTxtParser->parseString($this->securityTxtWriter->write($securityTxt));
 		Assert::true($parsed->isValid());
-		Assert::same([], $parsed->getFetchErrors());
-		Assert::same([], $parsed->getFetchWarnings());
 		Assert::same([], $parsed->getFileErrors());
 		Assert::same([], $parsed->getFileWarnings());
 		Assert::same([], $parsed->getLineErrors());

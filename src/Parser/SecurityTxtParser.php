@@ -104,7 +104,7 @@ final class SecurityTxtParser
 	/**
 	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
-	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
+	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseStringResult
 	{
 		$this->lineErrors = $this->lineWarnings = [];
 		$lines = $this->splitLines($contents);
@@ -144,7 +144,7 @@ final class SecurityTxtParser
 		$expiresSoon = $expiresWarningThreshold !== null && $expires?->inDays() < $expiresWarningThreshold;
 		$hasErrors = $this->lineErrors !== [] || $validateResult->getErrors() !== [];
 		$hasWarnings = $this->lineWarnings !== [] || $validateResult->getWarnings() !== [];
-		return new SecurityTxtParseResult(
+		return new SecurityTxtParseStringResult(
 			$securityTxt,
 			($expires === null || !$expires->isExpired()) && (!$strictMode || !$expiresSoon) && !$hasErrors && (!$strictMode || !$hasWarnings),
 			$strictMode,
@@ -160,20 +160,14 @@ final class SecurityTxtParser
 	/**
 	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
-	public function parseHost(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
+	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
-		return $this->createParseResult($parseResult, $fetchResult, $strictMode);
-	}
-
-
-	/**
-	 * @throws SecurityTxtCannotVerifySignatureException
-	 */
-	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
-	{
-		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
-		return $this->createParseResult($parseResult, $fetchResult, $strictMode);
+		return new SecurityTxtParseHostResult(
+			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
+			$parseResult,
+			$fetchResult,
+		);
 	}
 
 
@@ -212,22 +206,6 @@ final class SecurityTxtParser
 			}
 		}
 		return $best;
-	}
-
-
-	private function createParseResult(SecurityTxtParseResult $parseResult, SecurityTxtFetchResult $fetchResult, bool $strictMode): SecurityTxtParseResult
-	{
-		return new SecurityTxtParseResult(
-			$parseResult->getSecurityTxt(),
-			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
-			$parseResult->isStrictMode(),
-			$parseResult->getExpiresWarningThreshold(),
-			$parseResult->isExpiresSoon(),
-			$parseResult->getLineErrors(),
-			$parseResult->getLineWarnings(),
-			$parseResult->getValidateResult(),
-			$fetchResult,
-		);
 	}
 
 

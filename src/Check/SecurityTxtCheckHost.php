@@ -100,7 +100,7 @@ final class SecurityTxtCheckHost
 		$host = $this->urlParser->getHostFromUrl($url);
 		$this->callOnCallback($this->onHost, $host);
 		$fetchResult = $this->fetcher->fetchHost($host, $noIpv6);
-		$parseResult = $this->parser->parseHost($fetchResult, $expiresWarningThreshold, $strictMode);
+		$parseResult = $this->parser->parseFetchResult($fetchResult, $expiresWarningThreshold, $strictMode);
 
 		foreach ($parseResult->getFetchErrors() as $error) {
 			$this->error($this->onFetchError, $error);

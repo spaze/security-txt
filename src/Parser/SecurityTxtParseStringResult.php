@@ -5,12 +5,11 @@ namespace Spaze\SecurityTxt\Parser;
 
 use JsonSerializable;
 use Override;
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-final readonly class SecurityTxtParseResult implements JsonSerializable
+final readonly class SecurityTxtParseStringResult implements JsonSerializable
 {
 
 	/**
@@ -26,7 +25,6 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 		private array $lineErrors,
 		private array $lineWarnings,
 		private SecurityTxtValidateResult $validateResult,
-		private ?SecurityTxtFetchResult $fetchResult = null,
 	) {
 	}
 
@@ -62,15 +60,6 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 
 
 	/**
-	 * @return list<SecurityTxtSpecViolation>
-	 */
-	public function getFetchErrors(): array
-	{
-		return $this->fetchResult !== null ? $this->fetchResult->getErrors() : [];
-	}
-
-
-	/**
 	 * @return array<int, list<SecurityTxtSpecViolation>>
 	 */
 	public function getLineErrors(): array
@@ -90,16 +79,7 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 
 	public function hasErrors(): bool
 	{
-		return $this->getFetchErrors() !== [] || $this->getLineErrors() !== [] || $this->getFileErrors() !== [];
-	}
-
-
-	/**
-	 * @return list<SecurityTxtSpecViolation>
-	 */
-	public function getFetchWarnings(): array
-	{
-		return $this->fetchResult !== null ? $this->fetchResult->getWarnings() : [];
+		return $this->getLineErrors() !== [] || $this->getFileErrors() !== [];
 	}
 
 
@@ -123,13 +103,7 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 
 	public function hasWarnings(): bool
 	{
-		return $this->getFetchWarnings() !== [] || $this->getLineWarnings() !== [] || $this->getFileWarnings() !== [];
-	}
-
-
-	public function getFetchResult(): ?SecurityTxtFetchResult
-	{
-		return $this->fetchResult;
+		return $this->getLineWarnings() !== [] || $this->getFileWarnings() !== [];
 	}
 
 
@@ -154,7 +128,6 @@ final readonly class SecurityTxtParseResult implements JsonSerializable
 			'lineErrors' => $this->getLineErrors(),
 			'lineWarnings' => $this->getLineWarnings(),
 			'validateResult' => $this->getValidateResult(),
-			'fetchResult' => $this->getFetchResult(),
 		];
 	}
 

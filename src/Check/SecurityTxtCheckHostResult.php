@@ -22,7 +22,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	 */
 	public function __construct(
 		private string $host,
-		private ?SecurityTxtFetchResult $fetchResult,
+		private SecurityTxtFetchResult $fetchResult,
 		private array $fetchErrors,
 		private array $fetchWarnings,
 		private array $lineErrors,
@@ -51,29 +51,29 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	 */
 	public function getRedirects(): array
 	{
-		return $this->getFetchResult()?->getRedirects() ?? [];
+		return $this->getFetchResult()->getRedirects();
 	}
 
 
-	public function getConstructedUrl(): ?string
+	public function getConstructedUrl(): string
 	{
-		return $this->getFetchResult()?->getConstructedUrl();
+		return $this->getFetchResult()->getConstructedUrl();
 	}
 
 
-	public function getFinalUrl(): ?string
+	public function getFinalUrl(): string
 	{
-		return $this->getFetchResult()?->getFinalUrl();
+		return $this->getFetchResult()->getFinalUrl();
 	}
 
 
-	public function getContents(): ?string
+	public function getContents(): string
 	{
-		return $this->getFetchResult()?->getContents();
+		return $this->getFetchResult()->getContents();
 	}
 
 
-	public function getFetchResult(): ?SecurityTxtFetchResult
+	public function getFetchResult(): SecurityTxtFetchResult
 	{
 		return $this->fetchResult;
 	}
