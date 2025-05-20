@@ -216,11 +216,13 @@ final class SecurityTxtCheckHostTest extends TestCase
 	{
 		$securityTxt = new SecurityTxt();
 		$securityTxt->setExpires($this->expiresFactory->create($this->expires));
+		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $this->expires->format(SecurityTxtExpires::FORMAT)];
 		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			"Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
+			implode($lines),
+			$lines,
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 		);

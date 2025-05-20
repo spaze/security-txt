@@ -5,8 +5,6 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Parser;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
@@ -37,11 +35,8 @@ final class SecurityTxtWriterParseTest extends TestCase
 	{
 		$securityTxtValidator = new SecurityTxtValidator();
 		$securityTxtSignature = new SecurityTxtSignature();
-		$securityTxtFetcherHttpClient = new SecurityTxtFetcherFopenClient('tests');
-		$urlParser = new SecurityTxtUrlParser();
-		$securityTxtFetcher = new SecurityTxtFetcher($securityTxtFetcherHttpClient, $urlParser);
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtFetcher, $this->securityTxtExpiresFactory);
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory);
 		$this->securityTxtWriter = new SecurityTxtWriter();
 	}
 

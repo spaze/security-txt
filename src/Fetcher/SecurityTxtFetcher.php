@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledE
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
+use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
@@ -49,6 +50,7 @@ final class SecurityTxtFetcher
 	public function __construct(
 		private readonly SecurityTxtFetcherHttpClient $httpClient,
 		private readonly SecurityTxtUrlParser $urlParser,
+		private readonly SecurityTxtParser $parser,
 	) {
 	}
 
@@ -209,6 +211,7 @@ final class SecurityTxtFetcher
 			$result->getFinalUrl(),
 			$this->redirects,
 			$contents,
+			$this->parser->splitLines($contents),
 			$errors,
 			$warnings,
 		);

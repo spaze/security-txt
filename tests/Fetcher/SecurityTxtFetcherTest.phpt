@@ -14,7 +14,11 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
+use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -23,6 +27,18 @@ require __DIR__ . '/../bootstrap.php';
 /** @testCase */
 final class SecurityTxtFetcherTest extends TestCase
 {
+
+	private SecurityTxtParser $parser;
+
+
+	public function __construct()
+	{
+		$validator = new SecurityTxtValidator();
+		$signature = new SecurityTxtSignature();
+		$expiresFactory = new SecurityTxtExpiresFactory();
+		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory);
+	}
+
 
 	private function getHttpClient(SecurityTxtFetcherResponse $fetcherResponse): SecurityTxtFetcherHttpClient
 	{
@@ -112,7 +128,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		}
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents'));
 		$urlParser = new SecurityTxtUrlParser();
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser);
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->parser);
 		$template = 'https://%s/foo';
 		$host = 'host';
 		$property = new ReflectionProperty($fetcher, 'redirects');
@@ -153,7 +169,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
 		$urlParser = new SecurityTxtUrlParser();
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser);
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->parser);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
@@ -164,11 +180,30 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
+	public function testGetResultGetLine(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
+		$urlParser = new SecurityTxtUrlParser();
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->parser);
+		$lines = ["Contact: 123\n", "Hiring: 456\n"];
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', new SecurityTxtFetcherResponse(200, [], implode('', $lines)), null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, null);
+		$method = new ReflectionMethod($fetcher, 'getResult');
+		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
+		assert($result instanceof SecurityTxtFetchResult);
+		Assert::null($result->getLine(-1)); /** @phpstan-ignore argument.type (Testing invalid line number) */
+		Assert::null($result->getLine(0)); /** @phpstan-ignore argument.type (Testing another invalid line number) */
+		Assert::same($lines[0], $result->getLine(1));
+		Assert::same($lines[1], $result->getLine(2));
+		Assert::null($result->getLine(3));
+	}
+
+
 	public function testGetResultNotFound(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
 		$urlParser = new SecurityTxtUrlParser();
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser);
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->parser);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
 		$method = new ReflectionMethod($fetcher, 'getResult');

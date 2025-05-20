@@ -5,12 +5,14 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
+use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 
 final readonly class SecurityTxtFetchResultFactory
 {
 
 	public function __construct(
 		private SecurityTxtJson $securityTxtJson,
+		private SecurityTxtParser $parser,
 	) {
 	}
 
@@ -51,6 +53,7 @@ final readonly class SecurityTxtFetchResultFactory
 			$values['finalUrl'],
 			$redirects,
 			$values['contents'],
+			$this->parser->splitLines($values['contents']),
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['errors'])),
 			$this->securityTxtJson->createViolationsFromJsonValues(array_values($values['warnings'])),
 		);

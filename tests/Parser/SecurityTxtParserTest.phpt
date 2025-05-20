@@ -7,8 +7,6 @@ namespace Spaze\SecurityTxt\Parser;
 
 use DateTime;
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
@@ -45,11 +43,8 @@ final class SecurityTxtParserTest extends TestCase
 	{
 		$securityTxtValidator = new SecurityTxtValidator();
 		$securityTxtSignature = new SecurityTxtSignature();
-		$securityTxtFetcherHttpClient = new SecurityTxtFetcherFopenClient('tests');
-		$urlParser = new SecurityTxtUrlParser();
-		$securityTxtFetcher = new SecurityTxtFetcher($securityTxtFetcherHttpClient, $urlParser);
 		$securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtFetcher, $securityTxtExpiresFactory);
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory);
 	}
 
 
@@ -303,6 +298,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseFetchResult(): void
 	{
+		$lines = ["Contact: mailto:example@example.com\r\n", "Expires: 2020-12-31T23:59:59.000Z"];
 		$fetchResult = new SecurityTxtFetchResult(
 			'https://example.com/security.txt',
 			'https://www.example.com/security.txt',
@@ -310,7 +306,8 @@ final class SecurityTxtParserTest extends TestCase
 				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
 				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
 			],
-			"Contact: mailto:example@example.com\r\nExpires: 2020-12-31T23:59:59.000Z",
+			implode('', $lines),
+			$lines,
 			[new SecurityTxtContentTypeWrongCharset('https://example.com/security.txt', 'text/plain', null)],
 			[new SecurityTxtTopLevelPathOnly()],
 		);
@@ -324,11 +321,13 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::false($parseResult->isValid());
 
 		$expires = new DateTimeImmutable('+7 days');
+		$lines = ["Contact: mailto:example@example.com\r\n", 'Expires: ' . $expires->format(SecurityTxtExpires::FORMAT) . "\r\n"];
 		$fetchResult = new SecurityTxtFetchResult(
 			'https://example.com/security.txt',
 			'https://www.example.com/security.txt',
 			[],
-			"Contact: mailto:example@example.com\r\nExpires: " . $expires->format(SecurityTxtExpires::FORMAT) . "\r\n",
+			implode('', $lines),
+			$lines,
 			[],
 			[],
 		);

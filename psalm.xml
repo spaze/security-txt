@@ -22,6 +22,11 @@
 		<extension name="phpt" />
 	</fileExtensions>
 	<issueHandlers>
+		<InvalidArgument>
+			<errorLevel type="suppress">
+				<file name="tests/Fetcher/SecurityTxtFetcherTest.phpt" /> <!-- Testing invalid line numbers -->
+			</errorLevel>
+		</InvalidArgument>
 		<PossiblyUnusedMethod>
 			<errorLevel type="suppress">
 				<referencedMethod name="/.*Test::test.*/" />
@@ -29,7 +34,6 @@
 				<referencedMethod name="/Spaze\\SecurityTxt\\Check\\SecurityTxtCheckHostResult::get.*/" />
 				<referencedMethod name="/Spaze\\SecurityTxt\\Violations\\.*::__construct/" />
 				<referencedMethod name="/Spaze\\SecurityTxt\\Violations\\.*::get.*/" />
-				<referencedMethod name="/Spaze\\SecurityTxt\\Parser\\SecurityTxtParser::getLine/" />
 				<referencedMethod name="/Spaze\\SecurityTxt\\Parser\\SecurityTxtParseResult::hasErrors/" />
 				<referencedMethod name="/Spaze\\SecurityTxt\\Parser\\SecurityTxtParseResult::hasWarnings/" />
 			</errorLevel>

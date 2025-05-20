@@ -6,17 +6,6 @@ namespace Spaze\SecurityTxt\Parser;
 use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotReadUrlException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidTypeException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
@@ -43,9 +32,6 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 final class SecurityTxtParser
 {
 
-	/** @var list<string> */
-	private array $lines = [];
-
 	/**
 	 * @var array<string, list<FieldProcessor>>
 	 */
@@ -61,7 +47,6 @@ final class SecurityTxtParser
 	public function __construct(
 		private readonly SecurityTxtValidator $validator,
 		private readonly SecurityTxtSignature $signature,
-		private readonly SecurityTxtFetcher $fetcher,
 		private readonly SecurityTxtExpiresFactory $expiresFactory,
 	) {
 	}
@@ -122,11 +107,7 @@ final class SecurityTxtParser
 	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
 	{
 		$this->lineErrors = $this->lineWarnings = [];
-		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
-		if ($lines === false) {
-			throw new LogicException('This should not happen');
-		}
-		$this->lines = $lines;
+		$lines = $this->splitLines($contents);
 		$securityTxtFields = array_combine(
 			array_map(function (SecurityTxtField $securityTxtField): string {
 				return strtolower($securityTxtField->value);
@@ -134,9 +115,9 @@ final class SecurityTxtParser
 			SecurityTxtField::cases(),
 		);
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
-		for ($lineNumber = 1; $lineNumber <= count($this->lines); $lineNumber++) {
-			$line = trim($this->lines[$lineNumber - 1]);
-			if (!str_ends_with($this->lines[$lineNumber - 1], "\n")) {
+		for ($lineNumber = 1; $lineNumber <= count($lines); $lineNumber++) {
+			$line = trim($lines[$lineNumber - 1]);
+			if (!str_ends_with($lines[$lineNumber - 1], "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
 			}
 			if (str_starts_with($line, '#')) {
@@ -177,21 +158,10 @@ final class SecurityTxtParser
 
 
 	/**
-	 * @throws SecurityTxtCannotOpenUrlException
-	 * @throws SecurityTxtCannotReadUrlException
-	 * @throws SecurityTxtNotFoundException
-	 * @throws SecurityTxtTooManyRedirectsException
-	 * @throws SecurityTxtHostNotFoundException
-	 * @throws SecurityTxtNoHttpCodeException
-	 * @throws SecurityTxtNoLocationHeaderException
-	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
-	 * @throws SecurityTxtHostIpAddressInvalidTypeException
-	 * @throws SecurityTxtHostIpAddressNotFoundException
 	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
-	public function parseHost(string $host, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $noIpv6 = false): SecurityTxtParseResult
+	public function parseHost(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseResult
 	{
-		$fetchResult = $this->fetcher->fetchHost($host, $noIpv6);
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
 		return $this->createParseResult($parseResult, $fetchResult, $strictMode);
 	}
@@ -223,12 +193,6 @@ final class SecurityTxtParser
 			}
 		}
 		return $securityTxt;
-	}
-
-
-	public function getLine(int $lineNumber): ?string
-	{
-		return $this->lines[$lineNumber] ?? null;
 	}
 
 
@@ -264,6 +228,19 @@ final class SecurityTxtParser
 			$parseResult->getValidateResult(),
 			$fetchResult,
 		);
+	}
+
+
+	/**
+	 * @return list<string>
+	 */
+	public function splitLines(string $contents): array
+	{
+		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
+		if ($lines === false) {
+			throw new LogicException('This should not happen');
+		}
+		return $lines;
 	}
 
 }
