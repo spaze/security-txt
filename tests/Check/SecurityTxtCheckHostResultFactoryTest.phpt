@@ -1,28 +1,17 @@
 <?php
-/** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection HttpUrlsUsage */
+/** @noinspection PhpUnhandledExceptionInspection */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Check;
 
-use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
-use Spaze\SecurityTxt\Fields\SecurityTxtField;
-use Spaze\SecurityTxt\Json\SecurityTxtJson;
+use Spaze\SecurityTxt\Parser\SecurityTxtParseHostResult;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
-use Spaze\SecurityTxt\SecurityTxt;
-use Spaze\SecurityTxt\SecurityTxtValidationLevel;
+use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
-use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
-use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
-use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
-use Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps;
-use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
-use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -32,67 +21,58 @@ require __DIR__ . '/../bootstrap.php';
 final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 {
 
-	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
+	private SecurityTxtParser $parser;
+	private SecurityTxtCheckHostResultFactory $checkHostResultFactory;
 
 
 	public function __construct()
 	{
-		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
-	}
-
-
-	public function testCreateFromJson(): void
-	{
-		$json = new SecurityTxtJson();
 		$validator = new SecurityTxtValidator();
 		$signature = new SecurityTxtSignature();
 		$expiresFactory = new SecurityTxtExpiresFactory();
-		$parser = new SecurityTxtParser($validator, $signature, $expiresFactory);
-		$fetchResultFactory = new SecurityTxtFetchResultFactory($json, $parser);
-		$resultFactory = new SecurityTxtCheckHostResultFactory($json, $fetchResultFactory);
-		$expectedResult = $this->getResult();
-		$encoded = json_encode($expectedResult);
-		assert(is_string($encoded));
-		$decoded = json_decode($encoded, true);
-		assert(is_array($decoded));
-		$actualResult = $resultFactory->createFromJsonValues($decoded);
-		Assert::equal($expectedResult, $actualResult);
+		$splitLines = new SecurityTxtSplitLines();
+		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines);
+		$this->checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 	}
 
 
-	private function getResult(): SecurityTxtCheckHostResult
+	public function testCreate(): void
 	{
-		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
-		$dateTime = new DateTimeImmutable('2022-08-08T02:40:54+00:00');
-		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
-		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $dateTime->format(SecurityTxtExpires::FORMAT)];
+		$host = 'com.example';
+		$email = "mailto:foo@example.com";
+		$lines = [
+			"Contact: {$email}\n",
+			"Expires: 2020-10-15T00:01:02+02:00\n",
+		];
+		$contents = implode('', $lines);
+		$parseStringResult = $this->parser->parseString($contents, 123, true);
 		$fetchResult = new SecurityTxtFetchResult(
-			'http://www.example.com/.well-known/security.txt',
-			'https://www.example.com/.well-known/security.txt',
-			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			implode('', $lines),
+			'https://com.example/.well-known/security.txt',
+			'https://com.example/.well-known/security.txt',
+			[],
+			$contents,
 			$lines,
-			[new SecurityTxtSchemeNotHttps('http://example.com')],
-			[new SecurityTxtWellKnownPathOnly()],
+			[],
+			[],
 		);
-
-		return new SecurityTxtCheckHostResult(
-			'www.example.com',
-			$fetchResult,
-			$fetchResult->getErrors(),
-			$fetchResult->getWarnings(),
-			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact')]],
-			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
-			[new SecurityTxtNoContact()],
-			[new SecurityTxtSignatureExtensionNotLoaded()],
-			$securityTxt,
-			false,
-			true,
-			10,
-			false,
-			true,
-			15,
-		);
+		$parseHostResult = new SecurityTxtParseHostResult(false, $parseStringResult, $fetchResult);
+		$checkHostResult = $this->checkHostResultFactory->create($host, $parseHostResult);
+		Assert::same($contents, $checkHostResult->getContents());
+		Assert::same($host, $checkHostResult->getHost());
+		Assert::same($fetchResult, $checkHostResult->getFetchResult());
+		Assert::same([], $checkHostResult->getFetchErrors());
+		Assert::same([], $checkHostResult->getFetchWarnings());
+		Assert::hasKey(2, $checkHostResult->getLineErrors()); // Because Expires is in the past
+		Assert::same([], $checkHostResult->getLineWarnings());
+		Assert::same([], $checkHostResult->getFileErrors());
+		Assert::same([], $checkHostResult->getFileWarnings());
+		Assert::same($email, $checkHostResult->getSecurityTxt()->getContact()[0]->getValue());
+		Assert::true($checkHostResult->isExpiresSoon());
+		Assert::true($checkHostResult->getIsExpired());
+		Assert::true($checkHostResult->getExpiryDays() < 0);
+		Assert::false($checkHostResult->isValid());
+		Assert::true($checkHostResult->isStrictMode());
+		Assert::same(123, $checkHostResult->getExpiresWarningThreshold());
 	}
 
 }

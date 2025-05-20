@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
-use LogicException;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
@@ -48,6 +47,7 @@ final class SecurityTxtParser
 		private readonly SecurityTxtValidator $validator,
 		private readonly SecurityTxtSignature $signature,
 		private readonly SecurityTxtExpiresFactory $expiresFactory,
+		private readonly SecurityTxtSplitLines $splitLines,
 	) {
 	}
 
@@ -107,7 +107,7 @@ final class SecurityTxtParser
 	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseStringResult
 	{
 		$this->lineErrors = $this->lineWarnings = [];
-		$lines = $this->splitLines($contents);
+		$lines = $this->splitLines->splitLines($contents);
 		$securityTxtFields = array_combine(
 			array_map(function (SecurityTxtField $securityTxtField): string {
 				return strtolower($securityTxtField->value);
@@ -206,19 +206,6 @@ final class SecurityTxtParser
 			}
 		}
 		return $best;
-	}
-
-
-	/**
-	 * @return list<string>
-	 */
-	public function splitLines(string $contents): array
-	{
-		$lines = preg_split("/(?<=\n)/", $contents, flags: PREG_SPLIT_NO_EMPTY);
-		if ($lines === false) {
-			throw new LogicException('This should not happen');
-		}
-		return $lines;
 	}
 
 }

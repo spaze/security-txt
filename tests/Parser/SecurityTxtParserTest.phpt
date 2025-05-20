@@ -44,7 +44,8 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtValidator = new SecurityTxtValidator();
 		$securityTxtSignature = new SecurityTxtSignature();
 		$securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory);
+		$securityTxtSplitLines = new SecurityTxtSplitLines();
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory, $securityTxtSplitLines);
 	}
 
 

@@ -6,10 +6,9 @@ namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResultFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
-use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
+use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
@@ -38,12 +37,11 @@ $signature = new SecurityTxtSignature();
 $fopenClient = new SecurityTxtFetcherFopenClient('Mozilla/5.0 (compatible; spaze/security-txt; +https://github.com/spaze/security-txt)');
 $urlParser = new SecurityTxtUrlParser();
 $expiresFactory = new SecurityTxtExpiresFactory();
-$parser = new SecurityTxtParser($validator, $signature, $expiresFactory);
-$fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $parser);
+$splitLines = new SecurityTxtSplitLines();
+$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines);
+$fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $splitLines);
 $consolePrinter = new ConsolePrinter();
-$json = new SecurityTxtJson();
-$fetchResultFactory = new SecurityTxtFetchResultFactory($json, $parser);
-$checkHostResultFactory = new SecurityTxtCheckHostResultFactory($json, $fetchResultFactory);
+$checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 $checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);
 $checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost);
 
