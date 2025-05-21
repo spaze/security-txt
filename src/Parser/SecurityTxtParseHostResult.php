@@ -58,7 +58,7 @@ final readonly class SecurityTxtParseHostResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtSpecViolation>>
+	 * @return array<int<1, max>, list<SecurityTxtSpecViolation>>
 	 */
 	public function getLineErrors(): array
 	{
@@ -91,7 +91,7 @@ final readonly class SecurityTxtParseHostResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtSpecViolation>>
+	 * @return array<int<1, max>, list<SecurityTxtSpecViolation>>
 	 */
 	public function getLineWarnings(): array
 	{

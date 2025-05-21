@@ -11,8 +11,8 @@ final readonly class SecurityTxtParseStringResult
 {
 
 	/**
-	 * @param array<int, list<SecurityTxtSpecViolation>> $lineErrors
-	 * @param array<int, list<SecurityTxtSpecViolation>> $lineWarnings
+	 * @param array<int<1, max>, list<SecurityTxtSpecViolation>> $lineErrors
+	 * @param array<int<1, max>, list<SecurityTxtSpecViolation>> $lineWarnings
 	 */
 	public function __construct(
 		private SecurityTxt $securityTxt,
@@ -58,7 +58,7 @@ final readonly class SecurityTxtParseStringResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtSpecViolation>>
+	 * @return array<int<1, max>, list<SecurityTxtSpecViolation>>
 	 */
 	public function getLineErrors(): array
 	{
@@ -82,7 +82,7 @@ final readonly class SecurityTxtParseStringResult
 
 
 	/**
-	 * @return array<int, list<SecurityTxtSpecViolation>>
+	 * @return array<int<1, max>, list<SecurityTxtSpecViolation>>
 	 */
 	public function getLineWarnings(): array
 	{

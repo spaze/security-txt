@@ -36,10 +36,10 @@ final class SecurityTxtParser
 	 */
 	private array $fieldProcessors = [];
 
-	/** @var array<int, list<SecurityTxtSpecViolation>> */
+	/** @var array<int<1, max>, list<SecurityTxtSpecViolation>> */
 	private array $lineErrors = [];
 
-	/** @var array<int, list<SecurityTxtSpecViolation>> */
+	/** @var array<int<1, max>, list<SecurityTxtSpecViolation>> */
 	private array $lineWarnings = [];
 
 
@@ -86,6 +86,9 @@ final class SecurityTxtParser
 	}
 
 
+	/**
+	 * @param int<1, max> $lineNumber
+	 */
 	private function processField(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt): void
 	{
 		$this->initFieldProcessors();
@@ -172,6 +175,7 @@ final class SecurityTxtParser
 
 
 	/**
+	 * @param int<1, max> $lineNumber
 	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
 	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): SecurityTxt

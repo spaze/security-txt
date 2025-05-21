@@ -219,6 +219,9 @@ final readonly class SecurityTxtJson
 			if (!is_int($line)) {
 				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} key is not an int");
 			}
+			if ($line < 1) {
+				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} is less than 1");
+			}
 			if (!is_array($violations)) {
 				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} is not an array");
 			}
@@ -231,6 +234,9 @@ final readonly class SecurityTxtJson
 		foreach ($values['lineWarnings'] as $line => $violations) {
 			if (!is_int($line)) {
 				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$line} key is not an int");
+			}
+			if ($line < 1) {
+				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$line} key is less than 1");
 			}
 			if (!is_array($violations)) {
 				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$line} is not an array");

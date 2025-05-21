@@ -15,8 +15,8 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	/**
 	 * @param list<SecurityTxtSpecViolation> $fetchErrors
 	 * @param list<SecurityTxtSpecViolation> $fetchWarnings
-	 * @param array<int, list<SecurityTxtSpecViolation>> $lineErrors
-	 * @param array<int, list<SecurityTxtSpecViolation>> $lineWarnings
+	 * @param array<int<1, max>, list<SecurityTxtSpecViolation>> $lineErrors
+	 * @param array<int<1, max>, list<SecurityTxtSpecViolation>> $lineWarnings
 	 * @param list<SecurityTxtSpecViolation> $fileErrors
 	 * @param list<SecurityTxtSpecViolation> $fileWarnings
 	 */
@@ -98,7 +98,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 
 
 	/**
-	 * @return array<int, list<SecurityTxtSpecViolation>>
+	 * @return array<int<1, max>, list<SecurityTxtSpecViolation>>
 	 */
 	public function getLineErrors(): array
 	{
@@ -107,7 +107,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 
 
 	/**
-	 * @return array<int, list<SecurityTxtSpecViolation>>
+	 * @return array<int<1, max>, list<SecurityTxtSpecViolation>>
 	 */
 	public function getLineWarnings(): array
 	{
