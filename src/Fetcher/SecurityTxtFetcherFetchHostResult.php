@@ -11,9 +11,14 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 final readonly class SecurityTxtFetcherFetchHostResult
 {
 
+	/**
+	 * @phpstan-param 1|134217728 $ipAddressType DNS_A or DNS_AAAA
+	 */
 	public function __construct(
 		private string $url,
 		private string $finalUrl,
+		private string $ipAddress,
+		private int $ipAddressType,
 		private ?SecurityTxtFetcherResponse $response,
 		private ?SecurityTxtFetcherException $exception,
 	) {
@@ -29,6 +34,21 @@ final readonly class SecurityTxtFetcherFetchHostResult
 	public function getFinalUrl(): string
 	{
 		return $this->finalUrl;
+	}
+
+
+	public function getIpAddress(): string
+	{
+		return $this->ipAddress;
+	}
+
+
+	/**
+	 * @phpstan-return 1|134217728 DNS_A or DNS_AAAA
+	 */
+	public function getIpAddressType(): int
+	{
+		return $this->ipAddressType;
 	}
 
 

@@ -164,8 +164,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
@@ -180,8 +180,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
 		$lines = ["Contact: 123\n", "Hiring: 456\n"];
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', new SecurityTxtFetcherResponse(200, [], implode('', $lines)), null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, new SecurityTxtFetcherResponse(200, [], implode('', $lines)), null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, null, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
 		assert($result instanceof SecurityTxtFetchResult);
@@ -198,12 +198,14 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', null, new SecurityTxtUrlNotFoundException('foo', 404));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', null, new SecurityTxtUrlNotFoundException('bar', 403));
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, null, new SecurityTxtUrlNotFoundException('foo', 404));
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, null, new SecurityTxtUrlNotFoundException('bar', 403));
 		$method = new ReflectionMethod($fetcher, 'getResult');
-		Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
+		$exception = Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
 			$method->invoke($fetcher, $wellKnown, $topLevel);
-		}, SecurityTxtNotFoundException::class, "Can't read `security.txt`: `foo` => `404`, `bar` => `403`");
+		}, SecurityTxtNotFoundException::class, "Can't read `security.txt`: `foo` (`192.0.2.1`) => `404`, `bar` (`198.51.100.1`) => `403`");
+		assert($exception instanceof SecurityTxtNotFoundException);
+		Assert::same(['192.0.2.1' => [DNS_A, 404], '198.51.100.1' => [DNS_A, 403]], $exception->getIpAddresses());
 	}
 
 }
