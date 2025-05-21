@@ -198,6 +198,7 @@ final class SecurityTxtTest extends TestCase
 			'empty language' => [[''], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
 			'wrong language' => [['a'], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
 			'one wrong language' => [['en', 'cs', 'E', 'CS'], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
+			'two wrong languages' => [['en', 'cs', 'E', 'F', 'CS'], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
 			'common mistake' => [['en', 'cz'], SecurityTxtPreferredLanguagesCommonMistake::class],
 			'alright languages' => [['en', 'cs', 'EN', 'CS'], null],
 		];
