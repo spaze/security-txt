@@ -3,14 +3,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
-use JsonSerializable;
-use Override;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
-use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
-final readonly class SecurityTxtParseHostResult implements JsonSerializable
+final readonly class SecurityTxtParseHostResult
 {
 
 	public function __construct(
@@ -120,32 +117,6 @@ final readonly class SecurityTxtParseHostResult implements JsonSerializable
 	public function getFetchResult(): SecurityTxtFetchResult
 	{
 		return $this->fetchResult;
-	}
-
-
-	public function getValidateResult(): SecurityTxtValidateResult
-	{
-		return $this->parseStringResult->getValidateResult();
-	}
-
-
-	/**
-	 * @return array<string, mixed>
-	 */
-	#[Override]
-	public function jsonSerialize(): array
-	{
-		return [
-			'securityTxt' => $this->getSecurityTxt(),
-			'isValid' => $this->isValid(),
-			'strictMode' => $this->isStrictMode(),
-			'expiresWarningThreshold' => $this->getExpiresWarningThreshold(),
-			'expiresSoon' => $this->isExpiresSoon(),
-			'lineErrors' => $this->getLineErrors(),
-			'lineWarnings' => $this->getLineWarnings(),
-			'validateResult' => $this->getValidateResult(),
-			'fetchResult' => $this->getFetchResult(),
-		];
 	}
 
 }
