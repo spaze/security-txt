@@ -9,6 +9,7 @@ use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
@@ -333,6 +334,28 @@ final readonly class SecurityTxtJson
 			$this->createViolationsFromJsonValues(array_values($values['errors'])),
 			$this->createViolationsFromJsonValues(array_values($values['warnings'])),
 		);
+	}
+
+
+	/**
+	 * @param array<array-key, mixed> $values
+	 * @throws SecurityTxtCannotParseJsonException
+	 */
+	public function createFetcherExceptionFromJsonValues(array $values): SecurityTxtFetcherException
+	{
+		if (
+			!is_array($values['error'])
+			|| !isset($values['error']['class'])
+			|| !is_string($values['error']['class'])
+			|| !class_exists($values['error']['class'])
+		) {
+			throw new SecurityTxtCannotParseJsonException('error > class is missing, not a string or not an existing class');
+		}
+		$exception = new $values['error']['class'](...$values['error']['params']);
+		if (!$exception instanceof SecurityTxtFetcherException) {
+			throw new SecurityTxtCannotParseJsonException(sprintf('The exception is %s, not %s', $exception::class, SecurityTxtFetcherException::class));
+		}
+		return $exception;
 	}
 
 }

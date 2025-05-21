@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Json;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
@@ -13,6 +14,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
@@ -58,6 +60,7 @@ final class SecurityTxtJsonTest extends TestCase
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		$dateTime = new DateTimeImmutable('2022-08-08T02:40:54+00:00');
 		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
+		$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('LeKeyFingerPrint', new DateTimeImmutable('-2 weeks noon +02:00')));
 		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $dateTime->format(SecurityTxtExpires::FORMAT)];
 		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
@@ -109,6 +112,19 @@ final class SecurityTxtJsonTest extends TestCase
 		$decoded = json_decode($encoded, true);
 		assert(is_array($decoded));
 		Assert::equal($result, $this->securityTxtJson->createFetchResultFromJsonValues($decoded));
+	}
+
+
+	public function testCreateFetcherExceptionFromJsonValues(): void
+	{
+		$exception = new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1);
+		$encoded = json_encode(['error' => $exception]);
+		assert(is_string($encoded));
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		$exceptionFromJson = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
+		Assert::type($exception::class, $exceptionFromJson);
+		Assert::same($exception->getMessage(), $exceptionFromJson->getMessage());
 	}
 
 }
