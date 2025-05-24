@@ -13,6 +13,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtSeemsLikeAnHtmlPageException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
@@ -66,6 +67,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
 	 * @throws SecurityTxtHostIpAddressInvalidTypeException
 	 * @throws SecurityTxtHostIpAddressNotFoundException
+	 * @throws SecurityTxtSeemsLikeAnHtmlPageException
 	 */
 	public function fetchHost(string $host, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
@@ -166,6 +168,7 @@ final class SecurityTxtFetcher
 
 	/**
 	 * @throws SecurityTxtNotFoundException
+	 * @throws SecurityTxtSeemsLikeAnHtmlPageException
 	 */
 	private function getResult(SecurityTxtFetcherFetchHostResult $wellKnown, SecurityTxtFetcherFetchHostResult $topLevel): SecurityTxtFetchResult
 	{
@@ -204,7 +207,14 @@ final class SecurityTxtFetcher
 		$headerParts = $contentTypeHeader !== null ? explode(';', $contentTypeHeader, 2) : [];
 		$contentType = isset($headerParts[0]) ? trim($headerParts[0]) : null;
 		$charset = isset($headerParts[1]) ? trim($headerParts[1]) : null;
-		if ($contentType === null || strtolower($contentType) !== SecurityTxt::CONTENT_TYPE) {
+		$lowercaseContentType = $contentType !== null ? strtolower($contentType) : null;
+		if (
+			$result->getHttpCode() === 200
+			&& $lowercaseContentType === 'text/html'
+			&& str_contains(strtolower($contents), '<body')
+		) {
+			throw new SecurityTxtSeemsLikeAnHtmlPageException($result->getUrl(), $this->redirects[$result->getUrl()]);
+		} elseif ($contentType === null || $lowercaseContentType !== SecurityTxt::CONTENT_TYPE) {
 			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl(), $contentType);
 		} elseif ($charset === null || strtolower($charset) !== SecurityTxt::CHARSET) {
 			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentType, $charset);
