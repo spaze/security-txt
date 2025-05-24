@@ -120,7 +120,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		foreach ($headers as $key => $value) {
 			$lowercaseHeaders[strtolower($key)] = $value;
 		}
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents'));
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents', false));
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
 		$template = 'https://%s/foo';
@@ -140,6 +140,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			assert($response instanceof SecurityTxtFetcherResponse);
 			Assert::same($expectedHttpCode, $response->getHttpCode());
 			Assert::same($expectedLocation, $response->getHeader('location'));
+			Assert::false($response->isTruncated());
 		}
 	}
 
@@ -161,26 +162,27 @@ final class SecurityTxtFetcherTest extends TestCase
 	/** @dataProvider getContents */
 	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownWins): void
 	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', true));
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents) : null, null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents) : null, null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, true) : null, null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, false) : null, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
 		assert($result instanceof SecurityTxtFetchResult);
 		Assert::same($expected, $result->getContents());
+		Assert::same($wellKnownWins, $result->isTruncated());
 	}
 
 
 	public function testGetResultGetLine(): void
 	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
 		$lines = ["Contact: 123\n", "Hiring: 456\n"];
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, new SecurityTxtFetcherResponse(200, [], implode('', $lines)), null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false), null);
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, null, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
@@ -195,7 +197,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 	public function testGetResultNotFound(): void
 	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents'));
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, null, new SecurityTxtUrlNotFoundException('foo', 404));

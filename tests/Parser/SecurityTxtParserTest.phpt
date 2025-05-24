@@ -365,6 +365,7 @@ final class SecurityTxtParserTest extends TestCase
 				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
 			],
 			implode('', $lines),
+			true,
 			$lines,
 			[new SecurityTxtContentTypeWrongCharset('https://example.com/security.txt', 'text/plain', null)],
 			[new SecurityTxtTopLevelPathOnly()],
@@ -379,6 +380,7 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::false($parseResult->isValid());
 		Assert::true($parseResult->hasErrors());
 		Assert::true($parseResult->hasWarnings());
+		Assert::true($parseResult->getFetchResult()->isTruncated());
 
 		$expires = new DateTimeImmutable('+7 days');
 		$lines = ["Contact: mailto:example@example.com\r\n", 'Expires: ' . $expires->format(SecurityTxtExpires::FORMAT) . "\r\n"];
@@ -387,6 +389,7 @@ final class SecurityTxtParserTest extends TestCase
 			'https://www.example.com/security.txt',
 			[],
 			implode('', $lines),
+			false,
 			$lines,
 			[],
 			[],
@@ -400,6 +403,7 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::true($parseResult->isValid());
 		Assert::false($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+		Assert::false($parseResult->getFetchResult()->isTruncated());
 
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
 		Assert::false($parseResult->isValid());

@@ -218,6 +218,7 @@ final class SecurityTxtFetcher
 			$result->getFinalUrl(),
 			$this->redirects,
 			$contents,
+			$result->isTruncated(),
 			$this->splitLines->splitLines($contents),
 			$errors,
 			$warnings,

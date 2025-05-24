@@ -51,6 +51,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 					'http://example.com' => ['https://example.com', 'https://www.example.com'],
 				],
 				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
+				'isTruncated' => true,
 				'errors' => [
 					[
 						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps',
@@ -222,6 +223,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			'https://www.example.com/.well-known/security.txt',
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
 			implode($lines),
+			true,
 			$lines,
 			[new SecurityTxtSchemeNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],

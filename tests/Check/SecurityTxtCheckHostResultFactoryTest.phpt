@@ -51,6 +51,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 			'https://com.example/.well-known/security.txt',
 			[],
 			$contents,
+			true,
 			$lines,
 			[],
 			[],
@@ -60,6 +61,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		Assert::same($contents, $checkHostResult->getContents());
 		Assert::same($host, $checkHostResult->getHost());
 		Assert::same($fetchResult, $checkHostResult->getFetchResult());
+		Assert::true($checkHostResult->getFetchResult()->isTruncated());
 		Assert::same([], $checkHostResult->getFetchErrors());
 		Assert::same([], $checkHostResult->getFetchWarnings());
 		Assert::hasKey(2, $checkHostResult->getLineErrors()); // Because Expires is in the past
