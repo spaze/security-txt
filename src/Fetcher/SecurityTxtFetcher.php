@@ -178,8 +178,18 @@ final class SecurityTxtFetcher
 		if ($wellKnownContents === null && $topLevelContents === null) {
 			throw new SecurityTxtNotFoundException(
 				[
-					$wellKnown->getUrl() => [$wellKnown->getIpAddress(), $wellKnown->getIpAddressType(), $wellKnown->getHttpCode()],
-					$topLevel->getUrl() => [$topLevel->getIpAddress(), $topLevel->getIpAddressType(), $topLevel->getHttpCode()],
+					$wellKnown->getUrl() => [
+						$wellKnown->getIpAddress(),
+						$wellKnown->getIpAddressType(),
+						$wellKnown->getHttpCode(),
+						$this->redirects[$wellKnown->getUrl()] ?? [],
+					],
+					$topLevel->getUrl() => [
+						$topLevel->getIpAddress(),
+						$topLevel->getIpAddressType(),
+						$topLevel->getHttpCode(),
+						$this->redirects[$topLevel->getUrl()] ?? [],
+					],
 				],
 			);
 		} elseif ($wellKnownContents !== null && $topLevelContents === null) {

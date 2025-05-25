@@ -200,14 +200,18 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
 		$urlParser = new SecurityTxtUrlParser();
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, null, new SecurityTxtUrlNotFoundException('foo', 404));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, null, new SecurityTxtUrlNotFoundException('bar', 403));
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('fooUrl', 'fooUrl2', '192.0.2.1', DNS_A, null, new SecurityTxtUrlNotFoundException('fooUrl', 404));
+		$topLevel = new SecurityTxtFetcherFetchHostResult('barUrl', 'barUrl2', '198.51.100.1', DNS_A, null, new SecurityTxtUrlNotFoundException('barUrl', 403));
+		$property = new ReflectionProperty($fetcher, 'redirects');
+		$fooUrlRedirects = ['https://example.com/foo', 'https://example.net/foo/'];
+		$property->setValue($fetcher, ['fooUrl' => $fooUrlRedirects]);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$exception = Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
 			$method->invoke($fetcher, $wellKnown, $topLevel);
-		}, SecurityTxtNotFoundException::class, "Can't read `security.txt`: `foo` (`192.0.2.1`) => `404`, `bar` (`198.51.100.1`) => `403`");
+		}, SecurityTxtNotFoundException::class, "Can't read `security.txt`: `fooUrl` (`192.0.2.1`) => `404` (final code after redirects), `barUrl` (`198.51.100.1`) => `403`");
 		assert($exception instanceof SecurityTxtNotFoundException);
 		Assert::same(['192.0.2.1' => [DNS_A, 404], '198.51.100.1' => [DNS_A, 403]], $exception->getIpAddresses());
+		Assert::same(['fooUrl' => $fooUrlRedirects], $exception->getAllRedirects());
 	}
 
 }
