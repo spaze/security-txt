@@ -1,4 +1,4 @@
-# `security.txt` validator and writer
+# `security.txt` (RFC 9116) generator, parser, validator
 
 # As a validator
 

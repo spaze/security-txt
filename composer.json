@@ -1,6 +1,6 @@
 {
 	"name": "spaze/security-txt",
-	"description": "security.txt generator, parser, validator",
+	"description": "security.txt (RFC 9116) generator, parser, validator",
 	"license": "MIT",
 	"authors": [
 		{
