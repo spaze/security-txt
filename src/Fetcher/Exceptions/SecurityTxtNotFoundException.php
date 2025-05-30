@@ -30,7 +30,7 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 			$message .= '%s (%s) => %s';
 			$messageValues[] = $url;
 			$messageValues[] = $components[0];
-			$messageValues[] = $components[2];
+			$messageValues[] = (string)$components[2];
 			$this->ipAddresses[$components[0]] = [$components[1], $components[2]];
 			if ($components[3] !== []) {
 				$this->allRedirects[$url] = $components[3];

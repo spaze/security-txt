@@ -13,7 +13,7 @@ final class SecurityTxtNoLocationHeaderException extends SecurityTxtFetcherExcep
 		parent::__construct(
 			[$url, $httpCode],
 			'HTTP response with code %s is missing a %s header when fetching %s',
-			[$httpCode, 'Location', $url],
+			[(string)$httpCode, 'Location', $url],
 			$url,
 			previous: $previous,
 		);
