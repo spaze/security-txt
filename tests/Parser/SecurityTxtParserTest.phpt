@@ -257,7 +257,7 @@ final class SecurityTxtParserTest extends TestCase
 		$error = $parseResult->getLineErrors()[1][0];
 		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesSeparatorNotComma::class, $error);
-		Assert::same('The `Preferred-Languages` field uses wrong separators (#2 `;`, #3 `.`), separate multiple values with a comma (`,`)', $error->getMessage());
+		Assert::same('The Preferred-Languages field uses wrong separators (#2 ;, #3 .), separate multiple values with a comma (,)', $error->getMessage());
 		Assert::same('en, cs, fi, nl', $error->getCorrectValue());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
@@ -266,7 +266,7 @@ final class SecurityTxtParserTest extends TestCase
 		$error = $parseResult->getLineErrors()[1][0];
 		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesSeparatorNotComma::class, $error);
-		Assert::same('The `Preferred-Languages` field uses a wrong separator (#2 `;`), separate multiple values with a comma (`,`)', $error->getMessage());
+		Assert::same('The Preferred-Languages field uses a wrong separator (#2 ;), separate multiple values with a comma (,)', $error->getMessage());
 		Assert::same('en, cs, fi, nl', $error->getCorrectValue());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
@@ -279,7 +279,7 @@ final class SecurityTxtParserTest extends TestCase
 		$error = $parseResult->getLineErrors()[1][0];
 		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
-		Assert::same('The language tag #1 `CZ` in the `Preferred-Languages` field is not correct, the code for Czech language is `cs`, not `cz`', $error->getMessage());
+		Assert::same('The language tag #1 CZ in the Preferred-Languages field is not correct, the code for Czech language is cs, not cz', $error->getMessage());
 		Assert::same(['CZ', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
@@ -371,7 +371,7 @@ final class SecurityTxtParserTest extends TestCase
 			[new SecurityTxtTopLevelPathOnly()],
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
-		Assert::same("The line (`Expires: 2020-12-31T23:59:59.000Z`) doesn't end with neither `<CRLF>` nor `<LF>`", $parseResult->getLineErrors()[2][0]->getMessage());
+		Assert::same("The line (Expires: 2020-12-31T23:59:59.000Z) doesn't end with neither <CRLF> nor <LF>", $parseResult->getLineErrors()[2][0]->getMessage());
 		Assert::same("The file is considered stale and should not be used", $parseResult->getLineErrors()[2][1]->getMessage());
 		Assert::same([], $parseResult->getLineWarnings());
 		Assert::same([], $parseResult->getFileErrors());

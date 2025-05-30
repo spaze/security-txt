@@ -208,7 +208,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$exception = Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
 			$method->invoke($fetcher, $wellKnown, $topLevel);
-		}, SecurityTxtNotFoundException::class, "Can't read `security.txt`: `fooUrl` (`192.0.2.1`) => `404` (final code after redirects), `barUrl` (`198.51.100.1`) => `403`");
+		}, SecurityTxtNotFoundException::class, "Can't read security.txt: fooUrl (192.0.2.1) => 404 (final code after redirects), barUrl (198.51.100.1) => 403");
 		assert($exception instanceof SecurityTxtNotFoundException);
 		Assert::same(['192.0.2.1' => [DNS_A, 404], '198.51.100.1' => [DNS_A, 403]], $exception->getIpAddresses());
 		Assert::same(['fooUrl' => $fooUrlRedirects], $exception->getAllRedirects());

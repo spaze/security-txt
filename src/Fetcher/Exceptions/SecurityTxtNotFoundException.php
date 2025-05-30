@@ -21,29 +21,23 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 	 */
 	public function __construct(array $urls, ?Throwable $previous = null)
 	{
+		$message = "Can't read %s: ";
+		$messageValues = ['security.txt'];
 		foreach ($urls as $url => $components) {
+			if ($this->ipAddresses !== []) {
+				$message .= ', '; // Not added in the first iteration
+			}
+			$message .= '%s (%s) => %s';
+			$messageValues[] = $url;
+			$messageValues[] = $components[0];
+			$messageValues[] = $components[2];
 			$this->ipAddresses[$components[0]] = [$components[1], $components[2]];
 			if ($components[3] !== []) {
 				$this->allRedirects[$url] = $components[3];
+				$message .= ' (final code after redirects)';
 			}
 		}
-		parent::__construct(
-			[$urls],
-			"Can't read `security.txt`: %s",
-			[implode(', ', array_map($this->formatUrls(...), array_keys($urls), $urls))],
-			array_key_first($urls),
-			previous: $previous,
-		);
-	}
-
-
-	/**
-	 * @param array{0:string, 1:1|134217728, 2:int, 3:list<string>} $components
-	 */
-	private function formatUrls(string $url, array $components): string
-	{
-		$message = "`{$url}` (`{$components[0]}`) => `{$components[2]}`";
-		return isset($this->allRedirects[$url]) && $this->allRedirects[$url] !== [] ? "{$message} (final code after redirects)" : $message;
+		parent::__construct([$urls], $message, $messageValues, array_key_first($urls), previous: $previous);
 	}
 
 

@@ -68,14 +68,14 @@ final class SecurityTxtWriterTest extends TestCase
 		$securityTxt->addContact(new SecurityTxtContact('https://contact.example.com'));
 		Assert::throws(function () use ($securityTxt): void {
 			$securityTxt->addContact(new SecurityTxtContact('//no.scheme.example'));
-		}, SecurityTxtError::class, "The `Contact` value (`//no.scheme.example`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
+		}, SecurityTxtError::class, "The Contact value (//no.scheme.example) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
 		Assert::same("Contact: https://contact.example.com\n", $this->securityTxtWriter->write($securityTxt));
 
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::NoInvalidValues);
 		$securityTxt->addContact(new SecurityTxtContact('https://contact.example.com'));
 		Assert::throws(function () use ($securityTxt): void {
 			$securityTxt->addContact(new SecurityTxtContact('//no.scheme.example'));
-		}, SecurityTxtError::class, "The `Contact` value (`//no.scheme.example`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
+		}, SecurityTxtError::class, "The Contact value (//no.scheme.example) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
 		Assert::same("Contact: https://contact.example.com\n", $this->securityTxtWriter->write($securityTxt));
 	}
 
@@ -86,7 +86,7 @@ final class SecurityTxtWriterTest extends TestCase
 		$securityTxt->addContact(new SecurityTxtContact('https://contact.example.com'));
 		Assert::throws(function () use ($securityTxt): void {
 			$securityTxt->addContact(new SecurityTxtContact('//no.scheme.example'));
-		}, SecurityTxtError::class, "The `Contact` value (`//no.scheme.example`) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
+		}, SecurityTxtError::class, "The Contact value (//no.scheme.example) doesn't follow the URI syntax described in RFC 3986, the scheme is missing");
 		Assert::same("Contact: https://contact.example.com\nContact: //no.scheme.example\n", $this->securityTxtWriter->write($securityTxt));
 	}
 
