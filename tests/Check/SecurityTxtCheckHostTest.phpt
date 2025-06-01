@@ -32,7 +32,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 	public function __construct()
 	{
-		$this->expires = new DateTimeImmutable('+1 month');
+		$this->expires = new DateTimeImmutable('+25 days');
 		$this->expiresFactory = new SecurityTxtExpiresFactory();
 	}
 
@@ -189,7 +189,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				'expires' => [
 					'dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT),
 					'isExpired' => false,
-					'inDays' => 30,
+					'inDays' => 24,
 				],
 				'signatureVerifyResult' => null,
 				'preferredLanguages' => null,
