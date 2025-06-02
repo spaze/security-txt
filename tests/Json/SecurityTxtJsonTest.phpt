@@ -5,8 +5,11 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Json;
 
 use DateTimeImmutable;
+use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
@@ -21,6 +24,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
@@ -40,6 +44,34 @@ final class SecurityTxtJsonTest extends TestCase
 	{
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$this->securityTxtJson = new SecurityTxtJson(new SecurityTxtSplitLines());
+	}
+
+
+	public function testCreateViolationsFromJsonValues(): void
+	{
+		Assert::same([], $this->securityTxtJson->createViolationsFromJsonValues([]));
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues(['string']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: class is missing or not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([[]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: class is missing or not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => 303]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: class is missing or not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => 'foo bar']]);
+		}, SecurityTxtCannotParseJsonException::class, "Cannot parse JSON: class foo bar doesn't exist");
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => DateTimeImmutable::class]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: params is missing or not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => DateTimeImmutable::class, 'params' => 'string']]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: params is missing or not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => DateTimeImmutable::class, 'params' => []]]);
+		}, SecurityTxtCannotParseJsonException::class, sprintf("Cannot parse JSON: class %s doesn't extend %s", DateTimeImmutable::class, SecurityTxtSpecViolation::class));
+		Assert::equal([new SecurityTxtNoContact()], $this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtNoContact::class, 'params' => []]]));
 	}
 
 
@@ -117,6 +149,63 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	public function testCreateFetchResultFromJsonValuesErrors(): void
+	{
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues([]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: class is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => 808]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: class is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => DateTimeImmutable::class]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: class is not ' . SecurityTxtFetchResult::class);
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 303]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: finalUrl is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 808]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: finalUrl is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: redirects is not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => 'string']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: redirects is not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => []]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: contents is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => 303]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: contents is not a string');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: isTruncated is not a bool');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => 'maybe']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: isTruncated is not a bool');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: errors is not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => true]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: errors is not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => []]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: warnings is not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => [], 'warnings' => 'none']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: warnings is not an array');
+		Assert::type(SecurityTxtFetchResult::class, $this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => [], 'warnings' => []]));
+	}
+
+
 	public function testCreateFetcherExceptionFromJsonValues(): void
 	{
 		$exception = new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1);
@@ -127,6 +216,36 @@ final class SecurityTxtJsonTest extends TestCase
 		$exceptionFromJson = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
 		Assert::type($exception::class, $exceptionFromJson);
 		Assert::same($exception->getMessage(), $exceptionFromJson->getMessage());
+	}
+
+
+	public function testCreateFetcherExceptionFromJsonValuesErrors(): void
+	{
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues([]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => 'string']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => []]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => 123]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => 'foo bar']]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > params is missing or not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class, 'params' => 'string']]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > params is missing or not an array');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class, 'params' => []]]);
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: The exception is %s, not %s', DateTimeImmutable::class, SecurityTxtFetcherException::class));
+		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['url', 303]]]));
 	}
 
 }

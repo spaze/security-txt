@@ -93,6 +93,37 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	/**
+	 * @return list<array{0:string, 1:int, 2:int}>
+	 */
+	public function getUnknownFormats(): array
+	{
+		return [
+			['+3 weeks', 20, 22],
+			['±3 days', 364, 366],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getUnknownFormats
+	 */
+	public function testParseStringExpiresFieldWrongUnknownFormat(string $expires, int $minDays, int $maxDays): void
+	{
+		$contents = "Expires: {$expires}\n";
+		$parseResult = $this->securityTxtParser->parseString($contents);
+		/** @var SecurityTxtExpiresWrongFormat $expiresError */
+		$expiresError = $parseResult->getLineErrors()[1][0];
+		Assert::type(SecurityTxtExpiresWrongFormat::class, $expiresError);
+		$correctValue = $expiresError->getCorrectValue();
+		assert(is_string($correctValue));
+		$correctExpires = DateTimeImmutable::createFromFormat(SecurityTxtExpires::FORMAT, $correctValue);
+		assert($correctExpires instanceof DateTimeImmutable);
+		$days = $correctExpires->diff(new DateTimeImmutable())->days;
+		Assert::true($minDays <= $days && $days <= $maxDays, "Should be ±{$days} days ({$minDays} <= {$days} <= {$maxDays})");
+	}
+
+
 	public function testParseStringExpiresFieldOldFormat(): void
 	{
 		$contents = "Expires: Mon, 15 Aug 2005 15:52:01 +0000\n";
@@ -108,7 +139,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMissingExpires(): void
 	{
-		$contents = "Foo: bar\nBar: foo\n";
+		$contents = "Foo: bar\nBar: foo\n#Expires: 2020-10-05T10:20:30+00:00\nExpires\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::contains(SecurityTxtNoExpires::class, array_map(function (SecurityTxtSpecViolation $throwable): string {
 			return $throwable::class;
@@ -367,7 +398,7 @@ final class SecurityTxtParserTest extends TestCase
 			implode('', $lines),
 			true,
 			$lines,
-			[new SecurityTxtContentTypeWrongCharset('https://example.com/security.txt', 'text/plain', null)],
+			[new SecurityTxtContentTypeWrongCharset('https://example.com/security.txt', 'text/plain', 'charset=utf-9')],
 			[new SecurityTxtTopLevelPathOnly()],
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
@@ -376,6 +407,12 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::same([], $parseResult->getLineWarnings());
 		Assert::same([], $parseResult->getFileErrors());
 		Assert::same([], $parseResult->getFileWarnings());
+		Assert::count(1, $parseResult->getFetchErrors());
+		Assert::type(SecurityTxtContentTypeWrongCharset::class, $parseResult->getFetchErrors()[0]);
+		Assert::same('The file at https://example.com/security.txt has a correct Content-Type of text/plain but the charset=utf-9 parameter should be changed to charset=utf-8', $parseResult->getFetchErrors()[0]->getMessage());
+		Assert::count(1, $parseResult->getFetchWarnings());
+		Assert::type(SecurityTxtTopLevelPathOnly::class, $parseResult->getFetchWarnings()[0]);
+		Assert::same("security.txt wasn't found under the /.well-known/ path", $parseResult->getFetchWarnings()[0]->getMessage());
 		Assert::false($parseResult->isExpiresSoon());
 		Assert::false($parseResult->isValid());
 		Assert::true($parseResult->hasErrors());
