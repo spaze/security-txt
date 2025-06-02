@@ -11,7 +11,6 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
@@ -19,6 +18,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
@@ -93,7 +93,7 @@ final class SecurityTxtJsonTest extends TestCase
 		$dateTime = new DateTimeImmutable('2022-08-08T02:40:54+00:00');
 		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
 		$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('LeKeyFingerPrint', new DateTimeImmutable('-2 weeks noon +02:00')));
-		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $dateTime->format(SecurityTxtExpires::FORMAT)];
+		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $dateTime->format(DATE_RFC2822)];
 		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
@@ -110,7 +110,7 @@ final class SecurityTxtJsonTest extends TestCase
 			$fetchResult,
 			$fetchResult->getErrors(),
 			$fetchResult->getWarnings(),
-			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact')]],
+			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact'), new SecurityTxtExpiresOldFormat('a correct value')]],
 			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
 			[new SecurityTxtNoContact()],
 			[new SecurityTxtSignatureExtensionNotLoaded()],

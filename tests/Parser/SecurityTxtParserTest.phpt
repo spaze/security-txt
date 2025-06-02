@@ -89,7 +89,8 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::type(SecurityTxtExpiresWrongFormat::class, $expiresError);
 		Assert::same('4020-10-05T03:21:00+02:00', $expiresError->getCorrectValue());
 		Assert::true($parseResult->hasErrors());
-		Assert::false($parseResult->hasWarnings());
+		Assert::true($parseResult->hasWarnings());
+		Assert::type(SecurityTxtExpiresTooLong::class, $parseResult->getLineWarnings()[1][0]);
 	}
 
 
@@ -126,12 +127,15 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringExpiresFieldOldFormat(): void
 	{
-		$contents = "Expires: Mon, 15 Aug 2005 15:52:01 +0000\n";
+		$expires = new DateTimeImmutable('+3 months midnight -1 second +00:00');
+		$contents = 'Expires: ' . $expires->format(DATE_RFC2822) . "\nContact: mailto:foo@example.com\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		/** @var SecurityTxtExpiresOldFormat $expiresError */
 		$expiresError = $parseResult->getLineErrors()[1][0];
 		Assert::type(SecurityTxtExpiresOldFormat::class, $expiresError);
-		Assert::same('2005-08-15T15:52:01+00:00', $expiresError->getCorrectValue());
+		Assert::same($expires->format(DATE_RFC3339), $expiresError->getCorrectValue());
+		Assert::same([], $parseResult->getFileErrors());
+		Assert::equal($expires, $parseResult->getSecurityTxt()->getExpires()?->getDateTime());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
 	}
@@ -165,7 +169,8 @@ final class SecurityTxtParserTest extends TestCase
 		$contents = "Foo: bar\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: Mon, 15 Aug 2015 15:52:01 +0000\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
-		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[3][0]);
+		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
+		Assert::count(2, $parseResult->getLineErrors());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
 	}
@@ -185,9 +190,10 @@ final class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Foo: bar\nExpires: " . new DateTime('+2 months')->format(SecurityTxtExpires::FORMAT) . "\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nBar: foo\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::count(2, $parseResult->getLineErrors()[3]);
+		Assert::count(3, $parseResult->getLineErrors()[3]);
 		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
 		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[3][1]);
+		Assert::type(SecurityTxtExpired::class, $parseResult->getLineErrors()[3][2]);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
 	}
