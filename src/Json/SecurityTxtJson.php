@@ -3,8 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Json;
 
+use DateMalformedStringException;
 use DateTimeImmutable;
-use Exception;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
@@ -104,7 +104,7 @@ final readonly class SecurityTxtJson
 				}
 				try {
 					$dateTime = new DateTimeImmutable($values['expires']['dateTime']);
-				} catch (Exception $e) {
+				} catch (DateMalformedStringException $e) {
 					throw new SecurityTxtCannotParseJsonException('expires > dateTime is wrong format', $e);
 				}
 				if (!is_bool($values['expires']['isExpired'])) {
@@ -131,7 +131,7 @@ final readonly class SecurityTxtJson
 				}
 				try {
 					$dateTime = new DateTimeImmutable($values['signatureVerifyResult']['dateTime']);
-				} catch (Exception $e) {
+				} catch (DateMalformedStringException $e) {
 					throw new SecurityTxtCannotParseJsonException('signatureVerifyResult > dateTime is wrong format', $e);
 				}
 				$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult($values['signatureVerifyResult']['keyFingerprint'], $dateTime));
