@@ -10,6 +10,7 @@ use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
@@ -42,7 +43,8 @@ final class SecurityTxtParserTest extends TestCase
 	public function __construct()
 	{
 		$securityTxtValidator = new SecurityTxtValidator();
-		$securityTxtSignature = new SecurityTxtSignature();
+		$securityTxtSignatureGnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
 		$securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$securityTxtSplitLines = new SecurityTxtSplitLines();
 		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory, $securityTxtSplitLines);
