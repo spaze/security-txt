@@ -14,6 +14,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
 use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Writer\SecurityTxtWriter;
@@ -34,7 +35,8 @@ final class SecurityTxtWriterParseTest extends TestCase
 	public function __construct()
 	{
 		$securityTxtValidator = new SecurityTxtValidator();
-		$securityTxtSignature = new SecurityTxtSignature();
+		$securityTxtSignatureGnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$securityTxtSplitLines = new SecurityTxtSplitLines();
 		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $securityTxtSplitLines);

@@ -10,6 +10,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseHostResult;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
+use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
@@ -28,7 +29,8 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 	public function __construct()
 	{
 		$validator = new SecurityTxtValidator();
-		$signature = new SecurityTxtSignature();
+		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$signature = new SecurityTxtSignature($gnuPgProvider);
 		$expiresFactory = new SecurityTxtExpiresFactory();
 		$splitLines = new SecurityTxtSplitLines();
 		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines);
