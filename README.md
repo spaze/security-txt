@@ -102,7 +102,7 @@ $securityTxt->addContact(new SecurityTxtContact('https://contact.example'));
 $securityTxt->addContact(SecurityTxtContact::phone('123456'));
 $securityTxt->addContact(SecurityTxtContact::email('email@com.example'));
 $securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://ack1.example'));
-$securityTxt->setExpires(new SecurityTxtExpires(new DateTimeImmutable('+3 months midnight')));
+$securityTxt->setExpires(new SecurityTxtExpiresFactory()->create(new DateTimeImmutable('+3 months midnight')));
 $securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('ftp://ack2.example'));
 $securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs-CZ']));
 header('Content-Type: ' . SecurityTxt::CONTENT_TYPE_HEADER);
