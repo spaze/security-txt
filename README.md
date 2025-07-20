@@ -1,5 +1,13 @@
 # `security.txt` (RFC 9116) generator, parser, validator
 
+The `security.txt` document represents a text file that's both human-readable and machine-parsable to help organizations describe their vulnerability disclosure  practices to make it easier for researchers to report vulnerabilities.
+The format was created by EdOverflow and Yakov Shafranovich and is specified in [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116).
+You can find more about <code>security.txt</code> at <a href="https://securitytxt.org/">securitytxt.org</a>.
+
+I have also written a blogpost about `security.txt` and how it may be helpful when reporting vulnerabilities:
+- [What's `security.txt` and why you should have one](https://www.michalspacek.com/what-is-security.txt-and-why-you-should-have-one) in English
+- [K čemu je soubor `security.txt`](https://www.michalspacek.cz/k-cemu-je-soubor-security.txt) in Czech
+
 # As a validator
 
 ## How does the validation work
