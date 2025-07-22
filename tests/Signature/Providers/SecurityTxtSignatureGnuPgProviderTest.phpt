@@ -45,13 +45,13 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 	}
 
 
-	public function testSignClearTextHeader(): void
+	public function testSignClearsignHeader(): void
 	{
 		$gnuPg = new SecurityTxtSignatureGnuPgProvider(__DIR__ . '/gnupg');
 		$signature = new SecurityTxtSignature($gnuPg);
 		$signed = $gnuPg->sign('i was zero cool');
 		assert(is_string($signed));
-		Assert::true($signature->isCleartextHeader(trim(new SecurityTxtSplitLines()->splitLines($signed)[0])));
+		Assert::true($signature->isClearsignHeader(trim(new SecurityTxtSplitLines()->splitLines($signed)[0])));
 	}
 
 

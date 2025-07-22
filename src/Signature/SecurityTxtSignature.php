@@ -65,7 +65,7 @@ final class SecurityTxtSignature
 	}
 
 
-	public function isCleartextHeader(string $line): bool
+	public function isClearsignHeader(string $line): bool
 	{
 		return $line === '-----BEGIN PGP SIGNED MESSAGE-----';
 	}
