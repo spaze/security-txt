@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Signature\Providers;
 
 use SensitiveParameter;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureErrorInfo;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifySignatureInfo;
 
 interface SecurityTxtSignatureProvider
 {
@@ -16,5 +17,8 @@ interface SecurityTxtSignatureProvider
 
 
 	public function sign(string $text): false|string;
+
+
+	public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo;
 
 }

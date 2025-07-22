@@ -6,20 +6,12 @@ namespace Spaze\SecurityTxt\Signature\Exceptions;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureErrorInfo;
 use Throwable;
 
-final class SecurityTxtUnusableSigningKeyException extends SecurityTxtSignatureException
+final class SecurityTxtUnusableSigningKeyException extends SecurityTxtSignatureErrorInfoException
 {
 
 	public function __construct(string $key, SecurityTxtSignatureErrorInfo $errorInfo, ?Throwable $previous = null)
 	{
-		$message = sprintf(
-			'Unusable signing key %s: %s; code: %s, source: %s, library message: %s',
-			$key,
-			$errorInfo->getMessage() !== false ? $errorInfo->getMessage() : '<false>',
-			$errorInfo->getCode(),
-			$errorInfo->getSource(),
-			$errorInfo->getLibraryMessage(),
-		);
-		parent::__construct($message, $errorInfo->getCode(), $previous);
+		parent::__construct("Unusable signing key {$key}", $errorInfo, $previous);
 	}
 
 }

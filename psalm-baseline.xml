@@ -28,9 +28,18 @@
       <code><![CDATA[strlen($lowercaseName) / 4 + 1]]></code>
     </InvalidOperand>
   </file>
-  <file src="src/Signature/SecurityTxtSignature.php">
+  <file src="src/Signature/Providers/SecurityTxtSignatureGnuPgProvider.php">
     <InvalidArgument>
       <code><![CDATA[false]]></code>
     </InvalidArgument>
+  </file>
+  <file src="tests/Signature/SecurityTxtSignatureTest.phpt">
+    <UndefinedVariable>
+      <code><![CDATA[$result]]></code>
+      <code><![CDATA[$result]]></code>
+    </UndefinedVariable>
+    <UnusedVariable>
+      <code><![CDATA[$signature]]></code>
+    </UnusedVariable>
   </file>
 </files>
