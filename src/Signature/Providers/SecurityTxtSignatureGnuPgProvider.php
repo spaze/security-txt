@@ -41,10 +41,10 @@ final class SecurityTxtSignatureGnuPgProvider implements SecurityTxtSignaturePro
 	{
 		$error = $this->getGnuPg()->geterrorinfo();
 		return new SecurityTxtSignatureErrorInfo(
-			is_string($error['generic_message']) || $error['generic_message'] === false ? $error['generic_message'] : '<unknown>',
-			is_int($error['gpgme_code']) ? $error['gpgme_code'] : -1,
-			is_string($error['gpgme_source']) ? $error['gpgme_source'] : '<unknown>',
-			is_string($error['gpgme_message']) ? $error['gpgme_message'] : '<unknown>',
+			is_string($error['generic_message']) || $error['generic_message'] === false ? $error['generic_message'] : null,
+			is_int($error['gpgme_code']) ? $error['gpgme_code'] : null,
+			is_string($error['gpgme_source']) ? $error['gpgme_source'] : null,
+			is_string($error['gpgme_message']) ? $error['gpgme_message'] : null,
 		);
 	}
 
