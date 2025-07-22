@@ -36,7 +36,7 @@ final class SecurityTxtSignatureTest extends TestCase
 		$signature = new SecurityTxtSignature($this->getSignatureProvider(signReturnValue: 'signed'));
 		Assert::same('signed', $signature->sign('foo', 'fingerprint', 'passphrase'));
 
-		$signature = new SecurityTxtSignature($this->getSignatureProvider(addSignKeyReturnValue: false, errorInfo: new SecurityTxtSignatureErrorInfo('no passphrase set', 1, 'no pass source', 'no pass lib error')));
+		$signature = new SecurityTxtSignature($this->getSignatureProvider(addSignKeyReturnValue: false, errorInfo: new SecurityTxtSignatureErrorInfo('data signing failed', 67109041, 'no pass source', 'no pass lib error')));
 		Assert::throws(function () use ($signature): void {
 			$signature->sign('foo', 'sign key with pass');
 		}, SecurityTxtSigningKeyNoPassphraseSetException::class, 'Cannot create a signature, key sign key with pass requires a passphrase');

@@ -18,10 +18,20 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 
 	public function testSignAndVerify(): void
 	{
-		$gnuPg = new SecurityTxtSignatureGnuPgProvider();
+		$gnuPg = new SecurityTxtSignatureGnuPgProvider(/* Intentionally no homedir specified */);
+		$added = $gnuPg->addSignKey('2F632C7E0D1E115599CE14DB1E2FC2BFE8D5E8C4');
+		Assert::false($added);
+		$errorInfo = $gnuPg->getErrorInfo();
+		Assert::same(117456895, $errorInfo->getCode());
+		Assert::same('get_key failed', $errorInfo->getMessage());
+
+		$gnuPg = new SecurityTxtSignatureGnuPgProvider(__DIR__ . '/gnupg');
+		$added = $gnuPg->addSignKey('2F632C7E0D1E115599CE14DB1E2FC2BFE8D5E8C4');
+		Assert::true($added);
 		Assert::false($gnuPg->sign('hack the planet'));
 		$errorInfo = $gnuPg->getErrorInfo();
-		Assert::same('no passphrase set', $errorInfo->getMessage());
+		Assert::same(67109041, $errorInfo->getCode());
+		Assert::same('data signing failed', $errorInfo->getMessage());
 
 		$gnuPg = new SecurityTxtSignatureGnuPgProvider(__DIR__ . '/gnupg');
 		$fingerprint = '81845AF734473E623BB72216EB871D6296D433D2';
