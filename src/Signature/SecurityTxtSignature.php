@@ -23,6 +23,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 final class SecurityTxtSignature
 {
 
+	private const int GPG_ERROR_GENERAL_ERROR = 1;
 	private const int GPG_ERROR_GPG_AGENT_BAD_PASSPHRASE = 67108875;
 	private const int GPG_ERROR_GPGME_END_OF_FILE = 117456895;
 	private const string GPG_MESSAGE_NO_PASSPHRASE_SET = 'no passphrase set';
@@ -114,7 +115,7 @@ final class SecurityTxtSignature
 		}
 		if (!$this->signatureProvider->addSignKey($keyFingerprint, $keyPassphrase ?? '')) {
 			$error = $this->signatureProvider->getErrorInfo();
-			if ($error->getCode() === 1 && $error->getMessage() === self::GPG_MESSAGE_NO_PASSPHRASE_SET) {
+			if ($error->getCode() === self::GPG_ERROR_GENERAL_ERROR && $error->getMessage() === self::GPG_MESSAGE_NO_PASSPHRASE_SET) {
 				throw new SecurityTxtSigningKeyNoPassphraseSetException($keyFingerprint);
 			} elseif ($error->getCode() === self::GPG_ERROR_GPG_AGENT_BAD_PASSPHRASE) {
 				throw new SecurityTxtSigningKeyBadPassphraseException($keyFingerprint);
