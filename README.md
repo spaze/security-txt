@@ -90,7 +90,7 @@ You can create a `security.txt` file programmatically:
 2. Add what's needed
 3. Pass it to `SecurityTxtWriter::write()` it will return the `security.txt` contents as a string
 
-Signing the file is not (yet) supported.
+See below if you want to add an OpenPGP signature.
 
 ## Value validation
 By default, values are validated when set, and an exception is thrown when they're invalid. You can set validation level in the `SecurityTxt` constructor using the `SecurityTxtValidationLevel` enum:
