@@ -13,7 +13,7 @@ jobs:
           - "8.4"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: OS info
       run: cat /etc/os-release
