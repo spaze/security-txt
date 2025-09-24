@@ -421,7 +421,6 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::count(1, $parseResult->getFetchWarnings());
 		Assert::type(SecurityTxtTopLevelPathOnly::class, $parseResult->getFetchWarnings()[0]);
 		Assert::same("security.txt wasn't found under the /.well-known/ path", $parseResult->getFetchWarnings()[0]->getMessage());
-		Assert::false($parseResult->isExpiresSoon());
 		Assert::false($parseResult->isValid());
 		Assert::true($parseResult->hasErrors());
 		Assert::true($parseResult->hasWarnings());
@@ -441,13 +440,13 @@ final class SecurityTxtParserTest extends TestCase
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14);
 		Assert::same([], $parseResult->getLineErrors());
-		Assert::same([], $parseResult->getLineWarnings());
+		Assert::count(1, $parseResult->getLineWarnings());
+		Assert::same('The file will be considered stale in 7 days', $parseResult->getLineWarnings()[2][0]->getMessage());
 		Assert::same([], $parseResult->getFileErrors());
 		Assert::same([], $parseResult->getFileWarnings());
-		Assert::true($parseResult->isExpiresSoon());
 		Assert::true($parseResult->isValid());
 		Assert::false($parseResult->hasErrors());
-		Assert::false($parseResult->hasWarnings());
+		Assert::true($parseResult->hasWarnings());
 		Assert::false($parseResult->getFetchResult()->isTruncated());
 
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);

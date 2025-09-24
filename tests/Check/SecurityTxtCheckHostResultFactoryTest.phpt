@@ -71,7 +71,6 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		Assert::same([], $checkHostResult->getFileErrors());
 		Assert::same([], $checkHostResult->getFileWarnings());
 		Assert::same($email, $checkHostResult->getSecurityTxt()->getContact()[0]->getValue());
-		Assert::true($checkHostResult->isExpiresSoon());
 		Assert::true($checkHostResult->getIsExpired());
 		Assert::true($checkHostResult->getExpiryDays() < 0);
 		Assert::false($checkHostResult->isValid());
