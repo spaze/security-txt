@@ -15,6 +15,8 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
+use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -25,11 +27,13 @@ final class SecurityTxtFetcherTest extends TestCase
 {
 
 	private SecurityTxtSplitLines $splitLines;
+	private SecurityTxtUrlParser $urlParser;
 
 
 	public function __construct()
 	{
 		$this->splitLines = new SecurityTxtSplitLines();
+		$this->urlParser = new SecurityTxtUrlParser();
 	}
 
 
@@ -120,8 +124,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			$lowercaseHeaders[strtolower($key)] = $value;
 		}
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents', false));
-		$urlParser = new SecurityTxtUrlParser();
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
 		$template = 'https://%s/foo';
 		$host = 'host';
 		$property = new ReflectionProperty($fetcher, 'redirects');
@@ -162,8 +165,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownWins): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', true));
-		$urlParser = new SecurityTxtUrlParser();
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, true) : null);
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, false) : null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
@@ -178,8 +180,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResultGetLine(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
-		$urlParser = new SecurityTxtUrlParser();
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
 		$lines = ["Contact: 123\n", "Hiring: 456\n"];
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false));
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, null);
@@ -197,8 +198,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResultNotFound(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
-		$urlParser = new SecurityTxtUrlParser();
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('fooUrl', 'fooUrl2', '192.0.2.1', DNS_A, 404, null);
 		$topLevel = new SecurityTxtFetcherFetchHostResult('barUrl', 'barUrl2', '198.51.100.1', DNS_A, 403, null);
 		$property = new ReflectionProperty($fetcher, 'redirects');
@@ -211,6 +211,40 @@ final class SecurityTxtFetcherTest extends TestCase
 		assert($exception instanceof SecurityTxtNotFoundException);
 		Assert::same(['192.0.2.1' => [DNS_A, 404], '198.51.100.1' => [DNS_A, 403]], $exception->getIpAddresses());
 		Assert::same(['fooUrl' => $fooUrlRedirects], $exception->getAllRedirects());
+	}
+
+
+	/**
+	 * @return array<string, array{0:string, 1:string, 2:string, 3:string, 4:SecurityTxtTopLevelDiffers|null}>
+	 */
+	public function getResults(): array
+	{
+		$finalUrl1 = 'https://final1.example/';
+		$finalUrl2 = 'https://final2.example/';
+		$contents1 = 'contents1';
+		$contents2 = 'contents2';
+		return [
+			'different final URL, same response' => [$finalUrl1, $finalUrl2, $contents1, $contents1, null],
+			'different final URL, different response' => [$finalUrl1, $finalUrl2, $contents1, $contents2, new SecurityTxtTopLevelDiffers($contents1, $contents2)],
+			'same final URL, different response' => [$finalUrl1, $finalUrl1, $contents1, $contents2, null],
+		];
+	}
+
+
+	/** @dataProvider getResults */
+	public function testGetResultTopLevelDiffers(string $finalUrlWellKnown, string $finalUrlTopLevel, string $contentsWellKnown, string $contentsTopLevel, ?SecurityTxtTopLevelDiffers $violation): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
+		$fetcherResponseWellKnown = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxt::CONTENT_TYPE_HEADER], $contentsWellKnown, false);
+		$fetcherResponseTopLevel = new SecurityTxtFetcherResponse(200, [], $contentsTopLevel, false);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('https://url1.example/', $finalUrlWellKnown, '192.0.2.1', DNS_A, 200, $fetcherResponseWellKnown);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('https://url2.example/', $finalUrlTopLevel, '198.51.100.1', DNS_A, 200, $fetcherResponseTopLevel);
+		$method = new ReflectionMethod($fetcher, 'getResult');
+		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
+		assert($result instanceof SecurityTxtFetchResult);
+		Assert::same([], $result->getErrors());
+		Assert::equal($violation === null ? [] : [$violation], $result->getWarnings());
 	}
 
 }
