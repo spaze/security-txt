@@ -13,7 +13,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotCreateSignatureException;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotCreateSignatureExtensionNotLoadedException;
-use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtInvalidSignatureException;
+use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtSignatureException;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtSigningKeyBadPassphraseException;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtSigningKeyNoPassphraseSetException;
@@ -121,12 +121,12 @@ final class SecurityTxtSignatureTest extends TestCase
 		assert($e instanceof SecurityTxtWarning);
 		Assert::type(SecurityTxtSignatureExtensionNotLoaded::class, $e->getViolation());
 
-		$signature = new SecurityTxtSignature($this->getSignatureProvider(verifyThrows: new SecurityTxtInvalidSignatureException()));
+		$signature = new SecurityTxtSignature($this->getSignatureProvider(verifyThrows: new SecurityTxtCannotVerifySignatureException(null, new SecurityTxtSignatureErrorInfo('msg', 1336, null, null))));
 		$e = Assert::throws(function () use ($signature): void {
 			$signature->verify('gnupg::verify returns invalid array');
-		}, SecurityTxtError::class);
-		assert($e instanceof SecurityTxtError);
-		Assert::type(SecurityTxtSignatureInvalid::class, $e->getViolation());
+		}, SecurityTxtCannotVerifySignatureException::class);
+		assert($e instanceof SecurityTxtCannotVerifySignatureException);
+		Assert::same('Cannot verify signature: msg; code: 1336, source: <null>, library message: <null>', $e->getMessage());
 	}
 
 

@@ -5,7 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Signature\Providers;
 
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
-use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtInvalidSignatureException;
+use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Tester\Assert;
 use Tester\TestCase;
@@ -58,9 +58,11 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 	public function testVerifyInvalidSignature(): void
 	{
 		$gnuPg = new SecurityTxtSignatureGnuPgProvider();
-		Assert::throws(function () use ($gnuPg): void {
+		$e = Assert::throws(function () use ($gnuPg): void {
 			$gnuPg->verify('fifteen hundred and seven systems in one day');
-		}, SecurityTxtInvalidSignatureException::class);
+		}, SecurityTxtCannotVerifySignatureException::class);
+		assert($e instanceof SecurityTxtCannotVerifySignatureException);
+		Assert::same('Cannot verify signature: verify failed; code: 117440570, source: GPGME, library message: No data', $e->getMessage());
 		$errorInfo = $gnuPg->getErrorInfo();
 		Assert::same('verify failed', $errorInfo->getMessage());
 	}
