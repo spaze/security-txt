@@ -34,6 +34,11 @@ final class SecurityTxtUrlParserTest extends TestCase
 			'relative scheme' => ['//example.com', 'example.com'],
 			'scheme with one slash' => ['https:/example.com', 'example.com'],
 			'scheme with one slash and a port' => ['https:/example.com:444', 'example.com'],
+			'with scheme mixed case' => ['https://EXAMPLE.com', 'example.com'],
+			'no scheme mixed case' => ['EXAMPLE.com', 'example.com'],
+			'relative scheme mixed case' => ['//EXAMPLE.com', 'example.com'],
+			'scheme with one slash mixed case' => ['https:/EXAMPLE.com', 'example.com'],
+			'scheme with one slash and a port mixed case' => ['https:/EXAMPLE.com:444', 'example.com'],
 		];
 	}
 
