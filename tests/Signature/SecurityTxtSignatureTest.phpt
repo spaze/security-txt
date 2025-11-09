@@ -93,7 +93,7 @@ final class SecurityTxtSignatureTest extends TestCase
 		Assert::same('fingerprint1337', $result->getKeyFingerprint());
 		Assert::same('fingerprint1337', $result->getKeyId());
 		Assert::same('rint1337', $result->getShortKeyId());
-		Assert::equal(DateTimeImmutable::createFromTimestamp($time)->setTimezone(new DateTimeZone('UTC')), $result->getDate());
+		Assert::equal((new DateTimeImmutable("@{$time}"))->setTimezone(new DateTimeZone('UTC')), $result->getDate());
 
 		$signature = new SecurityTxtSignature($this->getSignatureProvider(verifySignatureInfo: new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_KEY_MISSING, 'fingerprint1337', $time)));
 		Assert::noError(function () use ($signature, &$result): void {
