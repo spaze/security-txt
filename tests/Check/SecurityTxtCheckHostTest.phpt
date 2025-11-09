@@ -247,4 +247,4 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 }
 
-new SecurityTxtCheckHostTest()->run();
+(new SecurityTxtCheckHostTest())->run();

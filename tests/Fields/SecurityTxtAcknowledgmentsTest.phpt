@@ -34,10 +34,10 @@ final class SecurityTxtAcknowledgmentsTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new SecurityTxtAcknowledgments($uri)->getUri());
+			Assert::same($uri, (new SecurityTxtAcknowledgments($uri))->getUri());
 		});
 	}
 
 }
 
-new SecurityTxtAcknowledgmentsTest()->run();
+(new SecurityTxtAcknowledgmentsTest())->run();

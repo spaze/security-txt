@@ -23,4 +23,4 @@ final class SecurityTxtSignatureVerifyResultTest extends TestCase
 
 }
 
-new SecurityTxtSignatureVerifyResultTest()->run();
+(new SecurityTxtSignatureVerifyResultTest())->run();

@@ -71,4 +71,4 @@ final class SecurityTxtValidatorTest extends TestCase
 
 }
 
-new SecurityTxtValidatorTest()->run();
+(new SecurityTxtValidatorTest())->run();

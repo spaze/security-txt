@@ -33,10 +33,10 @@ final class SecurityTxtCanonicalTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new SecurityTxtCanonical($uri)->getUri());
+			Assert::same($uri, (new SecurityTxtCanonical($uri))->getUri());
 		});
 	}
 
 }
 
-new SecurityTxtCanonicalTest()->run();
+(new SecurityTxtCanonicalTest())->run();

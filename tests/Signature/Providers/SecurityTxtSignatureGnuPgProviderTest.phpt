@@ -51,7 +51,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		$signature = new SecurityTxtSignature($gnuPg);
 		$signed = $gnuPg->sign('i was zero cool');
 		assert(is_string($signed));
-		Assert::true($signature->isClearsignHeader(trim(new SecurityTxtSplitLines()->splitLines($signed)[0])));
+		Assert::true($signature->isClearsignHeader(trim((new SecurityTxtSplitLines())->splitLines($signed)[0])));
 	}
 
 
@@ -84,7 +84,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		=bZYA
 		-----END PGP SIGNATURE-----
 		EOT;
-		$verified = new SecurityTxtSignatureGnuPgProvider()->verify($signed);
+		$verified = (new SecurityTxtSignatureGnuPgProvider())->verify($signed);
 		Assert::same('AF6E1775E311FF78E911E7DC7F879001A9C8F50A', $verified->getFingerprint());
 		Assert::same(GNUPG_SIGSUM_KEY_MISSING, $verified->getSummary());
 		Assert::same(1753150207, $verified->getTimestamp());
@@ -92,4 +92,4 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 
 }
 
-new SecurityTxtSignatureGnuPgProviderTest()->run();
+(new SecurityTxtSignatureGnuPgProviderTest())->run();

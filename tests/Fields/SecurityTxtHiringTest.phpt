@@ -34,10 +34,10 @@ final class SecurityTxtHiringTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new SecurityTxtHiring($uri)->getUri());
+			Assert::same($uri, (new SecurityTxtHiring($uri))->getUri());
 		});
 	}
 
 }
 
-new SecurityTxtHiringTest()->run();
+(new SecurityTxtHiringTest())->run();

@@ -249,4 +249,4 @@ final class SecurityTxtFetcherTest extends TestCase
 
 }
 
-new SecurityTxtFetcherTest()->run();
+(new SecurityTxtFetcherTest())->run();

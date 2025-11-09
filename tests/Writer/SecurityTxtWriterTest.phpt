@@ -101,4 +101,4 @@ final class SecurityTxtWriterTest extends TestCase
 
 }
 
-new SecurityTxtWriterTest()->run();
+(new SecurityTxtWriterTest())->run();

@@ -26,4 +26,4 @@ final class SecurityTxtFetcherFetchHostResultTest extends TestCase
 
 }
 
-new SecurityTxtFetcherFetchHostResultTest()->run();
+(new SecurityTxtFetcherFetchHostResultTest())->run();
