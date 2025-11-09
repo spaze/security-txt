@@ -47,4 +47,4 @@ final class PolicyAddFieldValueTest extends TestCase
 
 }
 
-new PolicyAddFieldValueTest()->run();
+(new PolicyAddFieldValueTest())->run();

@@ -34,10 +34,10 @@ final class SecurityTxtEncryptionTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new SecurityTxtEncryption($uri)->getUri());
+			Assert::same($uri, (new SecurityTxtEncryption($uri))->getUri());
 		});
 	}
 
 }
 
-new SecurityTxtEncryptionTest()->run();
+(new SecurityTxtEncryptionTest())->run();

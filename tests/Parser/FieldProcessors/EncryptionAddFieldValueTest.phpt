@@ -47,4 +47,4 @@ final class EncryptionAddFieldValueTest extends TestCase
 
 }
 
-new EncryptionAddFieldValueTest()->run();
+(new EncryptionAddFieldValueTest())->run();

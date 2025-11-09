@@ -82,4 +82,4 @@ final class ExpiresCheckFieldValueExpiresSoonTest extends TestCase
 
 }
 
-new ExpiresCheckFieldValueExpiresSoonTest()->run();
+(new ExpiresCheckFieldValueExpiresSoonTest())->run();

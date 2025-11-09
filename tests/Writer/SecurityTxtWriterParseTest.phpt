@@ -90,4 +90,4 @@ final class SecurityTxtWriterParseTest extends TestCase
 
 }
 
-new SecurityTxtWriterParseTest()->run();
+(new SecurityTxtWriterParseTest())->run();

@@ -250,4 +250,4 @@ final class SecurityTxtJsonTest extends TestCase
 
 }
 
-new SecurityTxtJsonTest()->run();
+(new SecurityTxtJsonTest())->run();

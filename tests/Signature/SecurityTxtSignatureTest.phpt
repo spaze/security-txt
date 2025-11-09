@@ -205,4 +205,4 @@ final class SecurityTxtSignatureTest extends TestCase
 
 }
 
-new SecurityTxtSignatureTest()->run();
+(new SecurityTxtSignatureTest())->run();

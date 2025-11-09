@@ -51,4 +51,4 @@ final class ExpiresCheckFieldFormatTest extends TestCase
 
 }
 
-new ExpiresCheckFieldFormatTest()->run();
+(new ExpiresCheckFieldFormatTest())->run();

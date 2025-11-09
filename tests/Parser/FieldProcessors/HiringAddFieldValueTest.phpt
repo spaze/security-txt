@@ -47,4 +47,4 @@ final class HiringAddFieldValueTest extends TestCase
 
 }
 
-new HiringAddFieldValueTest()->run();
+(new HiringAddFieldValueTest())->run();

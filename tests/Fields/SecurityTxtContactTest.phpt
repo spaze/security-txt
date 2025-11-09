@@ -35,10 +35,10 @@ final class SecurityTxtContactTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new SecurityTxtContact($uri)->getUri());
+			Assert::same($uri, (new SecurityTxtContact($uri))->getUri());
 		});
 	}
 
 }
 
-new SecurityTxtContactTest()->run();
+(new SecurityTxtContactTest())->run();

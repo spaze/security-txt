@@ -34,10 +34,10 @@ final class SecurityTxtPolicyTest extends TestCase
 	public function testValues(string $uri): void
 	{
 		Assert::noError(function () use ($uri): void {
-			Assert::same($uri, new SecurityTxtPolicy($uri)->getUri());
+			Assert::same($uri, (new SecurityTxtPolicy($uri))->getUri());
 		});
 	}
 
 }
 
-new SecurityTxtPolicyTest()->run();
+(new SecurityTxtPolicyTest())->run();

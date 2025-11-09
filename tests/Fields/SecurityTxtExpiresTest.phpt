@@ -44,4 +44,4 @@ final class SecurityTxtExpiresTest extends TestCase
 
 }
 
-new SecurityTxtExpiresTest()->run();
+(new SecurityTxtExpiresTest())->run();
