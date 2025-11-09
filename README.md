@@ -133,7 +133,7 @@ I'd recommend creating the signatures that way as it doesn't expose your private
 Creating a new signing key is beyond the scope of this document, but you can refer to sources like [the GitHub Docs](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key).
 Related challenges like key distribution, secure storage, and expiration, while interesting to address properly, are also not covered here.
 
-Having said that, this library also allows you to create the signature programmatically by calling `Spaze\SecurityTxt\Signature\SecurityTxtSignature::sign()`:
+Having said that, this library also allows you to create the signature programmatically by calling `Spaze\SecurityTxt\Signature\SecurityTxtSignature::sign()` (requires the `gnupg` PHP extension):
 ```php
 $gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
 $signature = new SecurityTxtSignature($gnuPgProvider);
@@ -216,6 +216,10 @@ In general, you’ll need to follow these steps:
 1. Install PHP if it is not already installed.
 2. Install this package using Composer.
 3. Run the `checksecuritytxt.php` script.
+
+GitHub Actions' `ubuntu-24.04` runner (also as `ubuntu-latest` at the time of writing) has PHP 8.3 preinstalled, so you can use `checksecuritytxt.php` without installing anything else, this lib can be used with PHP 8.3.
+But unfortunately the `gnupg` PHP extension is not available on GitHub runners so you won't be able to verify the file signatures.
+If you want to verify signatures you'll need to use [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) which can also set up the extension.
 
 You can use my own checks as a template or for inspiration; see [the `securitytxt.yml` file](https://github.com/spaze/michalspacek.cz/blob/main/.github/workflows/securitytxt.yml) in my repository.
 
