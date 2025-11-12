@@ -16,8 +16,8 @@
 		"phpstan/phpstan": "^2.1.18",
 		"phpstan/phpstan-strict-rules": "^2.0",
 		"psalm/phar": "^6.10",
-		"spaze/coding-standard": "^1.6",
-		"spaze/phpcs-phar": "^3.12",
+		"spaze/coding-standard": "^1.9",
+		"spaze/phpcs-phar": "^4.0",
 		"spaze/phpstan-disallowed-calls": "^4.5"
 	},
 	"suggest": {
