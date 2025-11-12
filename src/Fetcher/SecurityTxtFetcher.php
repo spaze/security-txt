@@ -89,7 +89,6 @@ final class SecurityTxtFetcher
 		$url = $this->buildUrl($urlTemplate, $host);
 		$finalUrl = $url;
 		$this->callOnCallback($this->onUrl, $url);
-		$this->redirects[$url] = [];
 		$records = @dns_get_record($host, DNS_A | DNS_AAAA); // intentionally @, converted to exception
 		if ($records === false) {
 			throw new SecurityTxtHostNotFoundException($url, $host);
@@ -303,7 +302,7 @@ final class SecurityTxtFetcher
 			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
 		} else {
 			$originalUrl = $this->buildUrl($urlTemplate, $host);
-			$previousUrl = $this->redirects[$originalUrl] !== [] ? $this->redirects[$originalUrl][array_key_last($this->redirects[$originalUrl])] : $originalUrl;
+			$previousUrl = isset($this->redirects[$originalUrl]) && $this->redirects[$originalUrl] !== [] ? $this->redirects[$originalUrl][array_key_last($this->redirects[$originalUrl])] : $originalUrl;
 			$this->callOnCallback($this->onRedirect, $previousUrl, $location);
 			$this->redirects[$originalUrl][] = $location;
 			$finalUrl = $location = $this->urlParser->getRedirectUrl($location, $url);

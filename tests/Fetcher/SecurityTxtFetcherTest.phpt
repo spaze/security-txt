@@ -127,10 +127,6 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
 		$template = 'https://%s/foo';
 		$host = 'host';
-		$property = new ReflectionProperty($fetcher, 'redirects');
-		$redirects = $property->getValue($fetcher);
-		assert(is_array($redirects));
-		$property->setValue($fetcher, array_merge($redirects, [sprintf($template, $host) => []]));
 		$method = new ReflectionMethod($fetcher, 'getResponse');
 		$finalUrl = 'passed by ref';
 		if ($expectedException !== null) {
