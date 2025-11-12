@@ -12,6 +12,7 @@ jobs:
         php-version:
           - "8.3"
           - "8.4"
+          - "8.5"
 
     steps:
     - uses: actions/checkout@v5
@@ -25,6 +26,8 @@ jobs:
         coverage: "none"
         php-version: ${{ matrix.php-version }}
         extensions: gnupg
+      env:
+        GNUPG_LIBS: libgpgme-dev
 
     - name: PHP info
       run: |
