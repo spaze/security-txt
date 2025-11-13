@@ -166,7 +166,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, false) : null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
-		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
+		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
 		Assert::same($expected, $result->getContents());
 		Assert::same($wellKnownWins, $result->isTruncated());
@@ -181,7 +181,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false));
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
-		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
+		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
 		Assert::null($result->getLine(-1)); /** @phpstan-ignore argument.type (Testing invalid line number) */
 		Assert::null($result->getLine(0)); /** @phpstan-ignore argument.type (Testing another invalid line number) */
@@ -202,7 +202,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$property->setValue($fetcher, ['fooUrl' => $fooUrlRedirects]);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$exception = Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
-			$method->invoke($fetcher, $wellKnown, $topLevel);
+			$method->invoke($fetcher, $wellKnown, $topLevel, true);
 		}, SecurityTxtNotFoundException::class, "Can't read security.txt: fooUrl (192.0.2.1) => 404 (final code after redirects), barUrl (198.51.100.1) => 403");
 		assert($exception instanceof SecurityTxtNotFoundException);
 		Assert::same(['192.0.2.1' => [DNS_A, 404], '198.51.100.1' => [DNS_A, 403]], $exception->getIpAddresses());
@@ -237,7 +237,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('https://url1.example/', $finalUrlWellKnown, '192.0.2.1', DNS_A, 200, $fetcherResponseWellKnown);
 		$topLevel = new SecurityTxtFetcherFetchHostResult('https://url2.example/', $finalUrlTopLevel, '198.51.100.1', DNS_A, 200, $fetcherResponseTopLevel);
 		$method = new ReflectionMethod($fetcher, 'getResult');
-		$result = $method->invoke($fetcher, $wellKnown, $topLevel);
+		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
 		Assert::same([], $result->getErrors());
 		Assert::equal($violation === null ? [] : [$violation], $result->getWarnings());

@@ -65,11 +65,11 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtHostIpAddressInvalidTypeException
 	 * @throws SecurityTxtHostIpAddressNotFoundException
 	 */
-	public function fetchHost(string $host, bool $noIpv6 = false): SecurityTxtFetchResult
+	public function fetchHost(string $host, bool $requireTopLevelLocation = false, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
 		$wellKnown = $this->fetchUrl('https://%s/.well-known/security.txt', $host, $noIpv6);
 		$topLevel = $this->fetchUrl('https://%s/security.txt', $host, $noIpv6);
-		return $this->getResult($wellKnown, $topLevel);
+		return $this->getResult($wellKnown, $topLevel, $requireTopLevelLocation);
 	}
 
 
@@ -162,7 +162,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @throws SecurityTxtNotFoundException
 	 */
-	private function getResult(SecurityTxtFetcherFetchHostResult $wellKnown, SecurityTxtFetcherFetchHostResult $topLevel): SecurityTxtFetchResult
+	private function getResult(SecurityTxtFetcherFetchHostResult $wellKnown, SecurityTxtFetcherFetchHostResult $topLevel, bool $requireTopLevelLocation): SecurityTxtFetchResult
 	{
 		$errors = $warnings = [];
 		$isRegularHtmlPageWellKnown = $this->isRegularHtmlPage($wellKnown);
@@ -189,7 +189,9 @@ final class SecurityTxtFetcher
 				],
 			);
 		} elseif ($wellKnownContents !== null && $topLevelContents === null) {
-			$warnings[] = new SecurityTxtWellKnownPathOnly();
+			if ($requireTopLevelLocation) {
+				$warnings[] = new SecurityTxtWellKnownPathOnly();
+			}
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} elseif ($wellKnownContents === null) {

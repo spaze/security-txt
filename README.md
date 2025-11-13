@@ -46,6 +46,10 @@ The validator will start throwing warnings if the file expires soon, and you can
 
 If you enable strict mode, then the file will be considered invalid, meaning `SecurityTxtCheckHostResult::isValid()` will return `false` even when there are only warnings, with strict mode disabled, the file with only warnings would still be valid and `SecurityTxtCheckHostResult::isValid()` would return `true`
 
+`bool $requireTopLevelLocation = false`
+
+When specified, the top-level `/security.txt` location must also exist (or be redirected) in addition to `/.well-known/security.txt`, otherwise a warning will be issued
+
 `bool $noIpv6 = false`
 
 Because some environments do not support IPv6, looking at you GitHub Actions
@@ -190,7 +194,7 @@ The `checksecuritytxt.php` script, located in the `bin` directory, prints progre
 
 Usage:
 ```sh
-checksecuritytxt.php <URL or hostname> [days] [--colors] [--strict] [--no-ipv6]
+checksecuritytxt.php <URL or hostname> [days] [--colors] [--strict] [--require-top-level-location] [--no-ipv6]
 ```
 
 Parameters:
@@ -198,6 +202,7 @@ Parameters:
 - `days`: If the file expires in less than *`days`* days, the script will print a warning.
 - `--colors`: Enables colored output using red, green, and other colors for better readability.
 - `--strict`: Upgrades all warnings to errors, enforcing stricter validation.
+- `--require-top-level-location`: When specified, the `/security.txt` location must also exist or be redirected, otherwise a warning will be issued.
 - `--no-ipv6`: Disables IPv6 usage. When this option is set, the script effectively ignores AAAA DNS records and uses only A records.
 
 The script returns the following status codes:

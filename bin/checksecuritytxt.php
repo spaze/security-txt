@@ -54,6 +54,7 @@ $checkHostCli->check(
 	isset($args[2]) && $args[2] !== '' ? (int)$args[2] : null,
 	in_array('--colors', $args, true),
 	in_array('--strict', $args, true),
+	in_array('--require-top-level-location', $args, true),
 	in_array('--no-ipv6', $args, true),
 	'Usage: ' . basename(__FILE__) . " <URL or hostname> [days] [--colors] [--strict] [--require-top-level-location] [--no-ipv6]\n"
 		. "If the file expires in less than <days>, the script will print a warning.\n"

@@ -22,6 +22,7 @@ final readonly class SecurityTxtCheckHostCli
 		?int $expiresWarningThreshold,
 		bool $colors,
 		bool $strictMode,
+		bool $requireTopLevelLocation,
 		bool $noIpv6,
 		string $usageHelp,
 	): never {
@@ -110,6 +111,7 @@ final readonly class SecurityTxtCheckHostCli
 				$url,
 				$expiresWarningThreshold,
 				$strictMode,
+				$requireTopLevelLocation,
 				$noIpv6,
 			);
 			if (!$checkResult->isValid()) {
