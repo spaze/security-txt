@@ -195,7 +195,7 @@ final class SecurityTxtFetcher
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} elseif ($wellKnownContents === null) {
-			$warnings[] = new SecurityTxtTopLevelPathOnly();
+			$errors[] = new SecurityTxtTopLevelPathOnly();
 			$result = $topLevel;
 			$contents = $topLevelContents;
 		} elseif ($wellKnownContents !== $topLevelContents) {
