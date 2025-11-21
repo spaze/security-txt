@@ -3,43 +3,82 @@ name: PHP Tests
 on: [push, pull_request]
 
 jobs:
-  build:
-
+  info:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         php-version:
           - "8.3"
           - "8.4"
           - "8.5"
-
     steps:
-    - uses: actions/checkout@v5
-
     - name: OS info
       run: cat /etc/os-release
-
-    - name: "Install PHP"
+    - name: Install PHP
       uses: shivammathur/setup-php@v2
       with:
-        coverage: "none"
+        coverage: none
         php-version: ${{ matrix.php-version }}
         extensions: gnupg
       env:
         GNUPG_LIBS: libgpgme-dev
-
     - name: PHP info
       run: |
         php -v
         php -m
         php --ri gnupg
 
+  lint-phpcs-phpstan-tester:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version:
+          - "8.3"
+          - "8.4"
+          - "8.5"
+    steps:
+    - uses: actions/checkout@v5
+    - name: Install PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        coverage: none
+        php-version: ${{ matrix.php-version }}
+        extensions: gnupg
+      env:
+        GNUPG_LIBS: libgpgme-dev
     - name: Validate composer.json
       run: composer validate --strict --no-interaction
-
     - name: Install dependencies
       run: composer update --no-progress --no-interaction
+    - name: Run linter
+      run: composer lint
+    - name: Run PHPCS
+      run: composer phpcs
+    - name: Run PHPStan
+      run: composer phpstan
+    - name: Run Tester
+      run: composer tester
 
-    - name: Run tests
-      run: composer test
+  psalm:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version:
+          - "8.3"
+          - "8.4"
+    steps:
+    - uses: actions/checkout@v5
+    - name: Install PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        coverage: none
+        php-version: ${{ matrix.php-version }}
+        extensions: gnupg
+      env:
+        GNUPG_LIBS: libgpgme-dev
+    - name: Validate composer.json
+      run: composer validate --strict --no-interaction
+    - name: Install dependencies
+      run: composer update --no-progress --no-interaction
+    - name: Run Psalm
+      run: composer psalm
