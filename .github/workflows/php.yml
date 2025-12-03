@@ -20,8 +20,6 @@ jobs:
         coverage: none
         php-version: ${{ matrix.php-version }}
         extensions: gnupg
-      env:
-        GNUPG_LIBS: libgpgme-dev
     - name: PHP info
       run: |
         php -v
