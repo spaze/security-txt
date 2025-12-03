@@ -42,8 +42,6 @@ jobs:
         coverage: none
         php-version: ${{ matrix.php-version }}
         extensions: gnupg
-      env:
-        GNUPG_LIBS: libgpgme-dev
     - name: Validate composer.json
       run: composer validate --strict --no-interaction
     - name: Install dependencies
@@ -72,8 +70,6 @@ jobs:
         coverage: none
         php-version: ${{ matrix.php-version }}
         extensions: gnupg
-      env:
-        GNUPG_LIBS: libgpgme-dev
     - name: Validate composer.json
       run: composer validate --strict --no-interaction
     - name: Install dependencies
