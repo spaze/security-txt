@@ -3,22 +3,16 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Validator\Validators;
 
-use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUrlMismatch;
 
-final class CanonicalUrlValidator implements FieldValidator
+final class CanonicalUrlValidator
 {
 
-	#[Override]
-	public function validate(SecurityTxt $securityTxt, ?SecurityTxtFetchResult $fetchResult = null): void
+	public function validate(SecurityTxt $securityTxt, SecurityTxtFetchResult $fetchResult): void
 	{
-		if ($fetchResult === null) {
-			return;
-		}
-
 		$canonicals = $securityTxt->getCanonical();
 		if ($canonicals === []) {
 			return;

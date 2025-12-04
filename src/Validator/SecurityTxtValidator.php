@@ -21,15 +21,17 @@ final class SecurityTxtValidator
 	 */
 	private array $fieldValidators;
 
+	private CanonicalUrlValidator $canonicalUrlValidator;
+
 
 	public function __construct()
 	{
 		$this->fieldValidators = [
-			new CanonicalUrlValidator(),
 			new ContactMissingFieldValidator(),
 			new ExpiresMissingFieldValidator(),
 			new SignedButCanonicalMissingFieldValidator(),
 		];
+		$this->canonicalUrlValidator = new CanonicalUrlValidator();
 	}
 
 
@@ -38,11 +40,16 @@ final class SecurityTxtValidator
 		$errors = $warnings = [];
 		foreach ($this->fieldValidators as $validator) {
 			try {
-				if ($validator instanceof CanonicalUrlValidator && $fetchResult !== null) {
-					$validator->validate($securityTxt, $fetchResult);
-				} else {
-					$validator->validate($securityTxt);
-				}
+				$validator->validate($securityTxt);
+			} catch (SecurityTxtError $e) {
+				$errors[] = $e->getViolation();
+			} catch (SecurityTxtWarning $e) {
+				$warnings[] = $e->getViolation();
+			}
+		}
+		if ($fetchResult !== null) {
+			try {
+				$this->canonicalUrlValidator->validate($securityTxt, $fetchResult);
 			} catch (SecurityTxtError $e) {
 				$errors[] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {
