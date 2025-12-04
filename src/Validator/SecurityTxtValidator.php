@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Validator;
 
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Validator\Validators\CanonicalUrlValidator;
 use Spaze\SecurityTxt\Validator\Validators\ContactMissingFieldValidator;
@@ -32,12 +33,16 @@ final class SecurityTxtValidator
 	}
 
 
-	public function validate(SecurityTxt $securityTxt): SecurityTxtValidateResult
+	public function validate(SecurityTxt $securityTxt, ?SecurityTxtFetchResult $fetchResult = null): SecurityTxtValidateResult
 	{
 		$errors = $warnings = [];
 		foreach ($this->fieldValidators as $validator) {
 			try {
-				$validator->validate($securityTxt);
+				if ($validator instanceof CanonicalUrlValidator && $fetchResult !== null) {
+					$validator->validate($securityTxt, $fetchResult);
+				} else {
+					$validator->validate($securityTxt);
+				}
 			} catch (SecurityTxtError $e) {
 				$errors[] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {

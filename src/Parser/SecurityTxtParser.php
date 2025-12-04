@@ -171,10 +171,9 @@ final class SecurityTxtParser
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
-		$securityTxt = $parseResult->getSecurityTxt()->withFetchedUrl($fetchResult->getFinalUrl());
-		$validateResult = $this->validator->validate($securityTxt);
+		$validateResult = $this->validator->validate($parseResult->getSecurityTxt(), $fetchResult);
 		$parseResult = new SecurityTxtParseStringResult(
-			$securityTxt,
+			$parseResult->getSecurityTxt(),
 			$parseResult->isValid() && $validateResult->getErrors() === [],
 			$parseResult->isStrictMode(),
 			$parseResult->getExpiresWarningThreshold(),
