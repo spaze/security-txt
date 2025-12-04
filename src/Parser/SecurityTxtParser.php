@@ -25,7 +25,9 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUrlMismatch;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
@@ -171,6 +173,28 @@ final class SecurityTxtParser
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
+		
+		// Validate canonical URLs against the fetched URL
+		$canonicalWarnings = $this->validateCanonicalUrls($parseResult->getSecurityTxt(), $fetchResult->getFinalUrl());
+		
+		// If there are canonical warnings, create a new validate result with them added
+		if ($canonicalWarnings !== []) {
+			$validateResult = $parseResult->getValidateResult();
+			$updatedValidateResult = new SecurityTxtValidateResult(
+				$validateResult->getErrors(),
+				array_merge($validateResult->getWarnings(), $canonicalWarnings),
+			);
+			$parseResult = new SecurityTxtParseStringResult(
+				$parseResult->getSecurityTxt(),
+				$parseResult->isValid() && (!$strictMode || $canonicalWarnings === []),
+				$parseResult->isStrictMode(),
+				$parseResult->getExpiresWarningThreshold(),
+				$parseResult->getLineErrors(),
+				$parseResult->getLineWarnings(),
+				$updatedValidateResult,
+			);
+		}
+		
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,
@@ -196,6 +220,30 @@ final class SecurityTxtParser
 			}
 		}
 		return $securityTxt;
+	}
+
+
+	/**
+	 * Validates that the fetched URL is listed in the Canonical field(s)
+	 * 
+	 * @return list<SecurityTxtSpecViolation>
+	 */
+	private function validateCanonicalUrls(SecurityTxt $securityTxt, string $fetchedUrl): array
+	{
+		$canonicals = $securityTxt->getCanonical();
+		
+		// If there are no canonical URLs, no validation is needed
+		if ($canonicals === []) {
+			return [];
+		}
+		
+		// Check if the fetched URL matches any canonical URL
+		$canonicalUrls = array_map(fn($canonical) => $canonical->getUri(), $canonicals);
+		if (!in_array($fetchedUrl, $canonicalUrls, true)) {
+			return [new SecurityTxtCanonicalUrlMismatch($fetchedUrl, $canonicalUrls)];
+		}
+		
+		return [];
 	}
 
 
