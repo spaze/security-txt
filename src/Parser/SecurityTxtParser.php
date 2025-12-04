@@ -171,16 +171,18 @@ final class SecurityTxtParser
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
-		$validateResult = $this->validator->validate($parseResult->getSecurityTxt(), $fetchResult);
-		$parseResult = new SecurityTxtParseStringResult(
-			$parseResult->getSecurityTxt(),
-			$parseResult->isValid() && $validateResult->getErrors() === [],
-			$parseResult->isStrictMode(),
-			$parseResult->getExpiresWarningThreshold(),
-			$parseResult->getLineErrors(),
-			$parseResult->getLineWarnings(),
-			$validateResult,
-		);
+		$validateResult = $this->validator->validateWithFetchResult($parseResult->getSecurityTxt(), $fetchResult);
+		if ($validateResult !== $parseResult->getValidateResult()) {
+			$parseResult = new SecurityTxtParseStringResult(
+				$parseResult->getSecurityTxt(),
+				$parseResult->isValid() && $validateResult->getErrors() === [],
+				$parseResult->isStrictMode(),
+				$parseResult->getExpiresWarningThreshold(),
+				$parseResult->getLineErrors(),
+				$parseResult->getLineWarnings(),
+				$validateResult,
+			);
+		}
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,
