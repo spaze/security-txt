@@ -12,9 +12,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
-use Spaze\SecurityTxt\Validator\CanonicalUrlValidator;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
-use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUrlMismatch;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
@@ -49,8 +47,7 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
 		$securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$securityTxtSplitLines = new SecurityTxtSplitLines();
-		$canonicalUrlValidator = new CanonicalUrlValidator();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory, $securityTxtSplitLines, $canonicalUrlValidator);
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory, $securityTxtSplitLines);
 	}
 
 
@@ -454,103 +451,6 @@ final class SecurityTxtParserTest extends TestCase
 
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
 		Assert::false($parseResult->isValid());
-	}
-
-
-	public function testParseFetchResultCanonicalUrlMismatch(): void
-	{
-		$expires = new DateTimeImmutable('+7 days');
-		$lines = [
-			"Contact: mailto:example@example.com\r\n",
-			'Expires: ' . $expires->format(SecurityTxtExpires::FORMAT) . "\r\n",
-			"Canonical: https://www.example.com/.well-known/security.txt\r\n",
-		];
-		$fetchResult = new SecurityTxtFetchResult(
-			'https://example.com/.well-known/security.txt',
-			'https://example.com/.well-known/security.txt',
-			[],
-			implode('', $lines),
-			false,
-			$lines,
-			[],
-			[],
-		);
-		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
-		Assert::same([], $parseResult->getLineErrors());
-		Assert::same([], $parseResult->getLineWarnings());
-		Assert::same([], $parseResult->getFetchErrors());
-		Assert::same([], $parseResult->getFetchWarnings());
-		Assert::same([], $parseResult->getFileErrors());
-		Assert::count(1, $parseResult->getFileWarnings());
-		Assert::type(SecurityTxtCanonicalUrlMismatch::class, $parseResult->getFileWarnings()[0]);
-		Assert::same(
-			'The file was fetched from https://example.com/.well-known/security.txt but the Canonical field does not list this URL',
-			$parseResult->getFileWarnings()[0]->getMessage()
-		);
-		Assert::true($parseResult->isValid());
-		Assert::false($parseResult->hasErrors());
-		Assert::true($parseResult->hasWarnings());
-	}
-
-
-	public function testParseFetchResultCanonicalUrlMatch(): void
-	{
-		$expires = new DateTimeImmutable('+7 days');
-		$lines = [
-			"Contact: mailto:example@example.com\r\n",
-			'Expires: ' . $expires->format(SecurityTxtExpires::FORMAT) . "\r\n",
-			"Canonical: https://example.com/.well-known/security.txt\r\n",
-		];
-		$fetchResult = new SecurityTxtFetchResult(
-			'https://example.com/.well-known/security.txt',
-			'https://example.com/.well-known/security.txt',
-			[],
-			implode('', $lines),
-			false,
-			$lines,
-			[],
-			[],
-		);
-		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
-		Assert::same([], $parseResult->getLineErrors());
-		Assert::same([], $parseResult->getLineWarnings());
-		Assert::same([], $parseResult->getFetchErrors());
-		Assert::same([], $parseResult->getFetchWarnings());
-		Assert::same([], $parseResult->getFileErrors());
-		Assert::same([], $parseResult->getFileWarnings());
-		Assert::true($parseResult->isValid());
-		Assert::false($parseResult->hasErrors());
-		Assert::false($parseResult->hasWarnings());
-	}
-
-
-	public function testParseFetchResultNoCanonicalUrls(): void
-	{
-		$expires = new DateTimeImmutable('+7 days');
-		$lines = [
-			"Contact: mailto:example@example.com\r\n",
-			'Expires: ' . $expires->format(SecurityTxtExpires::FORMAT) . "\r\n",
-		];
-		$fetchResult = new SecurityTxtFetchResult(
-			'https://example.com/.well-known/security.txt',
-			'https://example.com/.well-known/security.txt',
-			[],
-			implode('', $lines),
-			false,
-			$lines,
-			[],
-			[],
-		);
-		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
-		Assert::same([], $parseResult->getLineErrors());
-		Assert::same([], $parseResult->getLineWarnings());
-		Assert::same([], $parseResult->getFetchErrors());
-		Assert::same([], $parseResult->getFetchWarnings());
-		Assert::same([], $parseResult->getFileErrors());
-		Assert::same([], $parseResult->getFileWarnings());
-		Assert::true($parseResult->isValid());
-		Assert::false($parseResult->hasErrors());
-		Assert::false($parseResult->hasWarnings());
 	}
 
 }

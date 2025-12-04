@@ -45,6 +45,7 @@ final class SecurityTxt implements JsonSerializable
 	private ?SecurityTxtExpires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
 	private ?SecurityTxtPreferredLanguages $preferredLanguages = null;
+	private ?string $fetchedUrl = null;
 
 	/**
 	 * @var list<SecurityTxtCanonical>
@@ -129,6 +130,20 @@ final class SecurityTxt implements JsonSerializable
 	public function getSignatureVerifyResult(): ?SecurityTxtSignatureVerifyResult
 	{
 		return $this->signatureVerifyResult;
+	}
+
+
+	public function withFetchedUrl(string $fetchedUrl): self
+	{
+		$clone = clone $this;
+		$clone->fetchedUrl = $fetchedUrl;
+		return $clone;
+	}
+
+
+	public function getFetchedUrl(): ?string
+	{
+		return $this->fetchedUrl;
 	}
 
 

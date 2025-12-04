@@ -25,8 +25,6 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
-use Spaze\SecurityTxt\Validator\CanonicalUrlValidator;
-use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
@@ -54,7 +52,6 @@ final class SecurityTxtParser
 		private readonly SecurityTxtSignature $signature,
 		private readonly SecurityTxtExpiresFactory $expiresFactory,
 		private readonly SecurityTxtSplitLines $splitLines,
-		private readonly CanonicalUrlValidator $canonicalUrlValidator,
 	) {
 	}
 
@@ -174,28 +171,17 @@ final class SecurityTxtParser
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
-		
-		// Validate canonical URLs against the fetched URL
-		$canonicalWarnings = $this->canonicalUrlValidator->validate($parseResult->getSecurityTxt(), $fetchResult->getFinalUrl());
-		
-		// If there are canonical warnings, create a new validate result with them added
-		if ($canonicalWarnings !== []) {
-			$validateResult = $parseResult->getValidateResult();
-			$updatedValidateResult = new SecurityTxtValidateResult(
-				$validateResult->getErrors(),
-				array_merge($validateResult->getWarnings(), $canonicalWarnings),
-			);
-			$parseResult = new SecurityTxtParseStringResult(
-				$parseResult->getSecurityTxt(),
-				$parseResult->isValid() && (!$strictMode || $canonicalWarnings === []),
-				$parseResult->isStrictMode(),
-				$parseResult->getExpiresWarningThreshold(),
-				$parseResult->getLineErrors(),
-				$parseResult->getLineWarnings(),
-				$updatedValidateResult,
-			);
-		}
-		
+		$securityTxt = $parseResult->getSecurityTxt()->withFetchedUrl($fetchResult->getFinalUrl());
+		$validateResult = $this->validator->validate($securityTxt);
+		$parseResult = new SecurityTxtParseStringResult(
+			$securityTxt,
+			$parseResult->isValid() && $validateResult->getErrors() === [],
+			$parseResult->isStrictMode(),
+			$parseResult->getExpiresWarningThreshold(),
+			$parseResult->getLineErrors(),
+			$parseResult->getLineWarnings(),
+			$validateResult,
+		);
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,

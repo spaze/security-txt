@@ -12,7 +12,6 @@ use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
-use Spaze\SecurityTxt\Validator\CanonicalUrlValidator;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 
 $autoloadFiles = [
@@ -41,8 +40,7 @@ $fopenClient = new SecurityTxtFetcherFopenClient('Mozilla/5.0 (compatible; spaze
 $urlParser = new SecurityTxtUrlParser();
 $expiresFactory = new SecurityTxtExpiresFactory();
 $splitLines = new SecurityTxtSplitLines();
-$canonicalUrlValidator = new CanonicalUrlValidator();
-$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $canonicalUrlValidator);
+$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines);
 $fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $splitLines);
 $consolePrinter = new ConsolePrinter();
 $checkHostResultFactory = new SecurityTxtCheckHostResultFactory();

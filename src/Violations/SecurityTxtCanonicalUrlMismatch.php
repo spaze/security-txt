@@ -12,10 +12,10 @@ final class SecurityTxtCanonicalUrlMismatch extends SecurityTxtSpecViolation
 	public function __construct(string $fetchedUrl, array $canonicalUrls)
 	{
 		$count = count($canonicalUrls);
-		$urlsText = $count === 1 ? 'URL' : 'URLs';
-		$howToFixTemplate = $count === 1
-			? 'Add the URL %s to the %s field, or ensure the file is fetched from the listed canonical URL: %s'
-			: 'Add the URL %s to the %s field, or ensure the file is fetched from one of the listed canonical URLs: %s';
+		$urlPlaceholders = array_fill(0, $count, '%s');
+		$howToFixFormat = $count === 1
+			? 'Add the URL %s to the %s field, or ensure the file is fetched from the listed canonical URL: ' . implode(', ', $urlPlaceholders)
+			: 'Add the URL %s to the %s field, or ensure the file is fetched from one of the listed canonical URLs: ' . implode(', ', $urlPlaceholders);
 
 		parent::__construct(
 			func_get_args(),
@@ -23,8 +23,8 @@ final class SecurityTxtCanonicalUrlMismatch extends SecurityTxtSpecViolation
 			[$fetchedUrl, 'Canonical'],
 			'draft-foudil-securitytxt-09',
 			null,
-			$howToFixTemplate,
-			[$fetchedUrl, 'Canonical', implode(', ', $canonicalUrls)],
+			$howToFixFormat,
+			[$fetchedUrl, 'Canonical', ...$canonicalUrls],
 			'2.5.2',
 		);
 	}
