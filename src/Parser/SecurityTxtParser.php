@@ -172,7 +172,8 @@ final class SecurityTxtParser
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
 		$validateResult = $this->validator->validateWithFetchResult($parseResult->getSecurityTxt(), $fetchResult);
-		if ($validateResult !== $parseResult->getValidateResult()) {
+		$originalValidateResult = $parseResult->getValidateResult();
+		if ($validateResult->getErrors() !== $originalValidateResult->getErrors() || $validateResult->getWarnings() !== $originalValidateResult->getWarnings()) {
 			$parseResult = new SecurityTxtParseStringResult(
 				$parseResult->getSecurityTxt(),
 				$parseResult->isValid() && $validateResult->getErrors() === [],
