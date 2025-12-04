@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Validator\CanonicalUrlValidator;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Writer\SecurityTxtWriter;
 use Tester\Assert;
@@ -39,7 +40,8 @@ final class SecurityTxtWriterParseTest extends TestCase
 		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$securityTxtSplitLines = new SecurityTxtSplitLines();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $securityTxtSplitLines);
+		$canonicalUrlValidator = new CanonicalUrlValidator();
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $securityTxtSplitLines, $canonicalUrlValidator);
 		$this->securityTxtWriter = new SecurityTxtWriter();
 	}
 

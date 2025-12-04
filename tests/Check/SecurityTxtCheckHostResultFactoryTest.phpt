@@ -12,6 +12,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Validator\CanonicalUrlValidator;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
 use Tester\TestCase;
@@ -33,7 +34,8 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		$signature = new SecurityTxtSignature($gnuPgProvider);
 		$expiresFactory = new SecurityTxtExpiresFactory();
 		$splitLines = new SecurityTxtSplitLines();
-		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines);
+		$canonicalUrlValidator = new CanonicalUrlValidator();
+		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $canonicalUrlValidator);
 		$this->checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 	}
 

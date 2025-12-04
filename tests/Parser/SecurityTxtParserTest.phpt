@@ -12,6 +12,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Validator\CanonicalUrlValidator;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUrlMismatch;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
@@ -48,7 +49,8 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
 		$securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$securityTxtSplitLines = new SecurityTxtSplitLines();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory, $securityTxtSplitLines);
+		$canonicalUrlValidator = new CanonicalUrlValidator();
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory, $securityTxtSplitLines, $canonicalUrlValidator);
 	}
 
 

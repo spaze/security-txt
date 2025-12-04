@@ -25,9 +25,9 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Validator\CanonicalUrlValidator;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
-use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUrlMismatch;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
@@ -54,6 +54,7 @@ final class SecurityTxtParser
 		private readonly SecurityTxtSignature $signature,
 		private readonly SecurityTxtExpiresFactory $expiresFactory,
 		private readonly SecurityTxtSplitLines $splitLines,
+		private readonly CanonicalUrlValidator $canonicalUrlValidator,
 	) {
 	}
 
@@ -175,7 +176,7 @@ final class SecurityTxtParser
 		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
 		
 		// Validate canonical URLs against the fetched URL
-		$canonicalWarnings = $this->validateCanonicalUrls($parseResult->getSecurityTxt(), $fetchResult->getFinalUrl());
+		$canonicalWarnings = $this->canonicalUrlValidator->validate($parseResult->getSecurityTxt(), $fetchResult->getFinalUrl());
 		
 		// If there are canonical warnings, create a new validate result with them added
 		if ($canonicalWarnings !== []) {
@@ -220,30 +221,6 @@ final class SecurityTxtParser
 			}
 		}
 		return $securityTxt;
-	}
-
-
-	/**
-	 * Validates that the fetched URL is listed in the Canonical field(s)
-	 * 
-	 * @return list<SecurityTxtSpecViolation>
-	 */
-	private function validateCanonicalUrls(SecurityTxt $securityTxt, string $fetchedUrl): array
-	{
-		$canonicals = $securityTxt->getCanonical();
-		
-		// If there are no canonical URLs, no validation is needed
-		if ($canonicals === []) {
-			return [];
-		}
-		
-		// Check if the fetched URL matches any canonical URL
-		$canonicalUrls = array_map(fn($canonical) => $canonical->getUri(), $canonicals);
-		if (!in_array($fetchedUrl, $canonicalUrls, true)) {
-			return [new SecurityTxtCanonicalUrlMismatch($fetchedUrl, $canonicalUrls)];
-		}
-		
-		return [];
 	}
 
 
