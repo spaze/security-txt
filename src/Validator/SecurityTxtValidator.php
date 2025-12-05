@@ -7,7 +7,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
-use Spaze\SecurityTxt\Validator\Validators\CanonicalUrlValidator;
+use Spaze\SecurityTxt\Validator\Validators\CanonicalUrlFieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\ContactMissingFieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\ExpiresMissingFieldValidator;
 use Spaze\SecurityTxt\Validator\Validators\FieldValidator;
@@ -21,17 +21,15 @@ final class SecurityTxtValidator
 	 */
 	private array $fieldValidators;
 
-	private CanonicalUrlValidator $canonicalUrlValidator;
-
 
 	public function __construct()
 	{
 		$this->fieldValidators = [
+			new CanonicalUrlFieldValidator(),
 			new ContactMissingFieldValidator(),
 			new ExpiresMissingFieldValidator(),
 			new SignedButCanonicalMissingFieldValidator(),
 		];
-		$this->canonicalUrlValidator = new CanonicalUrlValidator();
 	}
 
 
@@ -41,15 +39,6 @@ final class SecurityTxtValidator
 		foreach ($this->fieldValidators as $validator) {
 			try {
 				$validator->validate($securityTxt);
-			} catch (SecurityTxtError $e) {
-				$errors[] = $e->getViolation();
-			} catch (SecurityTxtWarning $e) {
-				$warnings[] = $e->getViolation();
-			}
-		}
-		if ($fetchResult !== null) {
-			try {
-				$this->canonicalUrlValidator->validate($securityTxt, $fetchResult);
 			} catch (SecurityTxtError $e) {
 				$errors[] = $e->getViolation();
 			} catch (SecurityTxtWarning $e) {

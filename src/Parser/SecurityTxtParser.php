@@ -149,6 +149,9 @@ final class SecurityTxtParser
 				}
 			}
 		}
+		if ($fetchResult !== null) {
+			$securityTxt = $securityTxt->withFetchedUrl($fetchResult->getFinalUrl());
+		}
 		$validateResult = $this->validator->validate($securityTxt, $fetchResult);
 		$expires = $securityTxt->getExpires();
 		$hasErrors = $this->lineErrors !== [] || $validateResult->getErrors() !== [];
