@@ -35,7 +35,7 @@ final class SecurityTxtValidator
 	}
 
 
-	public function validate(SecurityTxt $securityTxt): SecurityTxtValidateResult
+	public function validate(SecurityTxt $securityTxt, ?SecurityTxtFetchResult $fetchResult = null): SecurityTxtValidateResult
 	{
 		$errors = $warnings = [];
 		foreach ($this->fieldValidators as $validator) {
@@ -47,27 +47,16 @@ final class SecurityTxtValidator
 				$warnings[] = $e->getViolation();
 			}
 		}
-		return new SecurityTxtValidateResult($errors, $warnings);
-	}
-
-
-	public function validateWithFetchResult(SecurityTxt $securityTxt, SecurityTxtFetchResult $fetchResult): SecurityTxtValidateResult
-	{
-		$result = $this->validate($securityTxt);
-		try {
-			$this->canonicalUrlValidator->validate($securityTxt, $fetchResult);
-		} catch (SecurityTxtError $e) {
-			return new SecurityTxtValidateResult(
-				array_merge($result->getErrors(), [$e->getViolation()]),
-				$result->getWarnings(),
-			);
-		} catch (SecurityTxtWarning $e) {
-			return new SecurityTxtValidateResult(
-				$result->getErrors(),
-				array_merge($result->getWarnings(), [$e->getViolation()]),
-			);
+		if ($fetchResult !== null) {
+			try {
+				$this->canonicalUrlValidator->validate($securityTxt, $fetchResult);
+			} catch (SecurityTxtError $e) {
+				$errors[] = $e->getViolation();
+			} catch (SecurityTxtWarning $e) {
+				$warnings[] = $e->getViolation();
+			}
 		}
-		return $result;
+		return new SecurityTxtValidateResult($errors, $warnings);
 	}
 
 }

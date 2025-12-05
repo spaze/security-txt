@@ -112,7 +112,7 @@ final class SecurityTxtParser
 	/**
 	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
-	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseStringResult
+	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false, ?SecurityTxtFetchResult $fetchResult = null): SecurityTxtParseStringResult
 	{
 		$this->expiresWarningThreshold = $expiresWarningThreshold;
 		$this->initFieldProcessors();
@@ -149,7 +149,7 @@ final class SecurityTxtParser
 				}
 			}
 		}
-		$validateResult = $this->validator->validate($securityTxt);
+		$validateResult = $this->validator->validate($securityTxt, $fetchResult);
 		$expires = $securityTxt->getExpires();
 		$hasErrors = $this->lineErrors !== [] || $validateResult->getErrors() !== [];
 		$hasWarnings = $this->lineWarnings !== [] || $validateResult->getWarnings() !== [];
@@ -170,20 +170,7 @@ final class SecurityTxtParser
 	 */
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
-		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
-		$validateResult = $this->validator->validateWithFetchResult($parseResult->getSecurityTxt(), $fetchResult);
-		$originalValidateResult = $parseResult->getValidateResult();
-		if ($validateResult->getErrors() !== $originalValidateResult->getErrors() || $validateResult->getWarnings() !== $originalValidateResult->getWarnings()) {
-			$parseResult = new SecurityTxtParseStringResult(
-				$parseResult->getSecurityTxt(),
-				$parseResult->isValid() && $validateResult->getErrors() === [],
-				$parseResult->isStrictMode(),
-				$parseResult->getExpiresWarningThreshold(),
-				$parseResult->getLineErrors(),
-				$parseResult->getLineWarnings(),
-				$validateResult,
-			);
-		}
+		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode, $fetchResult);
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,
