@@ -32,6 +32,7 @@
 				<referencedMethod name="/.*Test::test.*/" />
 				<referencedMethod name="/.*Test::get.*/" /> <!-- Test data providers -->
 				<referencedMethod name="/Spaze\\SecurityTxt\\Check\\SecurityTxtCheckHostResult::get.*/" />
+				<referencedMethod name="/Spaze\\SecurityTxt\\Signature\\SecurityTxtSignatureErrorInfo::get.*/" />
 				<referencedMethod name="/Spaze\\SecurityTxt\\Violations\\.*::__construct/" />
 				<referencedMethod name="/Spaze\\SecurityTxt\\Violations\\.*::get.*/" />
 				<referencedMethod name="/Spaze\\SecurityTxt\\Parser\\SecurityTxtParseResult::hasErrors/" />

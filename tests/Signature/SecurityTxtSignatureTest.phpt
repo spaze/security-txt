@@ -20,6 +20,7 @@ use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtSigningKeyNoPassphraseSetE
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnknownSigningKeyException;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnusableSigningKeyException;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 use Tester\Assert;
@@ -124,9 +125,10 @@ final class SecurityTxtSignatureTest extends TestCase
 		$signature = new SecurityTxtSignature($this->getSignatureProvider(verifyThrows: new SecurityTxtCannotVerifySignatureException(null, new SecurityTxtSignatureErrorInfo('msg', 1336, null, null))));
 		$e = Assert::throws(function () use ($signature): void {
 			$signature->verify('gnupg::verify returns invalid array');
-		}, SecurityTxtCannotVerifySignatureException::class);
-		assert($e instanceof SecurityTxtCannotVerifySignatureException);
-		Assert::same('Cannot verify signature: msg; code: 1336, source: <null>, library message: <null>', $e->getMessage());
+		}, SecurityTxtWarning::class);
+		assert($e instanceof SecurityTxtWarning);
+		Assert::type(SecurityTxtSignatureCannotVerify::class, $e->getViolation());
+		Assert::same('The file is digitally signed using an OpenPGP cleartext signature but the signature is damaged and cannot be verified (msg, 1336, <null>, <null>)', $e->getMessage());
 	}
 
 

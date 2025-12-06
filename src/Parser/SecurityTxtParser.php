@@ -23,7 +23,6 @@ use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesCheckMultipleFiel
 use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
-use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
@@ -109,9 +108,6 @@ final class SecurityTxtParser
 	}
 
 
-	/**
-	 * @throws SecurityTxtCannotVerifySignatureException
-	 */
 	public function parseString(string $contents, ?string $fileLocation = null, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseStringResult
 	{
 		$this->expiresWarningThreshold = $expiresWarningThreshold;
@@ -168,9 +164,6 @@ final class SecurityTxtParser
 	}
 
 
-	/**
-	 * @throws SecurityTxtCannotVerifySignatureException
-	 */
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
 		$parseResult = $this->parseString($fetchResult->getContents(), $fetchResult->getFinalUrl(), $expiresWarningThreshold, $strictMode);
@@ -184,7 +177,6 @@ final class SecurityTxtParser
 
 	/**
 	 * @param int<1, max> $lineNumber
-	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
 	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): SecurityTxt
 	{
