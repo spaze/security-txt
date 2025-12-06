@@ -96,6 +96,12 @@ final readonly class SecurityTxtJson
 	{
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		try {
+			if (isset($values['fileLocation'])) {
+				if (!is_string($values['fileLocation'])) {
+					throw new SecurityTxtCannotParseJsonException('fileLocation is not a string');
+				}
+				$securityTxt->setFileLocation($values['fileLocation']);
+			}
 			if (isset($values['expires'])) {
 				if (!is_array($values['expires'])) {
 					throw new SecurityTxtCannotParseJsonException('expires is not an array');

@@ -20,10 +20,10 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
+use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
-use Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
@@ -102,7 +102,7 @@ final class SecurityTxtJsonTest extends TestCase
 			implode('', $lines),
 			true,
 			$lines,
-			[new SecurityTxtSchemeNotHttps('http://example.com')],
+			[new SecurityTxtFileLocationNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 		);
 
@@ -246,6 +246,41 @@ final class SecurityTxtJsonTest extends TestCase
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class, 'params' => []]]);
 		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: The exception is %s, not %s', DateTimeImmutable::class, SecurityTxtFetcherException::class));
 		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['url', 303]]]));
+	}
+
+
+	public function testCreateSecurityTxtFromJsonValues(): void
+	{
+		$values = [
+			'fileLocation' => null,
+			'expires' => null,
+			'signatureVerifyResult' => null,
+			'preferredLanguages' => null,
+			'canonical' => [],
+			'contact' => [],
+			'acknowledgments' => [],
+			'hiring' => [],
+			'policy' => [],
+			'encryption' => [],
+		];
+		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		Assert::null($securityTxt->getFileLocation());
+		Assert::null($securityTxt->getExpires());
+		Assert::null($securityTxt->getPreferredLanguages());
+		Assert::same([], $securityTxt->getCanonical());
+		Assert::same([], $securityTxt->getContact());
+		Assert::same([], $securityTxt->getAcknowledgments());
+		Assert::same([], $securityTxt->getHiring());
+		Assert::same([], $securityTxt->getPolicy());
+		Assert::same([], $securityTxt->getEncryption());
+
+		$values['fileLocation'] = 'https://foo/bar';
+		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		Assert::same('https://foo/bar', $securityTxt->getFileLocation());
+
+		$values['fileLocation'] = 'foo';
+		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		Assert::same('foo', $securityTxt->getFileLocation());
 	}
 
 }
