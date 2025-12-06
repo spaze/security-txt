@@ -18,6 +18,8 @@ use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
+use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
@@ -37,6 +39,27 @@ final class SecurityTxtTest extends TestCase
 	public function __construct()
 	{
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
+	}
+
+
+	public function testSetFileLocation(): void
+	{
+		$securityTxt = new SecurityTxt();
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('+2 weeks')));
+		$securityTxt->setFileLocation('https://foo/bar');
+		Assert::same('https://foo/bar', $securityTxt->getFileLocation());
+
+		$e = Assert::throws(function () use ($securityTxt): void {
+			$securityTxt->setFileLocation('http://foo/bar');
+		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
+		Assert::type(SecurityTxtFileLocationNotHttps::class, $e->getViolation());
+
+		$e = Assert::throws(function () use ($securityTxt): void {
+			$securityTxt->setFileLocation('foo');
+		}, SecurityTxtError::class);
+		assert($e instanceof SecurityTxtError);
+		Assert::type(SecurityTxtFileLocationNotUri::class, $e->getViolation());
 	}
 
 

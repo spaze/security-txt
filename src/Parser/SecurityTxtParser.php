@@ -112,7 +112,7 @@ final class SecurityTxtParser
 	/**
 	 * @throws SecurityTxtCannotVerifySignatureException
 	 */
-	public function parseString(string $contents, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseStringResult
+	public function parseString(string $contents, ?string $fileLocation = null, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseStringResult
 	{
 		$this->expiresWarningThreshold = $expiresWarningThreshold;
 		$this->initFieldProcessors();
@@ -125,6 +125,9 @@ final class SecurityTxtParser
 			SecurityTxtField::cases(),
 		);
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
+		if ($fileLocation !== null) {
+			$securityTxt->setFileLocation($fileLocation);
+		}
 		for ($lineNumber = 1; $lineNumber <= count($lines); $lineNumber++) {
 			$line = trim($lines[$lineNumber - 1]);
 			if (!str_ends_with($lines[$lineNumber - 1], "\n")) {
@@ -170,7 +173,7 @@ final class SecurityTxtParser
 	 */
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
-		$parseResult = $this->parseString($fetchResult->getContents(), $expiresWarningThreshold, $strictMode);
+		$parseResult = $this->parseString($fetchResult->getContents(), $fetchResult->getFinalUrl(), $expiresWarningThreshold, $strictMode);
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,

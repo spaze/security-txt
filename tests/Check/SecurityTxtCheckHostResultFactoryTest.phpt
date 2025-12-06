@@ -47,7 +47,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 			"Expires: 2020-10-15T00:01:02+02:00\n",
 		];
 		$contents = implode('', $lines);
-		$parseStringResult = $this->parser->parseString($contents, 123, true);
+		$parseStringResult = $this->parser->parseString($contents, null, 123, true);
 		$fetchResult = new SecurityTxtFetchResult(
 			'https://com.example/.well-known/security.txt',
 			'https://com.example/.well-known/security.txt',

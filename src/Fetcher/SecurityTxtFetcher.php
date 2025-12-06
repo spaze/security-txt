@@ -20,7 +20,6 @@ use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
-use Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
@@ -218,10 +217,6 @@ final class SecurityTxtFetcher
 			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl(), $contentTypeHeader?->getContentType());
 		} elseif ($contentTypeHeader->getLowercaseCharset() !== SecurityTxt::CHARSET) {
 			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharset());
-		}
-		$scheme = parse_url($result->getUrl(), PHP_URL_SCHEME);
-		if ($scheme !== 'https') {
-			$errors[] = new SecurityTxtSchemeNotHttps($result->getUrl());
 		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),

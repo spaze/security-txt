@@ -11,10 +11,10 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
-use Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
@@ -54,7 +54,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				'isTruncated' => true,
 				'errors' => [
 					[
-						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtSchemeNotHttps',
+						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps',
 						'params' => ['http://example.com'],
 						'message' => 'The file at http://example.com must use HTTPS',
 						'messageFormat' => 'The file at %s must use HTTPS',
@@ -87,7 +87,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			],
 			'fetchErrors' => [
 				[
-					'class' => SecurityTxtSchemeNotHttps::class,
+					'class' => SecurityTxtFileLocationNotHttps::class,
 					'params' => ['http://example.com'],
 					'message' => 'The file at http://example.com must use HTTPS',
 					'messageFormat' => 'The file at %s must use HTTPS',
@@ -186,6 +186,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				],
 			],
 			'securityTxt' => [
+				'fileLocation' => 'https://foo.example/.well-known/security.txt',
 				'expires' => [
 					'dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT),
 					'isExpired' => false,
@@ -215,6 +216,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 	private function getResult(): SecurityTxtCheckHostResult
 	{
 		$securityTxt = new SecurityTxt();
+		$securityTxt->setFileLocation('https://foo.example/.well-known/security.txt');
 		$securityTxt->setExpires($this->expiresFactory->create($this->expires));
 		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $this->expires->format(SecurityTxtExpires::FORMAT)];
 		$fetchResult = new SecurityTxtFetchResult(
@@ -224,7 +226,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			implode($lines),
 			true,
 			$lines,
-			[new SecurityTxtSchemeNotHttps('http://example.com')],
+			[new SecurityTxtFileLocationNotHttps('http://example.com')],
 			[new SecurityTxtWellKnownPathOnly()],
 		);
 		return new SecurityTxtCheckHostResult(
