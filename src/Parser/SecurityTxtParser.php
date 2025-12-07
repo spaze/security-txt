@@ -28,6 +28,7 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 
 final class SecurityTxtParser
 {
@@ -132,7 +133,17 @@ final class SecurityTxtParser
 			if (str_starts_with($line, '#')) {
 				continue;
 			}
-			$securityTxt = $this->checkSignature($lineNumber, $line, $contents, $securityTxt);
+			if (isset($skipSignatureArmorHeaders) && $skipSignatureArmorHeaders) {
+				if ($line === '') {
+					$skipSignatureArmorHeaders = false;
+				}
+				continue;
+			}
+			if ($this->signature->isClearsignHeader($line)) {
+				$securityTxt = $this->checkSignature($lineNumber, $contents, $securityTxt);
+				$skipSignatureArmorHeaders = true;
+				continue;
+			}
 			$field = explode(':', $line, 2);
 			if (count($field) !== 2) {
 				continue;
@@ -145,6 +156,8 @@ final class SecurityTxtParser
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
 				if ($suggestion !== null) {
 					$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
+				} else {
+					$this->lineWarnings[$lineNumber][] = new SecurityTxtUnknownField($field[0], $line);
 				}
 			}
 		}
@@ -176,19 +189,17 @@ final class SecurityTxtParser
 
 
 	/**
-	 * @param int<1, max> $lineNumber
+	 * @param positive-int $lineNumber
 	 */
-	private function checkSignature(int $lineNumber, string $line, string $contents, SecurityTxt $securityTxt): SecurityTxt
+	private function checkSignature(int $lineNumber, string $contents, SecurityTxt $securityTxt): SecurityTxt
 	{
-		if ($this->signature->isClearsignHeader($line)) {
-			try {
-				$result = $this->signature->verify($contents);
-				return $securityTxt->withSignatureVerifyResult($result);
-			} catch (SecurityTxtError $e) {
-				$this->lineErrors[$lineNumber][] = $e->getViolation();
-			} catch (SecurityTxtWarning $e) {
-				$this->lineWarnings[$lineNumber][] = $e->getViolation();
-			}
+		try {
+			$result = $this->signature->verify($contents);
+			return $securityTxt->withSignatureVerifyResult($result);
+		} catch (SecurityTxtError $e) {
+			$this->lineErrors[$lineNumber][] = $e->getViolation();
+		} catch (SecurityTxtWarning $e) {
+			$this->lineWarnings[$lineNumber][] = $e->getViolation();
 		}
 		return $securityTxt;
 	}
