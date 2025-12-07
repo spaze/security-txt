@@ -251,6 +251,10 @@ final class SecurityTxtJsonTest extends TestCase
 
 	public function testCreateSecurityTxtFromJsonValues(): void
 	{
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues([]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Field canonical is missing or not an array');
+
 		$values = [
 			'fileLocation' => null,
 			'expires' => null,

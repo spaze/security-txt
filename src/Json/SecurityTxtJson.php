@@ -182,8 +182,8 @@ final readonly class SecurityTxtJson
 	 */
 	private function addSecurityTxtUriField(array $values, string $field, string $class, callable $addField): void
 	{
-		if (!is_array($values[$field])) {
-			throw new SecurityTxtCannotParseJsonException("Field {$field} is not an array");
+		if (!isset($values[$field]) || !is_array($values[$field])) {
+			throw new SecurityTxtCannotParseJsonException("Field {$field} is missing or not an array");
 		}
 		foreach ($values[$field] as $value) {
 			if (!is_array($value)) {
