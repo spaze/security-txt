@@ -26,8 +26,9 @@ use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
-use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
+use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -69,10 +70,10 @@ final class SecurityTxtParserTest extends TestCase
 	 */
 	public function testParseStringExpiresField(string $fieldValue, bool $isExpired, array $errors): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime($fieldValue))->format(SecurityTxtExpires::FORMAT) . "\nBar: foo\n";
+		$contents = "Contact: https://example.com/\nExpires: " . (new DateTime($fieldValue))->format(SecurityTxtExpires::FORMAT) . "\nHiring: https://com.example\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::same($isExpired, $parseResult->getSecurityTxt()->getExpires()?->isExpired());
-		Assert::true($parseResult->hasErrors());
+		Assert::same($isExpired, $parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
 		foreach ($parseResult->getLineErrors() as $lineNumber => $lineErrors) {
 			foreach ($lineErrors as $key => $lineError) {
@@ -145,11 +146,11 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMissingExpires(): void
 	{
-		$contents = "Foo: bar\nBar: foo\n#Expires: 2020-10-05T10:20:30+00:00\nExpires\n";
+		$contents = "Contact: https://example.com/\nHiring: https://com.example\n#Expires: 2020-10-05T10:20:30+00:00\nExpires\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::contains(SecurityTxtNoExpires::class, array_map(function (SecurityTxtSpecViolation $throwable): string {
-			return $throwable::class;
-		}, $parseResult->getFileErrors()));
+		Assert::count(0, $parseResult->getLineErrors());
+		Assert::count(1, $parseResult->getFileErrors());
+		Assert::type(SecurityTxtNoExpires::class, $parseResult->getFileErrors()[0]);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
 	}
@@ -157,7 +158,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMultipleExpires(): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: " . (new DateTime('+3 months'))->format(SecurityTxtExpires::FORMAT) . "\nBar: foo\n";
+		$contents = "Contact: https://example.com/\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: " . (new DateTime('+3 months'))->format(SecurityTxtExpires::FORMAT) . "\nHiring: https://com.example/\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		$expiresError = $parseResult->getLineErrors()[3][0];
 		Assert::type(SecurityTxtMultipleExpires::class, $expiresError);
@@ -168,7 +169,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMultipleExpiresAllWrong(): void
 	{
-		$contents = "Foo: bar\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: Mon, 15 Aug 2015 15:52:01 +0000\nBar: foo\n";
+		$contents = "Contact: https://example.com/\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: Mon, 15 Aug 2015 15:52:01 +0000\nHiring: https://com.example/\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
 		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
@@ -180,7 +181,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMultipleExpiresFirstWrong(): void
 	{
-		$contents = "Foo: bar\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nBar: foo\n";
+		$contents = "Contact: https://example.com/\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nHiring: https://com.example/\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
 		Assert::true($parseResult->hasErrors());
@@ -190,7 +191,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMultipleExpiresFirstCorrect(): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nBar: foo\n";
+		$contents = "Contact: https://example.com/\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: Mon, 15 Aug 2005 15:52:01 +0000\nHiring: https://com.example/\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::count(3, $parseResult->getLineErrors()[3]);
 		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
@@ -220,7 +221,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseMultipleBadFiles(): void
 	{
-		$contents = "Foo: bar\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: " . (new DateTime('+3 months'))->format(SecurityTxtExpires::FORMAT) . "\nBar: foo\n";
+		$contents = "Contact: https://example.com/\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: " . (new DateTime('+3 months'))->format(SecurityTxtExpires::FORMAT) . "\nHiring: https://com.example/\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::type(SecurityTxtMultipleExpires::class, $parseResult->getLineErrors()[3][0]);
 		Assert::true($parseResult->hasErrors());
@@ -249,7 +250,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringMissingContact(): void
 	{
-		$contents = "Foo: bar\nBar: foo\n";
+		$contents = "Acknowledgments: https://example.com/\nHiring: https://com.example/\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		$contactError = $parseResult->getFileErrors()[0];
 		Assert::type(SecurityTxtNoContact::class, $contactError);
@@ -390,6 +391,68 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::same($uri, $parseResult->getSecurityTxt()->getEncryption()[0]->getUri());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	public function testParseStringUnknownField(): void
+	{
+		$contents = "Foo: bar\nHash: file-not-signed-0123\nContact: https://example.com/\nExpires: " . (new DateTime('+3 weeks'))->format(SecurityTxtExpires::FORMAT) . "\n";
+		$parseResult = $this->securityTxtParser->parseString($contents);
+		Assert::count(0, $parseResult->getLineErrors());
+		Assert::false($parseResult->hasErrors());
+		Assert::true($parseResult->hasWarnings());
+		Assert::count(2, $parseResult->getLineWarnings());
+		Assert::count(0, $parseResult->getFileWarnings());
+		Assert::type(SecurityTxtUnknownField::class, $parseResult->getLineWarnings()[1][0]);
+		Assert::type(SecurityTxtUnknownField::class, $parseResult->getLineWarnings()[2][0]);
+	}
+
+
+	public function testParseStringSignedFile(): void
+	{
+		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		Expires: {$expires}
+		Canonical: https://foo.bar.example/
+		-----BEGIN PGP SIGNATURE-----
+
+		iJIEARYKADoWIQSvbhd14xH/eOkR59x/h5ABqcj1CgUCaH7y/xwcc3RpbGwudGVz
+		dHNAbGlicmFyeS5leGFtcGxlAAoJEH+HkAGpyPUKRvEA/2cVGZs54ieQ7s1nSTla
+		6O+JHJNaLOf3llvGRi55gW+BAQCDVLTj2q7cbHPS78lD/uvsgFI3NVWwZx8m72sx
+		SmjCCQ==
+		=bZYA
+		-----END PGP SIGNATURE-----
+		EOT . "\n";
+		$parseResult = $this->securityTxtParser->parseString($contents);
+		Assert::false($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+		Assert::same('AF6E1775E311FF78E911E7DC7F879001A9C8F50A', $parseResult->getSecurityTxt()->getSignatureVerifyResult()?->getKeyFingerprint());
+	}
+
+
+	public function testParseStringSignedFileDamaged(): void
+	{
+		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		Expires: {$expires}
+		Canonical: https://foo.bar.example/
+		-----BEGIN PGP SIGNATURE-----
+		yes, but
+		-----END PGP SIGNATURE-----
+		EOT . "\n";
+		$parseResult = $this->securityTxtParser->parseString($contents);
+		Assert::false($parseResult->hasErrors());
+		Assert::true($parseResult->hasWarnings());
+		Assert::count(1, $parseResult->getLineWarnings());
+		Assert::type(SecurityTxtSignatureCannotVerify::class, $parseResult->getLineWarnings()[1][0]);
 	}
 
 
