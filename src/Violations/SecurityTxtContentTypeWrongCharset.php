@@ -8,7 +8,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 final class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 {
 
-	public function __construct(string $url, string $contentType, ?string $charset)
+	public function __construct(string $uri, string $contentType, ?string $charset)
 	{
 		$format = $charset !== null
 			? 'The file at %s has a correct %s of %s but the %s parameter should be changed to %s'
@@ -16,7 +16,7 @@ final class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 		parent::__construct(
 			func_get_args(),
 			$format,
-			$charset !== null ? [$url, 'Content-Type', $contentType, $charset, SecurityTxt::CHARSET] : [$url, 'Content-Type', $contentType, SecurityTxt::CHARSET],
+			$charset !== null ? [$uri, 'Content-Type', $contentType, $charset, SecurityTxt::CHARSET] : [$uri, 'Content-Type', $contentType, SecurityTxt::CHARSET],
 			'draft-foudil-securitytxt-03',
 			SecurityTxt::CONTENT_TYPE_HEADER,
 			$charset !== null ? 'Change the parameter to %s' : 'Add a %s parameter',
