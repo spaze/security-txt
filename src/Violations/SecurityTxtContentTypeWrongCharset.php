@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
-use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtContentType;
 
 final class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 {
@@ -16,11 +16,11 @@ final class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 		parent::__construct(
 			func_get_args(),
 			$format,
-			$charset !== null ? [$uri, 'Content-Type', $contentType, $charset, SecurityTxt::CHARSET] : [$uri, 'Content-Type', $contentType, SecurityTxt::CHARSET],
+			$charset !== null ? [$uri, 'Content-Type', $contentType, $charset, SecurityTxtContentType::CHARSET_PARAMETER] : [$uri, 'Content-Type', $contentType, SecurityTxtContentType::CHARSET_PARAMETER],
 			'draft-foudil-securitytxt-03',
-			SecurityTxt::CONTENT_TYPE_HEADER,
+			SecurityTxtContentType::MEDIA_TYPE,
 			$charset !== null ? 'Change the parameter to %s' : 'Add a %s parameter',
-			[SecurityTxt::CHARSET],
+			[SecurityTxtContentType::CHARSET_PARAMETER],
 			'3',
 		);
 	}

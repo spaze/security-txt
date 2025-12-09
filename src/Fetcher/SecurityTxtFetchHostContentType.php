@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
-final readonly class SecurityTxtContentType
+final readonly class SecurityTxtFetchHostContentType
 {
 
 	/**
