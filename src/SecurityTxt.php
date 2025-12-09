@@ -40,10 +40,6 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesWrongLanguageTags;
 final class SecurityTxt implements JsonSerializable
 {
 
-	public const string CONTENT_TYPE = 'text/plain';
-	public const string CHARSET = 'charset=utf-8';
-	public const string CONTENT_TYPE_HEADER = self::CONTENT_TYPE . '; ' . self::CHARSET;
-
 	private ?string $fileLocation = null;
 	private ?SecurityTxtExpires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
