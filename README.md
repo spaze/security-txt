@@ -112,7 +112,7 @@ By default, values are validated when set, and an exception is thrown when they'
 - `AllowInvalidValuesSilently` (an exception will not be thrown, and the value will be set)
 
 ## Content type
-You can use the following `SecurityTxt` constants to serve the file with correct HTTP content type:
+You can use the following `SecurityTxtContentType` constants to serve the file with correct HTTP content type:
 - `SecurityTxtContentType::MEDIA_TYPE`, the value to be sent as `Content-Type` header value (`text/plain; charset=utf-8`);
 - `SecurityTxtContentType::CONTENT_TYPE`, the correct content type `text/plain`
 - `SecurityTxtContentType::CHARSET`, the charset `utf-8`

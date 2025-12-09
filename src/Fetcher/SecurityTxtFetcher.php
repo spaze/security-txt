@@ -215,8 +215,8 @@ final class SecurityTxtFetcher
 		$contentTypeHeader = $result->getContentType();
 		if ($contentTypeHeader === null || $contentTypeHeader->getLowercaseContentType() !== SecurityTxtContentType::CONTENT_TYPE) {
 			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl(), $contentTypeHeader?->getContentType());
-		} elseif ($contentTypeHeader->getLowercaseCharset() !== SecurityTxtContentType::CHARSET_PARAMETER) {
-			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharset());
+		} elseif ($contentTypeHeader->getLowercaseCharsetParameter() !== SecurityTxtContentType::CHARSET_PARAMETER) {
+			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharsetParameter());
 		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),

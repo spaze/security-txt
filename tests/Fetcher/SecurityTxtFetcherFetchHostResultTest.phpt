@@ -21,7 +21,7 @@ final class SecurityTxtFetcherFetchHostResultTest extends TestCase
 		$contentType = $wellKnown->getContentType();
 		assert($contentType !== null);
 		Assert::same('text/html', $contentType->getLowercaseContentType());
-		Assert::same('charset=win-1337', $contentType->getLowercaseCharset());
+		Assert::same('charset=win-1337', $contentType->getLowercaseCharsetParameter());
 	}
 
 }

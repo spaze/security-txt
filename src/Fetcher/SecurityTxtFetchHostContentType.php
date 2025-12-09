@@ -14,15 +14,15 @@ final readonly class SecurityTxtFetchHostContentType
 	/**
 	 * @var lowercase-string|null
 	 */
-	private ?string $lowercaseCharset;
+	private ?string $lowercaseCharsetParameter;
 
 
 	public function __construct(
 		private string $contentType,
-		private ?string $charset,
+		private ?string $charsetParameter,
 	) {
 		$this->lowercaseContentType = strtolower(trim($this->contentType));
-		$this->lowercaseCharset = $this->charset !== null ? strtolower(trim($this->charset)) : null;
+		$this->lowercaseCharsetParameter = $this->charsetParameter !== null ? strtolower(trim($this->charsetParameter)) : null;
 	}
 
 
@@ -32,9 +32,9 @@ final readonly class SecurityTxtFetchHostContentType
 	}
 
 
-	public function getCharset(): ?string
+	public function getCharsetParameter(): ?string
 	{
-		return $this->charset;
+		return $this->charsetParameter;
 	}
 
 
@@ -50,9 +50,9 @@ final readonly class SecurityTxtFetchHostContentType
 	/**
 	 * @return lowercase-string|null
 	 */
-	public function getLowercaseCharset(): ?string
+	public function getLowercaseCharsetParameter(): ?string
 	{
-		return $this->lowercaseCharset;
+		return $this->lowercaseCharsetParameter;
 	}
 
 }
