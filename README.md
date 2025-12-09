@@ -128,7 +128,7 @@ $securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://ack1.ex
 $securityTxt->setExpires(new SecurityTxtExpiresFactory()->create(new DateTimeImmutable('+3 months midnight')));
 $securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('ftp://ack2.example'));
 $securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs-CZ']));
-header('Content-Type: ' . SecurityTxt::CONTENT_TYPE_HEADER);
+header('Content-Type: ' . SecurityTxtContentType::MEDIA_TYPE);
 echo new SecurityTxtWriter()->write($securityTxt);
 ```
 
