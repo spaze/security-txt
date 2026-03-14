@@ -166,8 +166,8 @@ final class SecurityTxtFetcher
 		$errors = $warnings = [];
 		$isRegularHtmlPageWellKnown = $this->isRegularHtmlPage($wellKnown);
 		$isRegularHtmlPageTopLevel = $this->isRegularHtmlPage($topLevel);
-		$wellKnownContents = $isRegularHtmlPageWellKnown ? null : $wellKnown->getContents();
-		$topLevelContents = $isRegularHtmlPageTopLevel ? null : $topLevel->getContents();
+		$wellKnownContents = $isRegularHtmlPageWellKnown || $wellKnown->isTruncated() ? null : $wellKnown->getContents();
+		$topLevelContents = $isRegularHtmlPageTopLevel || $topLevel->isTruncated() ? null : $topLevel->getContents();
 		if ($wellKnownContents === null && $topLevelContents === null) {
 			throw new SecurityTxtNotFoundException(
 				[
@@ -177,6 +177,7 @@ final class SecurityTxtFetcher
 						$wellKnown->getHttpCode(),
 						$this->redirects[$wellKnown->getUrl()] ?? [],
 						$isRegularHtmlPageWellKnown,
+						$wellKnown->isTruncated(),
 					],
 					$topLevel->getUrl() => [
 						$topLevel->getIpAddress(),
@@ -184,6 +185,7 @@ final class SecurityTxtFetcher
 						$topLevel->getHttpCode(),
 						$this->redirects[$topLevel->getUrl()] ?? [],
 						$isRegularHtmlPageTopLevel,
+						$topLevel->isTruncated(),
 					],
 				],
 			);
