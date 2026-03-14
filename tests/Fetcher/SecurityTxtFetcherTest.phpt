@@ -144,32 +144,35 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
-	 * @return array<string, array{0:string|null, 1:string|null, 2:bool}>
+	 * @return array<string, array{0:string|null, 1:string|null, 2:bool, 3:bool, 4:bool}>
 	 */
 	public function getContents(): array
 	{
 		return [
-			'both 200' => ['well-known', 'top-level', true],
-			'top-level 404' => ['well-known', null, true],
-			'well-known 404' => [null, 'top-level', false],
-			'same' => ['same', 'same', true],
+			'both 200' => ['well-known', 'top-level', false, false, true],
+			'both 200 but top-level truncated' => ['well-known', 'top-level', false, true, true],
+			'both 200 but well-known truncated' => ['well-known', 'top-level', true, false, false],
+			'top-level 404' => ['well-known', null, false, false, true],
+			'well-known 404' => [null, 'top-level', false, false, false],
+			'same' => ['same', 'same', false, false, true],
+			'same but top-level truncated' => ['same', 'same', false, true, true],
+			'same but well-known truncated' => ['same', 'same', true, false, false],
 		];
 	}
 
 
 	/** @dataProvider getContents */
-	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownWins): void
+	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownTruncated, bool $topLevelTruncated, bool $wellKnownWins): void
 	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', true));
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, true) : null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, false) : null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, $wellKnownTruncated) : null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, $topLevelTruncated) : null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
 		Assert::same($expected, $result->getContents());
-		Assert::same($wellKnownWins, $result->isTruncated());
 	}
 
 
@@ -188,6 +191,19 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same($lines[0], $result->getLine(1));
 		Assert::same($lines[1], $result->getLine(2));
 		Assert::null($result->getLine(3));
+	}
+
+
+	public function testGetResultTruncated(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', true));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, new SecurityTxtFetcherResponse(200, [], 'well-known', true));
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, new SecurityTxtFetcherResponse(200, [], 'top-level', true));
+		$method = new ReflectionMethod($fetcher, 'getResult');
+		Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel) {
+			$method->invoke($fetcher, $wellKnown, $topLevel, true);
+		}, SecurityTxtNotFoundException::class, "Can't read security.txt: foo (192.0.2.1) => response too long, bar (198.51.100.1) => response too long");
 	}
 
 
