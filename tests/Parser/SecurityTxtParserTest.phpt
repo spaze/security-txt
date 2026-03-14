@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
@@ -390,6 +391,26 @@ final class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseString("Encryption: {$uri}\n");
 		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getEncryption()[0]->getUri());
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	public function testParseStringCsaf(): void
+	{
+		$uri = 'HTTP://example.net/';
+		$parseResult = $this->securityTxtParser->parseString("CSAF: {$uri}\n");
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+		Assert::same(SecurityTxtCsafNotHttps::class, $parseResult->getLineErrors()[1][0]::class);
+		Assert::same('If the CSAF field indicates a web URI, then it must begin with "https://"', $parseResult->getLineErrors()[1][0]->getMessage());
+		Assert::same('https://example.net/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+
+		$uri = 'https://example.net/data/provider-metadata.json';
+		$parseResult = $this->securityTxtParser->parseString("CSAF: {$uri}\n");
+		Assert::count(0, $parseResult->getLineErrors());
+		Assert::same($uri, $parseResult->getSecurityTxt()->getCsaf()[0]->getUri());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
 	}
