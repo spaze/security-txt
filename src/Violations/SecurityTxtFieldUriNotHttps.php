@@ -8,10 +8,16 @@ use Spaze\SecurityTxt\Fields\SecurityTxtField;
 abstract class SecurityTxtFieldUriNotHttps extends SecurityTxtSpecViolation
 {
 
-	public function __construct(SecurityTxtField $field, string $uri, string $specSection)
+	/**
+	 * @param list<mixed> $constructorParams
+	 * @param SecurityTxtField $field
+	 * @param string $uri
+	 * @param string $specSection
+	 */
+	public function __construct(array $constructorParams, SecurityTxtField $field, string $uri, string $specSection)
 	{
 		parent::__construct(
-			func_get_args(),
+			$constructorParams,
 			'If the %s field indicates a web URI, then it must begin with "https://"',
 			[$field->value],
 			'draft-foudil-securitytxt-06',

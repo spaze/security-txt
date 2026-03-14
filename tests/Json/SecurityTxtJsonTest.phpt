@@ -17,10 +17,12 @@ use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
+use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
@@ -73,6 +75,21 @@ final class SecurityTxtJsonTest extends TestCase
 			$this->securityTxtJson->createViolationsFromJsonValues([['class' => DateTimeImmutable::class, 'params' => []]]);
 		}, SecurityTxtCannotParseJsonException::class, sprintf("Cannot parse JSON: class %s doesn't extend %s", DateTimeImmutable::class, SecurityTxtSpecViolation::class));
 		Assert::equal([new SecurityTxtNoContact()], $this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtNoContact::class, 'params' => []]]));
+	}
+
+
+	public function testSerializeViolationsThenCreateFromJsonValues(): void
+	{
+		$json = json_encode([
+			new SecurityTxtContactNotUri('le big mac'),
+			new SecurityTxtHiringNotHttps('http://example.com/'),
+		]);
+		assert(is_string($json));
+		$decoded = json_decode($json, true);
+		assert(is_array($decoded));
+		$violations = $this->securityTxtJson->createViolationsFromJsonValues(array_values($decoded));
+		Assert::same("The Contact value (le big mac) doesn't follow the URI syntax described in RFC 3986, the scheme is missing", $violations[0]->getMessage());
+		Assert::same('If the Hiring field indicates a web URI, then it must begin with "https://"', $violations[1]->getMessage());
 	}
 
 
