@@ -13,6 +13,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
@@ -453,6 +454,19 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::true($parseResult->hasWarnings());
 		Assert::count(1, $parseResult->getLineWarnings());
 		Assert::type(SecurityTxtSignatureCannotVerify::class, $parseResult->getLineWarnings()[1][0]);
+	}
+
+
+	public function testParseStringUriNotHttps(): void
+	{
+		$uri = 'HTTP://EXAMPLE.COM/';
+		$parseResult = $this->securityTxtParser->parseString("Contact: {$uri}\n");
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+		Assert::same(SecurityTxtContactNotHttps::class, $parseResult->getLineErrors()[1][0]::class);
+		Assert::same('If the Contact field indicates a web URI, then it must begin with "https://"', $parseResult->getLineErrors()[1][0]->getMessage());
+		Assert::same('https://EXAMPLE.COM/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
 	}
 
 
