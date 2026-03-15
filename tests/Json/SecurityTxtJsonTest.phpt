@@ -11,12 +11,15 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fields\SecurityTxtBugBounty;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
+use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
+use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
@@ -27,6 +30,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
@@ -89,6 +93,9 @@ final class SecurityTxtJsonTest extends TestCase
 			new SecurityTxtCsafNotUri('with cheese'),
 			new SecurityTxtCsafNotHttps('http://example.com/bar.txt'),
 			new SecurityTxtCsafWrongFile('https://example.com/foo/bar.txt'),
+			new SecurityTxtBugBountyWrongCase('false'),
+			new SecurityTxtBugBountyWrongValue('cash only'),
+			new SecurityTxtMultipleBugBounty(),
 		]);
 		assert(is_string($json));
 		$decoded = json_decode($json, true);
@@ -99,6 +106,9 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::same("The CSAF value (with cheese) doesn't follow the URI syntax described in RFC 3986, the scheme is missing", $violations[2]->getMessage());
 		Assert::same('If the CSAF field indicates a web URI, then it must begin with "https://"', $violations[3]->getMessage());
 		Assert::same('The file with the Common Security Advisory Framework (CSAF) metadata currently located at https://example.com/foo/bar.txt must be called provider-metadata.json', $violations[4]->getMessage());
+		Assert::same('The first letter of the Bug-Bounty field value false should be uppercase', $violations[5]->getMessage());
+		Assert::same('The value of the Bug-Bounty field (cash only) should be either True or False', $violations[6]->getMessage());
+		Assert::same('The Bug-Bounty field must not appear more than once', $violations[7]->getMessage());
 	}
 
 
@@ -119,8 +129,9 @@ final class SecurityTxtJsonTest extends TestCase
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
 		$dateTime = new DateTimeImmutable('2022-08-08T02:40:54+00:00');
 		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
+		$securityTxt->setBugBounty(new SecurityTxtBugBounty(true));
 		$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('LeKeyFingerPrint', new DateTimeImmutable('-2 weeks noon +02:00')));
-		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $dateTime->format(DATE_RFC2822)];
+		$lines = ["Hi-ring: https://example.com/hiring\n", "Bug-Bounty: True\n", 'Expires: ' . $dateTime->format(DATE_RFC2822)];
 		$fetchResult = new SecurityTxtFetchResult(
 			'http://www.example.com/.well-known/security.txt',
 			'https://www.example.com/.well-known/security.txt',
@@ -312,6 +323,9 @@ final class SecurityTxtJsonTest extends TestCase
 			'csaf' => [
 				['uri' => 'https://example.com/csaf'],
 			],
+			'bugBounty' => [
+				'rewards' => true,
+			],
 		];
 		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
 		Assert::null($securityTxt->getFileLocation());
@@ -326,6 +340,7 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::same('https://example.com/policy', $securityTxt->getPolicy()[0]->getUri());
 		Assert::same('https://example.com/encryption', $securityTxt->getEncryption()[0]->getUri());
 		Assert::same('https://example.com/csaf', $securityTxt->getCsaf()[0]->getUri());
+		Assert::true($securityTxt->getBugBounty()?->rewards());
 
 		$values['fileLocation'] = 'https://foo/bar';
 		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);

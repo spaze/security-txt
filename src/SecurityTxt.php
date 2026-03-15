@@ -8,6 +8,7 @@ use Override;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
+use Spaze\SecurityTxt\Fields\SecurityTxtBugBounty;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
 use Spaze\SecurityTxt\Fields\SecurityTxtCsaf;
@@ -48,6 +49,7 @@ final class SecurityTxt implements JsonSerializable
 	private ?SecurityTxtExpires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
 	private ?SecurityTxtPreferredLanguages $preferredLanguages = null;
+	private ?SecurityTxtBugBounty $bugBounty = null;
 
 	/**
 	 * @var list<SecurityTxtCanonical>
@@ -382,6 +384,24 @@ final class SecurityTxt implements JsonSerializable
 	}
 
 
+	public function setBugBounty(SecurityTxtBugBounty $bugBounty): void
+	{
+		$this->setFieldValue(
+			function () use ($bugBounty): SecurityTxtBugBounty {
+				return $this->bugBounty = $bugBounty;
+			},
+			function (): void {
+			},
+		);
+	}
+
+
+	public function getBugBounty(): ?SecurityTxtBugBounty
+	{
+		return $this->bugBounty;
+	}
+
+
 	/**
 	 * @param callable(): void $setValue
 	 * @param callable(): void $validator
@@ -467,6 +487,7 @@ final class SecurityTxt implements JsonSerializable
 			'policy' => $this->getPolicy(),
 			'encryption' => $this->getEncryption(),
 			'csaf' => $this->getCsaf(),
+			'bugBounty' => $this->getBugBounty(),
 		];
 	}
 

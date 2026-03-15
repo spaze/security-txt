@@ -12,6 +12,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
+use Spaze\SecurityTxt\Fields\SecurityTxtBugBounty;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
 use Spaze\SecurityTxt\Fields\SecurityTxtCsaf;
@@ -160,6 +161,14 @@ final readonly class SecurityTxtJson
 					$languages[] = $language;
 				}
 				$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages($languages));
+			}
+			if (isset($values['bugBounty'])) {
+				if (!is_array($values['bugBounty'])) {
+					throw new SecurityTxtCannotParseJsonException('bugBounty is not an array');
+				} elseif (!isset($values['bugBounty']['rewards']) || !is_bool($values['bugBounty']['rewards'])) {
+					throw new SecurityTxtCannotParseJsonException('bugBounty > rewards is missing or not a bool');
+				}
+				$securityTxt->setBugBounty(new SecurityTxtBugBounty($values['bugBounty']['rewards']));
 			}
 			$this->addSecurityTxtUriField($values, 'canonical', SecurityTxtCanonical::class, $securityTxt->addCanonical(...));
 			$this->addSecurityTxtUriField($values, 'contact', SecurityTxtContact::class, $securityTxt->addContact(...));

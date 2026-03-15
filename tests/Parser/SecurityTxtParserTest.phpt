@@ -13,6 +13,8 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
+use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
@@ -411,6 +413,32 @@ final class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseString("CSAF: {$uri}\n");
 		Assert::count(0, $parseResult->getLineErrors());
 		Assert::same($uri, $parseResult->getSecurityTxt()->getCsaf()[0]->getUri());
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	public function testParseStringBugBounty(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Bug-Bounty: true\n");
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+		Assert::same(SecurityTxtBugBountyWrongCase::class, $parseResult->getLineErrors()[1][0]::class);
+		Assert::same('The first letter of the Bug-Bounty field value true should be uppercase', $parseResult->getLineErrors()[1][0]->getMessage());
+		Assert::same('True', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+
+		$parseResult = $this->securityTxtParser->parseString("Bug-Bounty: pizza\n");
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+		Assert::same(SecurityTxtBugBountyWrongValue::class, $parseResult->getLineErrors()[1][0]::class);
+		Assert::same('The value of the Bug-Bounty field (pizza) should be either True or False', $parseResult->getLineErrors()[1][0]->getMessage());
+		Assert::same('Change the value of the Bug-Bounty field to True or False', $parseResult->getLineErrors()[1][0]->getHowToFix());
+
+		$parseResult = $this->securityTxtParser->parseString("Bug-Bounty: True\n");
+		Assert::count(0, $parseResult->getLineErrors());
+		Assert::true($parseResult->getSecurityTxt()->getBugBounty()?->rewards());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
 	}
