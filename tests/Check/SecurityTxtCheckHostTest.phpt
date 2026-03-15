@@ -209,6 +209,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				'policy' => [],
 				'encryption' => [],
 				'csaf' => [],
+				'bugBounty' => null,
 			],
 			'expired' => false,
 			'expiryDays' => 150,

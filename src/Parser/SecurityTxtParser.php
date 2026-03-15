@@ -9,6 +9,8 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\FieldProcessors\AcknowledgmentsAddFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\BugBountyCheckMultipleFields;
+use Spaze\SecurityTxt\Parser\FieldProcessors\BugBountySetFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\CanonicalAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\ContactAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\CsafAddFieldValue;
@@ -64,6 +66,10 @@ final class SecurityTxtParser
 		}
 		$this->fieldProcessors[SecurityTxtField::Acknowledgments->value] = [
 			new AcknowledgmentsAddFieldValue(),
+		];
+		$this->fieldProcessors[SecurityTxtField::BugBounty->value] = [
+			new BugBountyCheckMultipleFields(),
+			new BugBountySetFieldValue(),
 		];
 		$this->fieldProcessors[SecurityTxtField::Canonical->value] = [
 			new CanonicalAddFieldValue(),
