@@ -66,6 +66,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 						'howToFixValues' => ['security.txt'],
 						'specSection' => '3',
 						'seeAlsoSections' => [],
+						'specUrl' => null,
 					],
 				],
 				'warnings' => [
@@ -82,6 +83,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 						'howToFixValues' => ['/.well-known/'],
 						'specSection' => '3',
 						'seeAlsoSections' => [],
+						'specUrl' => null,
 					],
 				],
 			],
@@ -99,6 +101,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 					'howToFixValues' => ['security.txt'],
 					'specSection' => '3',
 					'seeAlsoSections' => [],
+					'specUrl' => null,
 				],
 			],
 			'fetchWarnings' => [
@@ -115,6 +118,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 					'howToFixValues' => ['/.well-known/'],
 					'specSection' => '3',
 					'seeAlsoSections' => [],
+					'specUrl' => null,
 				],
 			],
 			'lineErrors' => [
@@ -132,6 +136,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 						'howToFixValues' => ['<CRLF>', '<LF>'],
 						'specSection' => '2.2',
 						'seeAlsoSections' => ['4'],
+						'specUrl' => null,
 					],
 				],
 			],
@@ -150,6 +155,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 						'howToFixValues' => ['Hi-ring', SecurityTxtField::Hiring->value],
 						'specSection' => null,
 						'seeAlsoSections' => [],
+						'specUrl' => null,
 					],
 				],
 			],
@@ -167,6 +173,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 					'howToFixValues' => [SecurityTxtField::Contact->value, 'mailto:security@example.com'],
 					'specSection' => '2.5.3',
 					'seeAlsoSections' => ['2.5.4'],
+					'specUrl' => null,
 				],
 			],
 			'fileWarnings' => [
@@ -183,6 +190,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 					'howToFixValues' => ['gnupg'],
 					'specSection' => '2.3',
 					'seeAlsoSections' => [],
+					'specUrl' => null,
 				],
 			],
 			'securityTxt' => [
@@ -200,6 +208,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 				'hiring' => [],
 				'policy' => [],
 				'encryption' => [],
+				'csaf' => [],
 			],
 			'expired' => false,
 			'expiryDays' => 150,

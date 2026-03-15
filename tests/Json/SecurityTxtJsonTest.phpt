@@ -19,6 +19,9 @@ use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtCsafWrongFile;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
@@ -83,6 +86,9 @@ final class SecurityTxtJsonTest extends TestCase
 		$json = json_encode([
 			new SecurityTxtContactNotUri('le big mac'),
 			new SecurityTxtHiringNotHttps('http://example.com/'),
+			new SecurityTxtCsafNotUri('with cheese'),
+			new SecurityTxtCsafNotHttps('http://example.com/bar.txt'),
+			new SecurityTxtCsafWrongFile('https://example.com/foo/bar.txt'),
 		]);
 		assert(is_string($json));
 		$decoded = json_decode($json, true);
@@ -90,6 +96,9 @@ final class SecurityTxtJsonTest extends TestCase
 		$violations = $this->securityTxtJson->createViolationsFromJsonValues(array_values($decoded));
 		Assert::same("The Contact value (le big mac) doesn't follow the URI syntax described in RFC 3986, the scheme is missing", $violations[0]->getMessage());
 		Assert::same('If the Hiring field indicates a web URI, then it must begin with "https://"', $violations[1]->getMessage());
+		Assert::same("The CSAF value (with cheese) doesn't follow the URI syntax described in RFC 3986, the scheme is missing", $violations[2]->getMessage());
+		Assert::same('If the CSAF field indicates a web URI, then it must begin with "https://"', $violations[3]->getMessage());
+		Assert::same('The file with the Common Security Advisory Framework (CSAF) metadata currently located at https://example.com/foo/bar.txt must be called provider-metadata.json', $violations[4]->getMessage());
 	}
 
 
@@ -275,6 +284,64 @@ final class SecurityTxtJsonTest extends TestCase
 		$values = [
 			'fileLocation' => null,
 			'expires' => null,
+			'signatureVerifyResult' => [
+				'dateTime' => '2025-09-23T17:02:54+02:00',
+				'keyFingerprint' => '4BCAFED00D5CAFEBABE5DEADBEEF1234',
+			],
+			'preferredLanguages' => [
+				'languages' => ['cs', 'en'],
+			],
+			'canonical' => [
+				['uri' => 'https://example.com/.well-known/security.txt'],
+			],
+			'contact' => [
+				['uri' => 'https://example.com/contact'],
+			],
+			'acknowledgments' => [
+				['uri' => 'https://example.com/acknowledgments'],
+			],
+			'hiring' => [
+				['uri' => 'https://example.com/hiring'],
+			],
+			'policy' => [
+				['uri' => 'https://example.com/policy'],
+			],
+			'encryption' => [
+				['uri' => 'https://example.com/encryption'],
+			],
+			'csaf' => [
+				['uri' => 'https://example.com/csaf'],
+			],
+		];
+		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		Assert::null($securityTxt->getFileLocation());
+		Assert::null($securityTxt->getExpires());
+		Assert::same('2025-09-23T17:02:54+02:00', $securityTxt->getSignatureVerifyResult()?->getDate()->format(DATE_RFC3339));
+		Assert::same('4BCAFED00D5CAFEBABE5DEADBEEF1234', $securityTxt->getSignatureVerifyResult()?->getKeyFingerprint());
+		Assert::same(['cs', 'en'], $securityTxt->getPreferredLanguages()?->getLanguages());
+		Assert::same('https://example.com/.well-known/security.txt', $securityTxt->getCanonical()[0]->getUri());
+		Assert::same('https://example.com/contact', $securityTxt->getContact()[0]->getUri());
+		Assert::same('https://example.com/acknowledgments', $securityTxt->getAcknowledgments()[0]->getUri());
+		Assert::same('https://example.com/hiring', $securityTxt->getHiring()[0]->getUri());
+		Assert::same('https://example.com/policy', $securityTxt->getPolicy()[0]->getUri());
+		Assert::same('https://example.com/encryption', $securityTxt->getEncryption()[0]->getUri());
+		Assert::same('https://example.com/csaf', $securityTxt->getCsaf()[0]->getUri());
+
+		$values['fileLocation'] = 'https://foo/bar';
+		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		Assert::same('https://foo/bar', $securityTxt->getFileLocation());
+
+		$values['fileLocation'] = 'foo';
+		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		Assert::same('foo', $securityTxt->getFileLocation());
+	}
+
+
+	public function testCreateSecurityTxtFromJsonValuesEmptyRequiredOnly(): void
+	{
+		$values = [
+			'fileLocation' => null,
+			'expires' => null,
 			'signatureVerifyResult' => null,
 			'preferredLanguages' => null,
 			'canonical' => [],
@@ -294,14 +361,7 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::same([], $securityTxt->getHiring());
 		Assert::same([], $securityTxt->getPolicy());
 		Assert::same([], $securityTxt->getEncryption());
-
-		$values['fileLocation'] = 'https://foo/bar';
-		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
-		Assert::same('https://foo/bar', $securityTxt->getFileLocation());
-
-		$values['fileLocation'] = 'foo';
-		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
-		Assert::same('foo', $securityTxt->getFileLocation());
+		Assert::same([], $securityTxt->getCsaf());
 	}
 
 }

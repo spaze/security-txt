@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
+use Spaze\SecurityTxt\Fields\SecurityTxtCsaf;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -50,6 +51,7 @@ final class SecurityTxtWriterTest extends TestCase
 		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://ack1.example'));
 		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
 		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('ftp://ack2.example'));
+		$securityTxt->addCsaf(new SecurityTxtCsaf('https://csaf.example/provider-metadata.json'));
 		$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'cs-CZ']));
 		$expected = "Contact: https://contact.example\n"
 			. "Contact: tel:123456\n"
@@ -57,6 +59,7 @@ final class SecurityTxtWriterTest extends TestCase
 			. "Acknowledgments: https://ack1.example\n"
 			. 'Expires: ' . $dateTime->format(DATE_RFC3339) . "\n"
 			. "Acknowledgments: ftp://ack2.example\n"
+			. "CSAF: https://csaf.example/provider-metadata.json\n"
 			. "Preferred-Languages: en,cs-CZ\n";
 		Assert::same($expected, $this->securityTxtWriter->write($securityTxt));
 	}
