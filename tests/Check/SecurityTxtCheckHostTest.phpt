@@ -195,21 +195,16 @@ final class SecurityTxtCheckHostTest extends TestCase
 			],
 			'securityTxt' => [
 				'fileLocation' => 'https://foo.example/.well-known/security.txt',
-				'expires' => [
-					'dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT),
-					'isExpired' => false,
-					'inDays' => 24,
+				'fields' => [
+					[
+						'Expires' => [
+							'dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT),
+							'isExpired' => false,
+							'inDays' => 24,
+						],
+					],
 				],
 				'signatureVerifyResult' => null,
-				'preferredLanguages' => null,
-				'canonical' => [],
-				'contact' => [],
-				'acknowledgments' => [],
-				'hiring' => [],
-				'policy' => [],
-				'encryption' => [],
-				'csaf' => [],
-				'bugBounty' => null,
 			],
 			'expired' => false,
 			'expiryDays' => 150,

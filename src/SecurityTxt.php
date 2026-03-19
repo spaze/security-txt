@@ -87,9 +87,14 @@ final class SecurityTxt implements JsonSerializable
 	private array $csaf = [];
 
 	/**
+	 * @var list<array<string, SecurityTxtFieldValue>>
+	 */
+	private array $fieldsWithNames = [];
+
+	/**
 	 * @var list<SecurityTxtFieldValue>
 	 */
-	private array $orderedFields = [];
+	private array $fields = [];
 
 
 	public function __construct(
@@ -433,7 +438,8 @@ final class SecurityTxt implements JsonSerializable
 	{
 		$this->setValue(
 			function () use ($setValue): void {
-				$this->orderedFields[] = $setValue();
+				$this->fields[] = $fieldValue = $setValue();
+				$this->fieldsWithNames[] = [$fieldValue->getField()->value => $fieldValue];
 			},
 			$validator,
 		);
@@ -463,9 +469,9 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @return list<SecurityTxtFieldValue>
 	 */
-	public function getOrderedFields(): array
+	public function getFields(): array
 	{
-		return $this->orderedFields;
+		return $this->fields;
 	}
 
 
@@ -477,17 +483,8 @@ final class SecurityTxt implements JsonSerializable
 	{
 		return [
 			'fileLocation' => $this->getFileLocation(),
-			'expires' => $this->getExpires(),
+			'fields' => $this->fieldsWithNames,
 			'signatureVerifyResult' => $this->getSignatureVerifyResult(),
-			'preferredLanguages' => $this->getPreferredLanguages(),
-			'canonical' => $this->getCanonical(),
-			'contact' => $this->getContact(),
-			'acknowledgments' => $this->getAcknowledgments(),
-			'hiring' => $this->getHiring(),
-			'policy' => $this->getPolicy(),
-			'encryption' => $this->getEncryption(),
-			'csaf' => $this->getCsaf(),
-			'bugBounty' => $this->getBugBounty(),
 		];
 	}
 
