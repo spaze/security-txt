@@ -6,26 +6,13 @@ namespace Spaze\SecurityTxt\Json;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
-use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
-use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
-use Spaze\SecurityTxt\Fields\SecurityTxtBugBounty;
-use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
-use Spaze\SecurityTxt\Fields\SecurityTxtContact;
-use Spaze\SecurityTxt\Fields\SecurityTxtCsaf;
-use Spaze\SecurityTxt\Fields\SecurityTxtEncryption;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
-use Spaze\SecurityTxt\Fields\SecurityTxtField;
-use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
-use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
-use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
-use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
@@ -33,18 +20,11 @@ use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafWrongFile;
-use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
-use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
-use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
-use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
-use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
-use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
-use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -55,12 +35,10 @@ final class SecurityTxtJsonTest extends TestCase
 {
 
 	private SecurityTxtJson $securityTxtJson;
-	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
 
 
 	public function __construct()
 	{
-		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$this->securityTxtJson = new SecurityTxtJson(new SecurityTxtSplitLines());
 	}
 
@@ -117,67 +95,6 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::same('The first letter of the Bug-Bounty field value false should be uppercase', $violations[5]->getMessage());
 		Assert::same('The value of the Bug-Bounty field (cash only) should be either True or False', $violations[6]->getMessage());
 		Assert::same('The Bug-Bounty field must not appear more than once', $violations[7]->getMessage());
-	}
-
-
-	public function testCreateCheckHostResultFromJsonValues(): void
-	{
-		$expectedResult = $this->getCheckHostResult();
-		$encoded = json_encode($expectedResult);
-		assert(is_string($encoded));
-		$decoded = json_decode($encoded, true);
-		assert(is_array($decoded));
-		$actualResult = $this->securityTxtJson->createCheckHostResultFromJsonValues($decoded);
-		Assert::equal($expectedResult, $actualResult);
-	}
-
-
-	private function getCheckHostResult(): SecurityTxtCheckHostResult
-	{
-		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
-		$dateTime = new DateTimeImmutable('2022-08-08T02:40:54+00:00');
-		$securityTxt->setFileLocation('https://example.com/.well-known/security.txt');
-		$securityTxt->setExpires($this->securityTxtExpiresFactory->create($dateTime));
-		$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages(['en', 'de']));
-		$securityTxt->setBugBounty(new SecurityTxtBugBounty(true));
-		$securityTxt->addPolicy(new SecurityTxtPolicy('https://example.com/1'));
-		$securityTxt->addPolicy(new SecurityTxtPolicy('https://example.com/2'));
-		$securityTxt->addHiring(new SecurityTxtHiring('https://example.com/'));
-		$securityTxt->addContact(new SecurityTxtContact('https://example.com/'));
-		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://example.com/1'));
-		$securityTxt->addAcknowledgments(new SecurityTxtAcknowledgments('https://example.com/2'));
-		$securityTxt->addCsaf(new SecurityTxtCsaf('https://example.com/'));
-		$securityTxt->addEncryption(new SecurityTxtEncryption('https://example.com/'));
-		$securityTxt->addCanonical(new SecurityTxtCanonical('https://example.com/'));
-		$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('LeKeyFingerPrint', new DateTimeImmutable('-2 weeks noon +02:00')));
-		$lines = ["Hi-ring: https://example.com/hiring\n", "Bug-Bounty: True\n", 'Expires: ' . $dateTime->format(DATE_RFC2822)];
-		$fetchResult = new SecurityTxtFetchResult(
-			'http://www.example.com/.well-known/security.txt',
-			'https://www.example.com/.well-known/security.txt',
-			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			implode('', $lines),
-			true,
-			$lines,
-			[new SecurityTxtFileLocationNotHttps('http://example.com')],
-			[new SecurityTxtWellKnownPathOnly()],
-		);
-
-		return new SecurityTxtCheckHostResult(
-			'www.example.com',
-			$fetchResult,
-			$fetchResult->getErrors(),
-			$fetchResult->getWarnings(),
-			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact'), new SecurityTxtExpiresOldFormat('a correct value')]],
-			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
-			[new SecurityTxtNoContact()],
-			[new SecurityTxtExpiresSoon(11), new SecurityTxtSignatureExtensionNotLoaded()],
-			$securityTxt,
-			true,
-			10,
-			false,
-			true,
-			15,
-		);
 	}
 
 
@@ -393,6 +310,14 @@ final class SecurityTxtJsonTest extends TestCase
 	public function testCreateSecurityTxtFromJsonValuesInvalidJsonFields(): void
 	{
 		$values = [
+			'fileLocation' => 42,
+			'signatureVerifyResult' => null,
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: fileLocation is not a string');
+
+		$values = [
 			'fileLocation' => null,
 			'fields' => 'foo',
 			'signatureVerifyResult' => null,
@@ -400,6 +325,18 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::throws(function () use ($values): void {
 			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: fields is not an array');
+
+		$values = [
+			'fileLocation' => null,
+			'fields' => [
+				'foo',
+				'bar',
+			],
+			'signatureVerifyResult' => null,
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: fields is not an array of arrays');
 
 		$values = [
 			'fileLocation' => null,
@@ -533,6 +470,23 @@ final class SecurityTxtJsonTest extends TestCase
 			'fileLocation' => null,
 			'fields' => [
 				[
+					'Expires' => [
+						'dateTime' => '2025-09-23T17:02:54+02:00',
+						'isExpired' => true,
+						'inDays' => 2600,
+					],
+				],
+			],
+			'signatureVerifyResult' => null,
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: The value of the Expires field should be less than a year into the future to avoid staleness');
+
+		$values = [
+			'fileLocation' => null,
+			'fields' => [
+				[
 					'Preferred-Languages' => null,
 				],
 			],
@@ -615,6 +569,87 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::throws(function () use ($values): void {
 			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: fields > foo is an unsupported field');
+	}
+
+
+	public function testCreateSecurityTxtFromJsonValuesInvalidSignatureVerifyResult(): void
+	{
+		$values = [
+			'signatureVerifyResult' => 'foo',
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: signatureVerifyResult is not an array');
+
+		$values = [
+			'signatureVerifyResult' => [],
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: signatureVerifyResult > keyFingerprint is missing or not a string');
+
+		$values = [
+			'signatureVerifyResult' => [
+				'keyFingerprint' => '1234',
+			],
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: signatureVerifyResult > dateTime is missing or not a string');
+
+		$values = [
+			'signatureVerifyResult' => [
+				'keyFingerprint' => '1234',
+				'dateTime' => 'foo',
+			],
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: signatureVerifyResult > dateTime is wrong format');
+	}
+
+
+	public function testCreateRedirectsFromJsonValues(): void
+	{
+		$values = [
+			'https://example.com/' => [
+				'https://example.net/',
+				'https://com.example/',
+			],
+			'https://example.org/' => [
+				'https://net.example/',
+				'https://com.example/',
+			],
+		];
+		Assert::same($values, $this->securityTxtJson->createRedirectsFromJsonValues($values));
+	}
+
+
+	public function testCreateRedirectsFromJsonValuesInvalidJson(): void
+	{
+		$values = [
+			123 => [],
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createRedirectsFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: redirects key is of type int, not a string');
+
+		$values = [
+			'https://example.com/' => 'foo',
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createRedirectsFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: redirects > https://example.com/ is not an array');
+
+		$values = [
+			'https://example.com/' => [
+				'https://example.net/',
+				909,
+			],
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createRedirectsFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: redirects contains an item which is not a string');
 	}
 
 }

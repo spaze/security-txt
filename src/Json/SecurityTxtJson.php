@@ -74,7 +74,7 @@ final readonly class SecurityTxtJson
 		$redirects = [];
 		foreach ($values as $url => $urlRedirects) {
 			if (!is_string($url)) {
-				throw new SecurityTxtCannotParseJsonException(sprintf('redirects key is a %s not a string', get_debug_type($url)));
+				throw new SecurityTxtCannotParseJsonException(sprintf('redirects key is of type %s, not a string', get_debug_type($url)));
 			}
 			if (!is_array($urlRedirects)) {
 				throw new SecurityTxtCannotParseJsonException("redirects > {$url} is not an array");
@@ -233,26 +233,26 @@ final readonly class SecurityTxtJson
 	 */
 	public function createCheckHostResultFromJsonValues(array $values): SecurityTxtCheckHostResult
 	{
-		if (!is_string($values['class'])) {
-			throw new SecurityTxtCannotParseJsonException('class is not a string');
+		if (!isset($values['class']) || !is_string($values['class'])) {
+			throw new SecurityTxtCannotParseJsonException('class is not set or not a string');
 		}
 		if ($values['class'] !== SecurityTxtCheckHostResult::class) {
 			throw new SecurityTxtCannotParseJsonException('class is not ' . SecurityTxtCheckHostResult::class);
 		}
-		if (!is_string($values['host'])) {
-			throw new SecurityTxtCannotParseJsonException('host is not a string');
+		if (!isset($values['host']) || !is_string($values['host'])) {
+			throw new SecurityTxtCannotParseJsonException('host is not set or not a string');
 		}
-		if (!is_array($values['fetchResult'])) {
-			throw new SecurityTxtCannotParseJsonException('fetchResult is not an array');
+		if (!isset($values['fetchResult']) || !is_array($values['fetchResult'])) {
+			throw new SecurityTxtCannotParseJsonException('fetchResult is not set or not an array');
 		}
-		if (!is_array($values['fetchErrors'])) {
-			throw new SecurityTxtCannotParseJsonException('fetchErrors is not an array');
+		if (!isset($values['fetchErrors']) || !is_array($values['fetchErrors'])) {
+			throw new SecurityTxtCannotParseJsonException('fetchErrors is not set or not an array');
 		}
-		if (!is_array($values['fetchWarnings'])) {
-			throw new SecurityTxtCannotParseJsonException('fetchWarnings is not an array');
+		if (!isset($values['fetchWarnings']) || !is_array($values['fetchWarnings'])) {
+			throw new SecurityTxtCannotParseJsonException('fetchWarnings is not set or not an array');
 		}
-		if (!is_array($values['lineErrors'])) {
-			throw new SecurityTxtCannotParseJsonException('lineErrors is not an array');
+		if (!isset($values['lineErrors']) || !is_array($values['lineErrors'])) {
+			throw new SecurityTxtCannotParseJsonException('lineErrors is not set or not an array');
 		}
 		$lineErrors = [];
 		foreach ($values['lineErrors'] as $line => $violations) {
@@ -260,15 +260,15 @@ final readonly class SecurityTxtJson
 				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} key is not an int");
 			}
 			if ($line < 1) {
-				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} is less than 1");
+				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} key is less than 1");
 			}
 			if (!is_array($violations)) {
 				throw new SecurityTxtCannotParseJsonException("lineErrors > {$line} is not an array");
 			}
 			$lineErrors[$line] = $this->createViolationsFromJsonValues(array_values($violations));
 		}
-		if (!is_array($values['lineWarnings'])) {
-			throw new SecurityTxtCannotParseJsonException('lineWarnings is not an array');
+		if (!isset($values['lineWarnings']) || !is_array($values['lineWarnings'])) {
+			throw new SecurityTxtCannotParseJsonException('lineWarnings is not set or not an array');
 		}
 		$lineWarnings = [];
 		foreach ($values['lineWarnings'] as $line => $violations) {
@@ -283,29 +283,38 @@ final readonly class SecurityTxtJson
 			}
 			$lineWarnings[$line] = $this->createViolationsFromJsonValues(array_values($violations));
 		}
-		if (!is_array($values['fileErrors'])) {
-			throw new SecurityTxtCannotParseJsonException('fileErrors is not an array');
+		if (!isset($values['fileErrors']) || !is_array($values['fileErrors'])) {
+			throw new SecurityTxtCannotParseJsonException('fileErrors is not set or not an array');
 		}
-		if (!is_array($values['fileWarnings'])) {
-			throw new SecurityTxtCannotParseJsonException('fileWarnings is not an array');
+		if (!isset($values['fileWarnings']) || !is_array($values['fileWarnings'])) {
+			throw new SecurityTxtCannotParseJsonException('fileWarnings is not set or not an array');
 		}
-		if (!is_array($values['securityTxt'])) {
-			throw new SecurityTxtCannotParseJsonException('securityTxt is not an array');
+		if (!isset($values['securityTxt']) || !is_array($values['securityTxt'])) {
+			throw new SecurityTxtCannotParseJsonException('securityTxt is not set or not an array');
 		}
-		if ($values['expired'] !== null && !is_bool($values['expired'])) {
-			throw new SecurityTxtCannotParseJsonException('expired is not an int');
+		if (isset($values['expired'])) {
+			if (!is_bool($values['expired'])) {
+				throw new SecurityTxtCannotParseJsonException('expired is not a bool');
+			}
+			$expired = $values['expired'];
 		}
-		if ($values['expiryDays'] !== null && !is_int($values['expiryDays'])) {
-			throw new SecurityTxtCannotParseJsonException('expiryDays is not an int');
+		if (isset($values['expiryDays'])) {
+			if (!is_int($values['expiryDays'])) {
+				throw new SecurityTxtCannotParseJsonException('expiryDays is not an int');
+			}
+			$expiryDays = $values['expiryDays'];
 		}
-		if (!is_bool($values['valid'])) {
-			throw new SecurityTxtCannotParseJsonException('valid is not a bool');
+		if (!isset($values['valid']) || !is_bool($values['valid'])) {
+			throw new SecurityTxtCannotParseJsonException('valid is not set or not a bool');
 		}
-		if (!is_bool($values['strictMode'])) {
-			throw new SecurityTxtCannotParseJsonException('strictMode is not a bool');
+		if (!isset($values['strictMode']) || !is_bool($values['strictMode'])) {
+			throw new SecurityTxtCannotParseJsonException('strictMode is not set or not a bool');
 		}
-		if ($values['expiresWarningThreshold'] !== null && !is_int($values['expiresWarningThreshold'])) {
-			throw new SecurityTxtCannotParseJsonException('expiresWarningThreshold is not an int');
+		if (isset($values['expiresWarningThreshold'])) {
+			if (!is_int($values['expiresWarningThreshold'])) {
+				throw new SecurityTxtCannotParseJsonException('expiresWarningThreshold is not an int');
+			}
+			$expiresWarningThreshold = $values['expiresWarningThreshold'];
 		}
 		return new SecurityTxtCheckHostResult(
 			$values['host'],
@@ -317,11 +326,11 @@ final readonly class SecurityTxtJson
 			$this->createViolationsFromJsonValues(array_values($values['fileErrors'])),
 			$this->createViolationsFromJsonValues(array_values($values['fileWarnings'])),
 			$this->createSecurityTxtFromJsonValues($values['securityTxt']),
-			$values['expired'],
-			$values['expiryDays'],
+			$expired ?? null,
+			$expiryDays ?? null,
 			$values['valid'],
 			$values['strictMode'],
-			$values['expiresWarningThreshold'],
+			$expiresWarningThreshold ?? null,
 		);
 	}
 
