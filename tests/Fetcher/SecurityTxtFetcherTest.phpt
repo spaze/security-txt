@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxtContentType;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
@@ -32,7 +33,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 	public function __construct()
 	{
-		$this->splitLines = new SecurityTxtSplitLines();
+		$this->splitLines = new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider());
 		$this->urlParser = new SecurityTxtUrlParser();
 	}
 

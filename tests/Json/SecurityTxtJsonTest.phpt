@@ -12,6 +12,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
@@ -40,7 +41,7 @@ final class SecurityTxtJsonTest extends TestCase
 
 	public function __construct()
 	{
-		$this->securityTxtJson = new SecurityTxtJson(new SecurityTxtSplitLines());
+		$this->securityTxtJson = new SecurityTxtJson(new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider()));
 	}
 
 

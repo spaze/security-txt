@@ -13,6 +13,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
 use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
@@ -38,8 +39,9 @@ final class SecurityTxtWriterParseTest extends TestCase
 		$securityTxtSignatureGnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
 		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
-		$securityTxtSplitLines = new SecurityTxtSplitLines();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $securityTxtSplitLines);
+		$pregSplitProvider = new SecurityTxtPregSplitProvider();
+		$securityTxtSplitLines = new SecurityTxtSplitLines($pregSplitProvider);
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $securityTxtSplitLines, $pregSplitProvider);
 		$this->securityTxtWriter = new SecurityTxtWriter();
 	}
 

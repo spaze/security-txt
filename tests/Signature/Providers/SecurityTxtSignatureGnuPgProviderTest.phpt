@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Signature\Providers;
 
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Tester\Assert;
@@ -51,7 +52,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		$signature = new SecurityTxtSignature($gnuPg);
 		$signed = $gnuPg->sign('i was zero cool');
 		assert(is_string($signed));
-		Assert::true($signature->isClearsignHeader(trim((new SecurityTxtSplitLines())->splitLines($signed)[0])));
+		Assert::true($signature->isClearsignHeader(trim((new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider()))->splitLines($signed)[0])));
 	}
 
 
