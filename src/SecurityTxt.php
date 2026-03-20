@@ -410,9 +410,10 @@ final class SecurityTxt implements JsonSerializable
 	/**
 	 * @param callable(): void $setValue
 	 * @param callable(): void $validator
+	 * @param (callable(): void)|null $warnings
 	 * @return void
 	 */
-	private function setValue(callable $setValue, callable $validator): void
+	private function setValue(callable $setValue, callable $validator, ?callable $warnings = null): void
 	{
 		if ($this->validationLevel === SecurityTxtValidationLevel::AllowInvalidValuesSilently) {
 			$setValue();
@@ -424,6 +425,9 @@ final class SecurityTxt implements JsonSerializable
 		} else {
 			$validator();
 			$setValue();
+		}
+		if ($warnings !== null) {
+			$warnings();
 		}
 	}
 
@@ -442,10 +446,8 @@ final class SecurityTxt implements JsonSerializable
 				$this->fieldsWithNames[] = [$fieldValue->getField()->value => $fieldValue];
 			},
 			$validator,
+			$warnings,
 		);
-		if ($warnings !== null) {
-			$warnings();
-		}
 	}
 
 

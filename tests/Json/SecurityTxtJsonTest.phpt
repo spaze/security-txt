@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Json;
 
+use DateInterval;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
@@ -269,6 +270,28 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	public function testCreateSecurityTxtFromJsonValuesIncorrectValuesNoWarnings(): void
+	{
+		$days = 2600;
+		$dateTime = (new DateTimeImmutable())->add(new DateInterval('P' . $days . 'D'))->format(DATE_RFC3339);
+		$values = [
+			'fileLocation' => null,
+			'fields' => [
+				[
+					'Expires' => [
+						'dateTime' => $dateTime,
+						'isExpired' => true,
+						'inDays' => $days,
+					],
+				],
+			],
+			'signatureVerifyResult' => null,
+		];
+		$securityTxt = $this->securityTxtJson->createSecurityTxtFromJsonValues($values);
+		Assert::same($dateTime, $securityTxt->getExpires()?->getDateTime()->format(DATE_RFC3339));
+	}
+
+
 	public function testCreateSecurityTxtFromJsonValuesEmptyRequiredOnly(): void
 	{
 		$values = [
@@ -465,24 +488,6 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::throws(function () use ($values): void {
 			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: fields > Expires > dateTime is wrong format');
-
-		$values = [
-			'fileLocation' => null,
-			'fields' => [
-				[
-					'Expires' => [
-						'dateTime' => '2025-09-23T17:02:54+02:00',
-						'isExpired' => true,
-						'inDays' => 2600,
-					],
-				],
-			],
-			'signatureVerifyResult' => null,
-		];
-		Assert::throws(function () use ($values): void {
-			$this->securityTxtJson->createSecurityTxtFromJsonValues($values);
-		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: The value of the Expires field should be less than a year into the future to avoid staleness');
-
 		$values = [
 			'fileLocation' => null,
 			'fields' => [
