@@ -7,11 +7,19 @@ namespace Spaze\SecurityTxt\Parser;
 
 use DateTime;
 use DateTimeImmutable;
+use Override;
+use SensitiveParameter;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
+use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignatureErrorInfo;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifySignatureInfo;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
@@ -31,6 +39,8 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 use Tester\Assert;
@@ -42,17 +52,22 @@ require __DIR__ . '/../bootstrap.php';
 final class SecurityTxtParserTest extends TestCase
 {
 
+	private SecurityTxtValidator $securityTxtValidator;
+	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
+	private SecurityTxtPregSplitProvider $securityTxtPregSplitProvider;
+	private SecurityTxtSplitLines $securityTxtSplitLines;
 	private SecurityTxtParser $securityTxtParser;
 
 
 	public function __construct()
 	{
-		$securityTxtValidator = new SecurityTxtValidator();
+		$this->securityTxtValidator = new SecurityTxtValidator();
 		$securityTxtSignatureGnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
 		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
-		$securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
-		$securityTxtSplitLines = new SecurityTxtSplitLines();
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $securityTxtExpiresFactory, $securityTxtSplitLines);
+		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
+		$this->securityTxtPregSplitProvider = new SecurityTxtPregSplitProvider();
+		$this->securityTxtSplitLines = new SecurityTxtSplitLines($this->securityTxtPregSplitProvider);
+		$this->securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
 	}
 
 
@@ -503,6 +518,93 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::true($parseResult->hasWarnings());
 		Assert::count(1, $parseResult->getLineWarnings());
 		Assert::type(SecurityTxtSignatureCannotVerify::class, $parseResult->getLineWarnings()[1][0]);
+	}
+
+
+	public function testParseStringSignatureFailures(): void
+	{
+		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		Expires: {$expires}
+		Canonical: https://foo.bar.example/
+		-----BEGIN PGP SIGNATURE-----
+		yes, but
+		-----END PGP SIGNATURE-----
+		EOT . "\n";
+
+		$signatureProvider = $this->getSignatureProvider(new SecurityTxtError(new SecurityTxtSignatureInvalid()));
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::count(0, $parseResult->getLineWarnings());
+		Assert::type(SecurityTxtSignatureInvalid::class, $parseResult->getLineErrors()[1][0]);
+
+		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::false($parseResult->hasErrors());
+		Assert::true($parseResult->hasWarnings());
+		Assert::count(0, $parseResult->getLineErrors());
+		Assert::count(1, $parseResult->getLineWarnings());
+		Assert::type(SecurityTxtSignatureExtensionNotLoaded::class, $parseResult->getLineWarnings()[1][0]);
+	}
+
+
+	private function getSignatureProvider(SecurityTxtError|SecurityTxtWarning $verifyThrows): SecurityTxtSignatureProvider
+	{
+		return new readonly class ($verifyThrows) implements SecurityTxtSignatureProvider {
+
+			public function __construct(
+				private SecurityTxtError|SecurityTxtWarning $verifyThrows,
+			) {
+			}
+
+
+			/**
+			 * @throws void
+			 */
+			#[Override]
+			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
+			{
+				return true;
+			}
+
+
+			/**
+			 * @throws void
+			 */
+			#[Override]
+			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
+			{
+				return new SecurityTxtSignatureErrorInfo(false, 0, 'Unspecified source', 'Success');
+			}
+
+
+			/**
+			 * @throws void
+			 */
+			#[Override]
+			public function sign(string $text): false|string
+			{
+				return false;
+			}
+
+
+			#[Override]
+			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
+			{
+				throw $this->verifyThrows;
+			}
+
+		};
 	}
 
 

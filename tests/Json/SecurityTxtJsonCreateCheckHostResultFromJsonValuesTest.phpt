@@ -20,6 +20,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
 use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
@@ -48,7 +49,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 	public function __construct()
 	{
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
-		$this->securityTxtJson = new SecurityTxtJson(new SecurityTxtSplitLines());
+		$this->securityTxtJson = new SecurityTxtJson(new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider()));
 	}
 
 
