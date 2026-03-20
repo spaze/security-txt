@@ -33,19 +33,7 @@
       <code><![CDATA[false]]></code>
     </InvalidArgument>
   </file>
-  <file src="tests/Parser/SecurityTxtParserTest.phpt">
-    <ReservedWord>
-      <code><![CDATA[void]]></code>
-      <code><![CDATA[void]]></code>
-      <code><![CDATA[void]]></code>
-    </ReservedWord>
-  </file>
   <file src="tests/Signature/SecurityTxtSignatureTest.phpt">
-    <ReservedWord>
-      <code><![CDATA[void]]></code>
-      <code><![CDATA[void]]></code>
-      <code><![CDATA[void]]></code>
-    </ReservedWord>
     <UndefinedVariable>
       <code><![CDATA[$result]]></code>
       <code><![CDATA[$result]]></code>

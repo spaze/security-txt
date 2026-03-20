@@ -163,9 +163,6 @@ final class SecurityTxtSignatureTest extends TestCase
 			}
 
 
-			/**
-			 * @throws void
-			 */
 			#[Override]
 			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
 			{
@@ -173,9 +170,6 @@ final class SecurityTxtSignatureTest extends TestCase
 			}
 
 
-			/**
-			 * @throws void
-			 */
 			#[Override]
 			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
 			{
@@ -183,9 +177,6 @@ final class SecurityTxtSignatureTest extends TestCase
 			}
 
 
-			/**
-			 * @throws void
-			 */
 			#[Override]
 			public function sign(string $text): false|string
 			{
