@@ -106,13 +106,18 @@ final class SecurityTxtUrlParserTest extends TestCase
 			['https://new.test:808/new', 'https://example.com/bar', 'https://new.test:808/new'],
 			['https://new.test/new?query', 'https://example.com/bar', 'https://new.test/new?query'],
 			['https://new.test/new?query#fragment', 'https://example.com/bar', 'https://new.test/new?query#fragment'],
-			['//new.test/new', 'https://example.com/bar', '//new.test/new'], // up to the client to deal with an empty scheme
+			['//new.test/new', 'https://example.com/bar', 'https://new.test/new'],
 			['https://new.test', 'https://example.com/bar', 'https://new.test'], // up to the client to deal with an empty path
 			[':', 'https://example.com/foo', ':'], // the new location can't be parsed but still go with it
 			['/new', ':', '/new'],
 			['?bar', 'https://example.com/foo/file.ext', 'https://example.com/foo/file.ext?bar'],
 			['?bar', 'https://example.com', 'https://example.com/?bar'],
 			['/new', 'https://example.org:1337/foo', 'https://example.org:1337/new'],
+			['file:///etc/passwd', 'https://example.org/foo', 'file:///etc/passwd'],
+			['file://./etc/passwd', 'https://example.org/foo', 'file://./etc/passwd'],
+			['file://../etc/passwd', 'https://example.org/foo', 'file://../etc/passwd'],
+			['file://foo/etc/passwd', 'https://example.org/foo', 'file://foo/etc/passwd'],
+			['scheme://foo-bar', 'https://example.org/foo', 'scheme://foo-bar'],
 		];
 	}
 
