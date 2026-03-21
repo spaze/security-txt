@@ -14,7 +14,9 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNoSchemeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
@@ -67,6 +69,8 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
 	 * @throws SecurityTxtHostIpAddressInvalidTypeException
 	 * @throws SecurityTxtHostIpAddressNotFoundException
+	 * @throws SecurityTxtUrlNoSchemeException
+	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 */
 	public function fetchHost(string $host, bool $requireTopLevelLocation = false, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
@@ -86,6 +90,8 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
 	 * @throws SecurityTxtHostIpAddressInvalidTypeException
 	 * @throws SecurityTxtHostIpAddressNotFoundException
+	 * @throws SecurityTxtUrlNoSchemeException
+	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 */
 	private function fetchUrl(string $urlTemplate, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
@@ -133,6 +139,8 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtUrlNotFoundException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
+	 * @throws SecurityTxtUrlNoSchemeException
+	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 */
 	private function getResponse(string $url, string $urlTemplate, string $host, bool $useHostForContextHost, string &$finalUrl): SecurityTxtFetcherResponse
 	{
@@ -266,6 +274,8 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtUrlNotFoundException
+	 * @throws SecurityTxtUrlNoSchemeException
+	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 */
 	private function redirect(string $url, SecurityTxtFetcherResponse $response, string $urlTemplate, string $host, string &$finalUrl): SecurityTxtFetcherResponse
 	{
