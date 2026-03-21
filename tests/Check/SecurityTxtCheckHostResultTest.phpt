@@ -23,7 +23,7 @@ use Tester\TestCase;
 require __DIR__ . '/../bootstrap.php';
 
 /** @testCase */
-final class SecurityTxtCheckHostTest extends TestCase
+final class SecurityTxtCheckHostResultTest extends TestCase
 {
 
 	private DateTimeImmutable $expires;
@@ -37,9 +37,17 @@ final class SecurityTxtCheckHostTest extends TestCase
 	}
 
 
-	public function testJsonSerialize(): void
+	public function testGetters(): void
 	{
 		$result = $this->getResult();
+		Assert::same(['http://example.com' => ['https://example.com', 'https://www.example.com']], $result->getRedirects());
+		Assert::same('http://www.example.com/.well-known/security.txt', $result->getConstructedUrl());
+		Assert::same('https://www.example.com/.well-known/security.txt', $result->getFinalUrl());
+	}
+
+
+	public function testJsonSerialize(): void
+	{
 		$expected = [
 			'class' => 'Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult',
 			'host' => 'www.example.com',
@@ -212,7 +220,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			'strictMode' => true,
 			'expiresWarningThreshold' => 15,
 		];
-		$json = json_encode($result);
+		$json = json_encode($this->getResult());
 		assert(is_string($json));
 		Assert::same($expected, json_decode($json, true));
 	}
@@ -254,4 +262,4 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 }
 
-(new SecurityTxtCheckHostTest())->run();
+(new SecurityTxtCheckHostResultTest())->run();
