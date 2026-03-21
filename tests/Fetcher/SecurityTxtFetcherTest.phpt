@@ -16,6 +16,8 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNoSchemeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
@@ -359,6 +361,45 @@ final class SecurityTxtFetcherTest extends TestCase
 			$fetcher->fetchHost('com.example');
 		}, SecurityTxtNotFoundException::class);
 		Assert::same('https://[2001:DB8::1]/security.txt', $onUrlNotFound);
+	}
+
+
+	public function testFetchNoScheme(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')));
+
+		$method = new ReflectionMethod($fetcher, 'fetchUrl');
+		Assert::throws(function () use ($method, $fetcher): void {
+			$method->invoke($fetcher, '//%s/bar', 'foo', false);
+		}, SecurityTxtUrlNoSchemeException::class);
+
+		Assert::throws(function () use ($method, $fetcher): void {
+			$method->invoke($fetcher, ':', 'foo', false);
+		}, SecurityTxtUrlNoSchemeException::class);
+	}
+
+
+	public function testFetchUnsupportedScheme(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')));
+
+		$method = new ReflectionMethod($fetcher, 'fetchUrl');
+		Assert::throws(function () use ($method, $fetcher): void {
+			$method->invoke($fetcher, 'file://%s/bar', 'foo', false);
+		}, SecurityTxtUrlUnsupportedSchemeException::class);
+	}
+
+
+	public function testFetchUnsupportedSchemeRedirect(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, ['location' => 'file:///etc/passwd'], '', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')));
+		$method = new ReflectionMethod($fetcher, 'fetchUrl');
+		Assert::throws(function () use ($method, $fetcher): void {
+			$method->invoke($fetcher, 'https://%s/bar', 'foo', false);
+		}, SecurityTxtUrlUnsupportedSchemeException::class);
 	}
 
 
