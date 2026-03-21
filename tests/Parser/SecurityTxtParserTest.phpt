@@ -24,6 +24,7 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
@@ -670,6 +671,40 @@ final class SecurityTxtParserTest extends TestCase
 
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
 		Assert::false($parseResult->isValid());
+
+		$fetchResult = new SecurityTxtFetchResult(
+			'https://example.com/security.txt',
+			'https://www.example.com/security.txt',
+			[],
+			implode('', $lines),
+			false,
+			$lines,
+			[new SecurityTxtContentTypeInvalid('https://example.com/security.txt', 'foo/bar')],
+			[],
+		);
+		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
+		Assert::type(SecurityTxtContentTypeInvalid::class, $parseResult->getFetchErrors()[0]);
+		Assert::same(
+			'The file at https://example.com/security.txt has a Content-Type of foo/bar but it should be a Content-Type of text/plain with the charset parameter set to charset=utf-8',
+			$parseResult->getFetchErrors()[0]->getMessage(),
+		);
+
+		$fetchResult = new SecurityTxtFetchResult(
+			'https://example.com/security.txt',
+			'https://www.example.com/security.txt',
+			[],
+			implode('', $lines),
+			false,
+			$lines,
+			[new SecurityTxtContentTypeInvalid('https://example.com/security.txt', null)],
+			[],
+		);
+		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
+		Assert::type(SecurityTxtContentTypeInvalid::class, $parseResult->getFetchErrors()[0]);
+		Assert::same(
+			'The file at https://example.com/security.txt has no Content-Type but it should be a Content-Type of text/plain with the charset parameter set to charset=utf-8',
+			$parseResult->getFetchErrors()[0]->getMessage(),
+		);
 	}
 
 }

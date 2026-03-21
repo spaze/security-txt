@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Check;
 
+use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtPhpDnsProvider;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
@@ -37,13 +38,14 @@ if (!$autoloadLoaded) {
 $validator = new SecurityTxtValidator();
 $gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
 $signature = new SecurityTxtSignature($gnuPgProvider);
-$fopenClient = new SecurityTxtFetcherFopenClient('Mozilla/5.0 (compatible; spaze/security-txt; +https://github.com/spaze/security-txt)');
+$fopenClient = new SecurityTxtFetcherFopenClient();
 $urlParser = new SecurityTxtUrlParser();
 $expiresFactory = new SecurityTxtExpiresFactory();
 $pregSplitProvider = new SecurityTxtPregSplitProvider();
 $splitLines = new SecurityTxtSplitLines($pregSplitProvider);
 $parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
-$fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $splitLines);
+$dnsProvider = new SecurityTxtPhpDnsProvider();
+$fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $splitLines, $dnsProvider);
 $consolePrinter = new ConsolePrinter();
 $checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 $checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher;
 
 use LogicException;
+use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidTypeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
@@ -27,8 +28,6 @@ use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 final class SecurityTxtFetcher
 {
 
-	private const int MAX_ALLOWED_REDIRECTS = 5;
-
 	/** @var array<string, list<string>> */
 	private array $redirects = [];
 
@@ -49,7 +48,12 @@ final class SecurityTxtFetcher
 		private readonly SecurityTxtFetcherHttpClient $httpClient,
 		private readonly SecurityTxtUrlParser $urlParser,
 		private readonly SecurityTxtSplitLines $splitLines,
+		private readonly SecurityTxtDnsProvider $dnsLookupProvider,
+		private readonly int $maxAllowedRedirects = 5,
 	) {
+		if ($this->maxAllowedRedirects < 0) {
+			throw new LogicException('maxAllowedRedirects must be greater than or equal to 0 (0 means no redirects allowed)');
+		}
 	}
 
 
@@ -88,19 +92,9 @@ final class SecurityTxtFetcher
 		$url = $this->buildUrl($urlTemplate, $host);
 		$finalUrl = $url;
 		$this->callOnCallback($this->onUrl, $url);
-		$records = @dns_get_record($host, DNS_A | DNS_AAAA); // intentionally @, converted to exception
-		if ($records === false) {
-			throw new SecurityTxtHostNotFoundException($url, $host);
-		}
-		$records = array_merge(...$records);
-		$ipRecord = $records['ip'] ?? null;
-		$ipv6Record = $records['ipv6'] ?? null;
-		if ($ipRecord !== null && !is_string($ipRecord)) {
-			throw new SecurityTxtHostIpAddressInvalidTypeException($host, get_debug_type($ipRecord), $url);
-		}
-		if ($ipv6Record !== null && !is_string($ipv6Record)) {
-			throw new SecurityTxtHostIpAddressInvalidTypeException($host, get_debug_type($ipv6Record), $url);
-		}
+		$dnsRecords = $this->dnsLookupProvider->getRecords($url, $host);
+		$ipRecord = $dnsRecords->getIpRecord();
+		$ipv6Record = $dnsRecords->getIpv6Record();
 		if ($noIpv6 && $ipv6Record !== null && $ipRecord === null) {
 			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url);
 		}
@@ -284,8 +278,8 @@ final class SecurityTxtFetcher
 			$this->callOnCallback($this->onRedirect, $previousUrl, $location);
 			$this->redirects[$originalUrl][] = $location;
 			$finalUrl = $location = $this->urlParser->getRedirectUrl($location, $url);
-			if (count($this->redirects[$originalUrl]) > self::MAX_ALLOWED_REDIRECTS) {
-				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], self::MAX_ALLOWED_REDIRECTS);
+			if (count($this->redirects[$originalUrl]) > $this->maxAllowedRedirects) {
+				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], $this->maxAllowedRedirects);
 			}
 			return $this->getResponse($location, $urlTemplate, $host, false, $finalUrl);
 		}
