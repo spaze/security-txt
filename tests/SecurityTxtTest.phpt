@@ -14,6 +14,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Fields\SecurityTxtUriField;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
@@ -135,6 +136,7 @@ final class SecurityTxtTest extends TestCase
 					'http://example.com/.well-known/security.txt' => SecurityTxtCanonicalNotHttps::class,
 					'ftp://foo.bar.example.net/security.txt' => null,
 					'C:\\security.txt' => null,
+					'example.com/.well-known/security.txt' => SecurityTxtCanonicalNotUri::class,
 				],
 				SecurityTxtCanonical::class,
 				function (SecurityTxt $securityTxt): callable {

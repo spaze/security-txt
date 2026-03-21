@@ -1,0 +1,28 @@
+name: PHP Tests including skipped
+
+on:
+    schedule:
+        - cron: '27 18 * * 3'
+    workflow_dispatch:
+
+jobs:
+  tester-include-skipped:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version:
+          - "8.3"
+          - "8.4"
+          - "8.5"
+    steps:
+    - uses: actions/checkout@v6
+    - name: Install PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        coverage: none
+        php-version: ${{ matrix.php-version }}
+        extensions: gnupg
+    - name: Install dependencies
+      run: composer update --no-progress --no-interaction
+    - name: Run Tester including skipped tests
+      run: TEST_CASE_RUNNER_INCLUDE_SKIPPED=1 composer tester

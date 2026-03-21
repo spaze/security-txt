@@ -5,18 +5,23 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use LogicException;
 use Override;
 use ReflectionMethod;
-use ReflectionProperty;
+use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
+use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxtContentType;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
 use Tester\TestCase;
@@ -125,7 +130,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			$lowercaseHeaders[strtolower($key)] = $value;
 		}
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents', false));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
 		$template = 'https://%s/foo';
 		$host = 'host';
 		$method = new ReflectionMethod($fetcher, 'getResponse');
@@ -166,7 +171,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResult(?string $wellKnownContents, ?string $topLevelContents, bool $wellKnownTruncated, bool $topLevelTruncated, bool $wellKnownWins): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, $wellKnownTruncated) : null);
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, $topLevelTruncated) : null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
@@ -180,7 +185,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResultGetLine(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
 		$lines = ["Contact: 123\n", "Hiring: 456\n"];
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false));
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, null);
@@ -198,32 +203,13 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResultTruncated(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', true));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', DNS_A, 200, new SecurityTxtFetcherResponse(200, [], 'well-known', true));
 		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', DNS_A, 200, new SecurityTxtFetcherResponse(200, [], 'top-level', true));
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel) {
 			$method->invoke($fetcher, $wellKnown, $topLevel, true);
 		}, SecurityTxtNotFoundException::class, "Can't read security.txt: foo (192.0.2.1) => response too long, bar (198.51.100.1) => response too long");
-	}
-
-
-	public function testGetResultNotFound(): void
-	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('fooUrl', 'fooUrl2', '192.0.2.1', DNS_A, 404, null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('barUrl', 'barUrl2', '198.51.100.1', DNS_A, 403, null);
-		$property = new ReflectionProperty($fetcher, 'redirects');
-		$fooUrlRedirects = ['https://example.com/foo', 'https://example.net/foo/'];
-		$property->setValue($fetcher, ['fooUrl' => $fooUrlRedirects]);
-		$method = new ReflectionMethod($fetcher, 'getResult');
-		$exception = Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel): void {
-			$method->invoke($fetcher, $wellKnown, $topLevel, true);
-		}, SecurityTxtNotFoundException::class, "Can't read security.txt: fooUrl (192.0.2.1) => 404 (final code after redirects), barUrl (198.51.100.1) => 403");
-		assert($exception instanceof SecurityTxtNotFoundException);
-		Assert::same(['192.0.2.1' => [DNS_A, 404], '198.51.100.1' => [DNS_A, 403]], $exception->getIpAddresses());
-		Assert::same(['fooUrl' => $fooUrlRedirects], $exception->getAllRedirects());
 	}
 
 
@@ -248,7 +234,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testGetResultTopLevelDiffers(string $finalUrlWellKnown, string $finalUrlTopLevel, string $contentsWellKnown, string $contentsTopLevel, ?SecurityTxtTopLevelDiffers $violation): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'random', false));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
 		$fetcherResponseWellKnown = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], $contentsWellKnown, false);
 		$fetcherResponseTopLevel = new SecurityTxtFetcherResponse(200, [], $contentsTopLevel, false);
 		$wellKnown = new SecurityTxtFetcherFetchHostResult('https://url1.example/', $finalUrlWellKnown, '192.0.2.1', DNS_A, 200, $fetcherResponseWellKnown);
@@ -257,7 +243,153 @@ final class SecurityTxtFetcherTest extends TestCase
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
 		Assert::same([], $result->getErrors());
-		Assert::equal($violation === null ? [] : [$violation], $result->getWarnings());
+		if ($violation !== null) {
+			Assert::notSame($violation->getTopLevelContents(), $violation->getWellKnownContents());
+			Assert::equal([$violation], $result->getWarnings());
+		} else {
+			Assert::equal([], $result->getWarnings());
+		}
+	}
+
+
+	public function testFetchHostNoRecords(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords(null, null)));
+		Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetchHost('example.com');
+		}, SecurityTxtHostIpAddressNotFoundException::class);
+	}
+
+
+	public function testFetchHostOnlyIpv6Address(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords(null, '2001:DB8::1')));
+		Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetchHost('example.com', false, true);
+		}, SecurityTxtOnlyIpv6HostButIpv6DisabledException::class);
+
+		$fetchResult = $fetcher->fetchHost('example.net');
+		Assert::same([], $fetchResult->getErrors());
+		Assert::same([], $fetchResult->getWarnings());
+		Assert::same('random', $fetchResult->getContents());
+		Assert::same('https://example.net/.well-known/security.txt', $fetchResult->getFinalUrl());
+		Assert::same('https://example.net/.well-known/security.txt', $fetchResult->getConstructedUrl());
+	}
+
+
+	public function testFetchHost(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')));
+		$fetchResult = $fetcher->fetchHost('com.example', false, true);
+		Assert::same([], $fetchResult->getErrors());
+		Assert::same([], $fetchResult->getWarnings());
+		Assert::same('random', $fetchResult->getContents());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same([], $fetchResult->getRedirects());
+	}
+
+
+	public function testFetchHostWrongCharset(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-42'], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')));
+		$fetchResult = $fetcher->fetchHost('com.example', false, true);
+		$expectedError = new SecurityTxtContentTypeWrongCharset('https://com.example/.well-known/security.txt', 'text/plain', 'charset=utf-42');
+		Assert::equal([$expectedError], $fetchResult->getErrors());
+		Assert::same([], $fetchResult->getWarnings());
+		Assert::same('random', $fetchResult->getContents());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same([], $fetchResult->getRedirects());
+	}
+
+
+	public function testFetchHostNotFound(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, ['content-type' => 'text/plain; charset=utf-42'], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')));
+		$exception = Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetchHost('com.example');
+		}, SecurityTxtNotFoundException::class, "Can't read security.txt: https://com.example/.well-known/security.txt (2001:DB8::1) => 404, https://com.example/security.txt (2001:DB8::1) => 404");
+		assert($exception instanceof SecurityTxtNotFoundException);
+		Assert::same(['2001:DB8::1' => [DNS_AAAA, 404]], $exception->getIpAddresses());
+		Assert::same([], $exception->getAllRedirects());
+	}
+
+
+	public function testFetchHostCallbacks(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')));
+		$onUrl = $onFinalUrl = null;
+		$fetcher->addOnUrl(function (string $url) use (&$onUrl): void {
+			$onUrl = $url;
+		});
+		$fetcher->addOnFinalUrl(function (string $url) use (&$onFinalUrl): void {
+			$onFinalUrl = $url;
+		});
+		$fetcher->fetchHost('com.example');
+		Assert::same('https://com.example/security.txt', $onUrl);
+		Assert::same('https://com.example/.well-known/security.txt', $onFinalUrl);
+
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, ['location' => 'https://location.example/'], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')), 0);
+		$onRedirectUrl = $onRedirectDestination = null;
+		$fetcher->addOnRedirect(function (string $url, string $destination) use (&$onRedirectUrl, &$onRedirectDestination): void {
+			$onRedirectUrl = $url;
+			$onRedirectDestination = $destination;
+		});
+		Assert::throws(function () use (&$fetcher): void {
+			$fetcher->fetchHost('com.example');
+		}, SecurityTxtTooManyRedirectsException::class);
+		Assert::same('https://com.example/.well-known/security.txt', $onRedirectUrl);
+		Assert::same('https://location.example/', $onRedirectDestination);
+
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'random', false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', '2001:DB8::1')), 0);
+		$onUrlNotFound = null;
+		$fetcher->addOnUrlNotFound(function (string $url) use (&$onUrlNotFound): void {
+			$onUrlNotFound = $url;
+		});
+		Assert::throws(function () use (&$fetcher): void {
+			$fetcher->fetchHost('com.example');
+		}, SecurityTxtNotFoundException::class);
+		Assert::same('https://[2001:DB8::1]/security.txt', $onUrlNotFound);
+	}
+
+
+	public function testCheckMaxAllowedRedirects(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, [], 'random', false));
+		Assert::throws(function () use ($httpClient): void {
+			new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords(null, null)), -1);
+		}, LogicException::class, 'maxAllowedRedirects must be greater than or equal to 0 (0 means no redirects allowed)');
+	}
+
+
+	private function getDnsProvider(?SecurityTxtDnsRecords $dnsRecords = null): SecurityTxtDnsProvider
+	{
+		if ($dnsRecords === null) {
+			$dnsRecords = new SecurityTxtDnsRecords(null, null);
+		}
+		return new readonly class ($dnsRecords) implements SecurityTxtDnsProvider {
+
+			public function __construct(private SecurityTxtDnsRecords $dnsRecords)
+			{
+			}
+
+
+			#[Override]
+			public function getRecords(string $url, string $host): SecurityTxtDnsRecords
+			{
+				return $this->dnsRecords;
+			}
+
+		};
 	}
 
 }
