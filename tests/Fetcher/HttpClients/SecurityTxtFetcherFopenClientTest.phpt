@@ -40,6 +40,26 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 	}
 
 
+	public function testGetResponseContextHost(): void
+	{
+		needsInternet();
+		$client = new SecurityTxtFetcherFopenClient();
+		$response = $client->getResponse(new SecurityTxtFetcherUrl('https://httpbin.org/headers', []), 'www.httpbin.org');
+		Assert::same(200, $response->getHttpCode());
+		$json = $response->getContents();
+		$headers = json_decode($json, true);
+		if (
+			is_array($headers)
+			&& is_array($headers['headers'] ?? null)
+			&& is_string($headers['headers']['Host'] ?? null)
+		) {
+			Assert::same('www.httpbin.org', $headers['headers']['Host']);
+		} else {
+			Assert::fail("Cannot access headers > host in the JSON response ({$json})");
+		}
+	}
+
+
 	public function testGetResponseCannotOpen(): void
 	{
 		needsInternet();

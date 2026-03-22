@@ -4,9 +4,6 @@
     <PossiblyUndefinedArrayOffset>
       <code><![CDATA[$_SERVER['argv']]]></code>
     </PossiblyUndefinedArrayOffset>
-    <UnevaluatedCode>
-      <code><![CDATA[!/usr/bin/env php]]></code>
-    </UnevaluatedCode>
   </file>
   <file src="src/Fetcher/HttpClients/SecurityTxtFetcherFopenClient.php">
     <PossiblyFalseArgument>

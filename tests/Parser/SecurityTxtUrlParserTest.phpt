@@ -118,6 +118,7 @@ final class SecurityTxtUrlParserTest extends TestCase
 			['file://../etc/passwd', 'https://example.org/foo', 'file://../etc/passwd'],
 			['file://foo/etc/passwd', 'https://example.org/foo', 'file://foo/etc/passwd'],
 			['scheme://foo-bar', 'https://example.org/foo', 'scheme://foo-bar'],
+			['//what.ever', 'foo', '//what.ever'],
 		];
 	}
 

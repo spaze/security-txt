@@ -6,17 +6,30 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
-use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Override;
+use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
+use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
+use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
-use Spaze\SecurityTxt\Fields\SecurityTxtField;
-use Spaze\SecurityTxt\SecurityTxt;
-use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
+use Spaze\SecurityTxt\Parser\SecurityTxtParser;
+use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
+use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
+use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
+use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUriMismatch;
+use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
+use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
-use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
-use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
-use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -26,230 +39,298 @@ require __DIR__ . '/../bootstrap.php';
 final class SecurityTxtCheckHostTest extends TestCase
 {
 
-	private DateTimeImmutable $expires;
-	private SecurityTxtExpiresFactory $expiresFactory;
+	private SecurityTxtSplitLines $splitLines;
+	private SecurityTxtParser $parser;
+	private SecurityTxtUrlParser $urlParser;
+	private SecurityTxtCheckHostResultFactory $checkHostResultFactory;
+	private DateTimeImmutable $validExpires;
+	private string $validExpiresLine;
 
 
 	public function __construct()
 	{
-		$this->expires = new DateTimeImmutable('+25 days');
-		$this->expiresFactory = new SecurityTxtExpiresFactory();
+		$validator = new SecurityTxtValidator();
+		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$signature = new SecurityTxtSignature($gnuPgProvider);
+		$expiresFactory = new SecurityTxtExpiresFactory();
+		$pregSplitProvider = new SecurityTxtPregSplitProvider();
+		$this->splitLines = new SecurityTxtSplitLines($pregSplitProvider);
+		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $this->splitLines, $pregSplitProvider);
+		$this->urlParser = new SecurityTxtUrlParser();
+		$this->checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
+		$this->validExpires = new DateTimeImmutable('+6 months');
+		$this->validExpiresLine = 'Expires:' . $this->validExpires->format(DATE_RFC3339);
 	}
 
 
-	public function testJsonSerialize(): void
+	public function testCheckHost(): void
 	{
-		$result = $this->getResult();
-		$expected = [
-			'class' => 'Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult',
-			'host' => 'www.example.com',
-			'fetchResult' => [
-				'class' => 'Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult',
-				'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
-				'finalUrl' => 'https://www.example.com/.well-known/security.txt',
-				'redirects' => [
-					'http://example.com' => ['https://example.com', 'https://www.example.com'],
-				],
-				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
-				'isTruncated' => true,
-				'errors' => [
-					[
-						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps',
-						'params' => ['http://example.com'],
-						'message' => 'The file at http://example.com must use HTTPS',
-						'messageFormat' => 'The file at %s must use HTTPS',
-						'messageValues' => ['http://example.com'],
-						'since' => 'draft-foudil-securitytxt-06',
-						'correctValue' => 'https://example.com',
-						'howToFix' => 'Use HTTPS to serve the security.txt file',
-						'howToFixFormat' => 'Use HTTPS to serve the %s file',
-						'howToFixValues' => ['security.txt'],
-						'specSection' => '3',
-						'seeAlsoSections' => [],
-						'specUrl' => null,
-					],
-				],
-				'warnings' => [
-					[
-						'class' => 'Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly',
-						'params' => [],
-						'message' => 'security.txt not found at the top-level path',
-						'messageFormat' => '%s not found at the top-level path',
-						'messageValues' => ['security.txt'],
-						'since' => 'draft-foudil-securitytxt-02',
-						'correctValue' => null,
-						'howToFix' => 'Redirect the top-level file to the one under the /.well-known/ path',
-						'howToFixFormat' => 'Redirect the top-level file to the one under the %s path',
-						'howToFixValues' => ['/.well-known/'],
-						'specSection' => '3',
-						'seeAlsoSections' => [],
-						'specUrl' => null,
-					],
-				],
-			],
-			'fetchErrors' => [
-				[
-					'class' => SecurityTxtFileLocationNotHttps::class,
-					'params' => ['http://example.com'],
-					'message' => 'The file at http://example.com must use HTTPS',
-					'messageFormat' => 'The file at %s must use HTTPS',
-					'messageValues' => ['http://example.com'],
-					'since' => 'draft-foudil-securitytxt-06',
-					'correctValue' => 'https://example.com',
-					'howToFix' => 'Use HTTPS to serve the security.txt file',
-					'howToFixFormat' => 'Use HTTPS to serve the %s file',
-					'howToFixValues' => ['security.txt'],
-					'specSection' => '3',
-					'seeAlsoSections' => [],
-					'specUrl' => null,
-				],
-			],
-			'fetchWarnings' => [
-				[
-					'class' => SecurityTxtWellKnownPathOnly::class,
-					'params' => [],
-					'message' => 'security.txt not found at the top-level path',
-					'messageFormat' => '%s not found at the top-level path',
-					'messageValues' => ['security.txt'],
-					'since' => 'draft-foudil-securitytxt-02',
-					'correctValue' => null,
-					'howToFix' => 'Redirect the top-level file to the one under the /.well-known/ path',
-					'howToFixFormat' => 'Redirect the top-level file to the one under the %s path',
-					'howToFixValues' => ['/.well-known/'],
-					'specSection' => '3',
-					'seeAlsoSections' => [],
-					'specUrl' => null,
-				],
-			],
-			'lineErrors' => [
-				2 => [
-					[
-						'class' => SecurityTxtLineNoEol::class,
-						'params' => ['Contact: https://example.com/contact'],
-						'message' => "The line (Contact: https://example.com/contact) doesn't end with neither <CRLF> nor <LF>",
-						'messageFormat' => "The line (%s) doesn't end with neither %s nor %s",
-						'messageValues' => ['Contact: https://example.com/contact', '<CRLF>', '<LF>'],
-						'since' => 'draft-foudil-securitytxt-03',
-						'correctValue' => 'Contact: https://example.com/contact<LF>',
-						'howToFix' => 'End the line with either <CRLF> or <LF>',
-						'howToFixFormat' => 'End the line with either %s or %s',
-						'howToFixValues' => ['<CRLF>', '<LF>'],
-						'specSection' => '2.2',
-						'seeAlsoSections' => ['4'],
-						'specUrl' => null,
-					],
-				],
-			],
-			'lineWarnings' => [
-				1 => [
-					[
-						'class' => SecurityTxtPossibelFieldTypo::class,
-						'params' => ['Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring'],
-						'message' => 'Field Hi-ring may be a typo, did you mean Hiring?',
-						'messageFormat' => 'Field %s may be a typo, did you mean %s?',
-						'messageValues' => ['Hi-ring', SecurityTxtField::Hiring->value],
-						'since' => null,
-						'correctValue' => 'Hiring: https://example.com/hiring',
-						'howToFix' => 'Change Hi-ring to Hiring',
-						'howToFixFormat' => 'Change %s to %s',
-						'howToFixValues' => ['Hi-ring', SecurityTxtField::Hiring->value],
-						'specSection' => null,
-						'seeAlsoSections' => [],
-						'specUrl' => null,
-					],
-				],
-			],
-			'fileErrors' => [
-				[
-					'class' => SecurityTxtNoContact::class,
-					'params' => [],
-					'message' => 'The Contact field must always be present',
-					'messageFormat' => 'The %s field must always be present',
-					'messageValues' => [SecurityTxtField::Contact->value],
-					'since' => 'draft-foudil-securitytxt-00',
-					'correctValue' => null,
-					'howToFix' => 'Add at least one Contact field with a value that follows the URI syntax described in RFC 3986. This means that "mailto" and "tel" URI schemes must be used when specifying email addresses and telephone numbers, e.g. mailto:security@example.com',
-					'howToFixFormat' => 'Add at least one %s field with a value that follows the URI syntax described in RFC 3986. This means that "mailto" and "tel" URI schemes must be used when specifying email addresses and telephone numbers, e.g. %s',
-					'howToFixValues' => [SecurityTxtField::Contact->value, 'mailto:security@example.com'],
-					'specSection' => '2.5.3',
-					'seeAlsoSections' => ['2.5.4'],
-					'specUrl' => null,
-				],
-			],
-			'fileWarnings' => [
-				[
-					'class' => SecurityTxtSignatureExtensionNotLoaded::class,
-					'params' => [],
-					'message' => 'The gnupg extension is not available, cannot verify or create signatures',
-					'messageFormat' => 'The %s extension is not available, cannot verify or create signatures',
-					'messageValues' => ['gnupg'],
-					'since' => 'draft-foudil-securitytxt-01',
-					'correctValue' => null,
-					'howToFix' => 'Load the gnupg extension',
-					'howToFixFormat' => 'Load the %s extension',
-					'howToFixValues' => ['gnupg'],
-					'specSection' => '2.3',
-					'seeAlsoSections' => [],
-					'specUrl' => null,
-				],
-			],
-			'securityTxt' => [
-				'fileLocation' => 'https://foo.example/.well-known/security.txt',
-				'fields' => [
-					[
-						'Expires' => [
-							'dateTime' => $this->expires->format(SecurityTxtExpires::FORMAT),
-							'isExpired' => false,
-							'inDays' => 24,
-						],
-					],
-				],
-				'signatureVerifyResult' => null,
-			],
-			'expired' => false,
-			'expiryDays' => 150,
-			'valid' => false,
-			'strictMode' => true,
-			'expiresWarningThreshold' => 15,
-		];
-		$json = json_encode($result);
-		assert(is_string($json));
-		Assert::same($expected, json_decode($json, true));
+		$onUrlCalled = $onFinalUrlCalled = $onRedirectCalled = $onUrlNotFoundCalled = $onIsExpiredCalled = $onExpiresCalled = $onHostCalled = $onValidSignatureCalled = false;
+		$onFetchErrorCalled = $onFetchWarningCalled = $onLineErrorCalled = $onLineWarningCalled = $onFileErrorCalled = $onFileWarningCalled = false;
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		{$this->validExpiresLine}
+		Canonical: https://foo.bar.example/.well-known/security.txt
+		-----BEGIN PGP SIGNATURE-----
+
+		iJIEARYKADoWIQSvbhd14xH/eOkR59x/h5ABqcj1CgUCaH7y/xwcc3RpbGwudGVz
+		dHNAbGlicmFyeS5leGFtcGxlAAoJEH+HkAGpyPUKRvEA/2cVGZs54ieQ7s1nSTla
+		6O+JHJNaLOf3llvGRi55gW+BAQCDVLTj2q7cbHPS78lD/uvsgFI3NVWwZx8m72sx
+		SmjCCQ==
+		=bZYA
+		-----END PGP SIGNATURE-----
+		EOT . "\n";
+
+		$checkHost = $this->getCheckHost(200, ['content-type' => 'text/plain; charset=utf-8'], $contents);
+		$checkHost->addOnUrl(function () use (&$onUrlCalled): void {
+			$onUrlCalled = true;
+		});
+		$checkHost->addOnFinalUrl(function () use (&$onFinalUrlCalled): void {
+			$onFinalUrlCalled = true;
+		});
+		$checkHost->addOnRedirect(function () use (&$onRedirectCalled): void {
+			$onRedirectCalled = true;
+		});
+		$checkHost->addOnUrlNotFound(function () use (&$onUrlNotFoundCalled): void {
+			$onUrlNotFoundCalled = true;
+		});
+		$checkHost->addOnIsExpired(function () use (&$onIsExpiredCalled): void {
+			$onIsExpiredCalled = true;
+		});
+		$checkHost->addOnExpires(function () use (&$onExpiresCalled): void {
+			$onExpiresCalled = true;
+		});
+		$checkHost->addOnHost(function () use (&$onHostCalled): void {
+			$onHostCalled = true;
+		});
+		$checkHost->addOnValidSignature(function () use (&$onValidSignatureCalled): void {
+			$onValidSignatureCalled = true;
+		});
+		$checkHost->addOnFetchError(function () use (&$onFetchErrorCalled): void {
+			$onFetchErrorCalled = true;
+		});
+		$checkHost->addOnFetchWarning(function () use (&$onFetchWarningCalled): void {
+			$onFetchWarningCalled = true;
+		});
+		$checkHost->addOnLineError(function () use (&$onLineErrorCalled): void {
+			$onLineErrorCalled = true;
+		});
+		$checkHost->addOnLineWarning(function () use (&$onLineWarningCalled): void {
+			$onLineWarningCalled = true;
+		});
+		$checkHost->addOnFileError(function () use (&$onFileErrorCalled): void {
+			$onFileErrorCalled = true;
+		});
+		$checkHost->addOnFileWarning(function () use (&$onFileWarningCalled): void {
+			$onFileWarningCalled = true;
+		});
+
+		$result = $checkHost->check('https://foo.bar.example/');
+		Assert::same($contents, $result->getContents());
+		Assert::false($result->getIsExpired());
+		Assert::true($onUrlCalled);
+		Assert::true($onFinalUrlCalled);
+		Assert::false($onRedirectCalled);
+		Assert::false($onUrlNotFoundCalled);
+		Assert::false($onIsExpiredCalled);
+		Assert::true($onExpiresCalled);
+		Assert::true($onHostCalled);
+		Assert::true($onValidSignatureCalled);
+		Assert::false($onFetchErrorCalled);
+		Assert::false($onFetchWarningCalled);
+		Assert::false($onLineErrorCalled);
+		Assert::false($onLineWarningCalled);
+		Assert::false($onFileErrorCalled);
+		Assert::false($onFileWarningCalled);
+		Assert::same([], $result->getFetchWarnings());
+		Assert::same([], $result->getFetchErrors());
+		Assert::same([], $result->getLineWarnings());
+		Assert::same([], $result->getLineErrors());
+		Assert::same([], $result->getFileWarnings());
+		Assert::same([], $result->getFileErrors());
 	}
 
 
-	private function getResult(): SecurityTxtCheckHostResult
+	public function testCheckHostLineErrorWarning(): void
 	{
-		$securityTxt = new SecurityTxt();
-		$securityTxt->setFileLocation('https://foo.example/.well-known/security.txt');
-		$securityTxt->setExpires($this->expiresFactory->create($this->expires));
-		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $this->expires->format(SecurityTxtExpires::FORMAT)];
-		$fetchResult = new SecurityTxtFetchResult(
-			'http://www.example.com/.well-known/security.txt',
-			'https://www.example.com/.well-known/security.txt',
-			['http://example.com' => ['https://example.com', 'https://www.example.com']],
-			implode($lines),
-			true,
-			$lines,
-			[new SecurityTxtFileLocationNotHttps('http://example.com')],
-			[new SecurityTxtWellKnownPathOnly()],
+		$contents = "Contact: foo@example.com\nExpires: " . $this->validExpires->modify('+10 years')->format(DATE_RFC3339) . "\n";
+		$checkHost = $this->getCheckHost(200, [], $contents);
+		$onLineErrorCalled = $onLineWarningCalled = false;
+		$checkHost->addOnLineError(function () use (&$onLineErrorCalled): void {
+			$onLineErrorCalled = true;
+		});
+		$checkHost->addOnLineWarning(function () use (&$onLineWarningCalled): void {
+			$onLineWarningCalled = true;
+		});
+		$result = $checkHost->check('https://example.com');
+		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com')]], $result->getLineErrors());
+		Assert::equal([2 => [new SecurityTxtExpiresTooLong()]], $result->getLineWarnings());
+		Assert::true($onLineErrorCalled);
+		Assert::true($onLineWarningCalled);
+	}
+
+
+	public function testCheckHostRedirect(): void
+	{
+		$contents = "Contact: foo@example.com\nExpires: " . $this->validExpires->modify('+10 years')->format(DATE_RFC3339) . "\n";
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://example.net/'], 'redirect', false),
+			new SecurityTxtFetcherResponse(200, [], $contents, false),
 		);
-		return new SecurityTxtCheckHostResult(
-			'www.example.com',
-			$fetchResult,
-			$fetchResult->getErrors(),
-			$fetchResult->getWarnings(),
-			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact')]],
-			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
-			[new SecurityTxtNoContact()],
-			[new SecurityTxtSignatureExtensionNotLoaded()],
-			$securityTxt,
-			false,
-			150,
-			false,
-			true,
-			15,
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', null)), 1);
+		$checkHost = new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
+
+		$onRedirectCalled = false;
+		$checkHost->addOnRedirect(function () use (&$onRedirectCalled): void {
+			$onRedirectCalled = true;
+		});
+		$result = $checkHost->check('https://example.com');
+		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com')]], $result->getLineErrors());
+		Assert::equal([2 => [new SecurityTxtExpiresTooLong()]], $result->getLineWarnings());
+		Assert::true($onRedirectCalled);
+	}
+
+
+	public function testCheckHostNotFound(): void
+	{
+		$checkHost = $this->getCheckHost(404, [], 'not found');
+		$onUrlNotFoundCalled = false;
+		$checkHost->addOnUrlNotFound(function () use (&$onUrlNotFoundCalled): void {
+			$onUrlNotFoundCalled = true;
+		});
+		Assert::throws(function () use ($checkHost): void {
+			$checkHost->check('https://example.com');
+		}, SecurityTxtNotFoundException::class);
+		Assert::true($onUrlNotFoundCalled);
+	}
+
+
+	public function testCheckExpiredNoEol(): void
+	{
+		$contents = 'Expires: ' . $this->validExpires->modify('-10 years')->format(DATE_RFC3339);
+		$checkHost = $this->getCheckHost(200, [], $contents);
+		$onIsExpiredCalled = false;
+		$checkHost->addOnIsExpired(function () use (&$onIsExpiredCalled): void {
+			$onIsExpiredCalled = true;
+		});
+		$result = $checkHost->check('https://example.com');
+		Assert::true($result->getIsExpired());
+		Assert::equal([1 => [new SecurityTxtLineNoEol($contents), new SecurityTxtExpired()]], $result->getLineErrors());
+		Assert::true($onIsExpiredCalled);
+	}
+
+
+	public function testCheckFetchErrorWarning(): void
+	{
+		$contentType = 'pineapple/pizza';
+		$url = 'https://example.com/.well-known/security.txt';
+
+		$wellKnownContents = $this->validExpiresLine . "\n";
+		$topLevelContents = 'Content differs';
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $wellKnownContents, false),
+			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $topLevelContents, false),
 		);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', null)), 1);
+		$checkHost = new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
+
+		$onFetchErrorCalled = $onFetchWarningCalled = false;
+		$checkHost->addOnFetchError(function () use (&$onFetchErrorCalled): void {
+			$onFetchErrorCalled = true;
+		});
+		$checkHost->addOnFetchWarning(function () use (&$onFetchWarningCalled): void {
+			$onFetchWarningCalled = true;
+		});
+		$result = $checkHost->check($url);
+		Assert::equal([new SecurityTxtContentTypeInvalid($url, $contentType)], $result->getFetchErrors());
+		Assert::equal([new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents)], $result->getFetchWarnings());
+		Assert::true($onFetchErrorCalled);
+		Assert::true($onFetchWarningCalled);
+	}
+
+
+	public function testCheckFileErrorWarning(): void
+	{
+		$canonical1 = "https://1.example/.well-known/security.txt";
+		$canonical2 = "https://2.example/.well-known/security.txt";
+		$contents = "{$this->validExpiresLine}\nCanonical: {$canonical1}\nCanonical: {$canonical2}\n";
+		$checkHost = $this->getCheckHost(200, [], $contents);
+
+		$onFileErrorCalled = $onFileWarningCalled = false;
+		$checkHost->addOnFileError(function () use (&$onFileErrorCalled): void {
+			$onFileErrorCalled = true;
+		});
+		$checkHost->addOnFileWarning(function () use (&$onFileWarningCalled): void {
+			$onFileWarningCalled = true;
+		});
+		$url = 'https://example.com/.well-known/security.txt';
+		$result = $checkHost->check($url);
+		Assert::equal([new SecurityTxtNoContact()], $result->getFileErrors());
+		Assert::equal([new SecurityTxtCanonicalUriMismatch($url, [$canonical1, $canonical2])], $result->getFileWarnings());
+		Assert::true($onFileErrorCalled);
+		Assert::true($onFileWarningCalled);
+	}
+
+
+	/**
+	 * @param array<lowercase-string, string> $lowercaseHeaders
+	 */
+	private function getCheckHost(int $httpCode, array $lowercaseHeaders, string $contents): SecurityTxtCheckHost
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, $contents, false));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', null)), 1);
+		return new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
+	}
+
+
+	private function getHttpClient(SecurityTxtFetcherResponse ...$fetcherResponse): SecurityTxtFetcherHttpClient
+	{
+		return new class (...$fetcherResponse) implements SecurityTxtFetcherHttpClient {
+
+			/**
+			 * @var list<SecurityTxtFetcherResponse>
+			 */
+			private array $fetcherResponse;
+			private int $position = 0;
+			private int $lastKey = 0;
+
+
+			public function __construct(SecurityTxtFetcherResponse ...$fetcherResponse)
+			{
+				$this->fetcherResponse = array_values($fetcherResponse);
+				$this->lastKey = count($fetcherResponse) - 1;
+			}
+
+
+			#[Override]
+			public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse
+			{
+				return $this->fetcherResponse[$this->position++] ?? $this->fetcherResponse[$this->lastKey];
+			}
+
+		};
+	}
+
+
+	private function getDnsProvider(SecurityTxtDnsRecords $dnsRecords): SecurityTxtDnsProvider
+	{
+		return new readonly class ($dnsRecords) implements SecurityTxtDnsProvider {
+
+			public function __construct(private SecurityTxtDnsRecords $dnsRecords)
+			{
+			}
+
+
+			#[Override]
+			public function getRecords(string $url, string $host): SecurityTxtDnsRecords
+			{
+				return $this->dnsRecords;
+			}
+
+		};
 	}
 
 }
