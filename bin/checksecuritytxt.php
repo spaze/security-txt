@@ -49,7 +49,10 @@ $fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $splitLines, $dnsPro
 $consolePrinter = new ConsolePrinter();
 $checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 $checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);
-$checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost);
+$exit = function (int $status): void {
+	exit($status);
+};
+$checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost, $exit);
 
 /** @var list<string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
