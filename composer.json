@@ -46,9 +46,11 @@
 			"@lint",
 			"@phpcs",
 			"@phpstan",
+			"@tester-no-extensions",
 			"@tester",
 			"@psalm"
 		],
+		"tester-no-extensions": "TEST_CASE_RUNNER_FORCE_EXT_GNUPG_NOT_LOADED=1 vendor/bin/tester -s -c tests/php-unix-no-extensions.ini -d zend.assertions=1 --colors 1 tests/Signature/Providers/SecurityTxtSignatureGnuPgProviderNoExtensionTest.phpt",
 		"tester": "vendor/bin/tester -s -c tests/php-unix.ini -d zend.assertions=1 --colors 1 --coverage tests/temp/coverage.html --coverage-src src/ tests/"
 	}
 }
