@@ -12,10 +12,9 @@ I have also written a blogpost about `security.txt` and how it may be helpful wh
 
 # Supported versions
 
-| Version | PHP     | Notes                                        |
-|---------|---------|----------------------------------------------|
-| `1.x`   | `^8.3`  | Current stable release                       |
-| `2.x`   | `^8.5`  | Planned; will use the new PHP 8.5 URI extension |
+| Version | PHP       | Notes                  |
+|---------|-----------|------------------------|
+| `1.x`   | 8.3, 8.4  | Current stable release |
 
 # Installation
 
