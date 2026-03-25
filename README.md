@@ -10,6 +10,12 @@ I have also written a blogpost about `security.txt` and how it may be helpful wh
 - [What's `security.txt` and why you should have one](https://www.michalspacek.com/what-is-security.txt-and-why-you-should-have-one) in English
 - [K čemu je soubor `security.txt`](https://www.michalspacek.cz/k-cemu-je-soubor-security.txt) in Czech
 
+# Supported versions
+
+| Version | PHP       | Notes                  |
+|---------|-----------|------------------------|
+| `1.x`   | 8.3, 8.4, 8.5  | Current stable release |
+
 # Installation
 
 Install the package with Composer:
