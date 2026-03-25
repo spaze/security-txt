@@ -14,7 +14,7 @@ I have also written a blogpost about `security.txt` and how it may be helpful wh
 
 | Version | PHP       | Notes                  |
 |---------|-----------|------------------------|
-| `1.x`   | 8.3, 8.4  | Current stable release |
+| `1.x`   | 8.3, 8.4, 8.5  | Current stable release |
 
 # Installation
 
