@@ -29,7 +29,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
-use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
+use Spaze\SecurityTxt\Violations\SecurityTxtPossibleFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
@@ -101,7 +101,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 			$fetchResult->getErrors(),
 			$fetchResult->getWarnings(),
 			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact'), new SecurityTxtExpiresOldFormat('a correct value')]],
-			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
+			[1 => [new SecurityTxtPossibleFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
 			[new SecurityTxtNoContact()],
 			[new SecurityTxtExpiresSoon(11), new SecurityTxtSignatureExtensionNotLoaded()],
 			$securityTxt,

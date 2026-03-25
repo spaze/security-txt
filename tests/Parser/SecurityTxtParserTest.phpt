@@ -36,7 +36,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
-use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
+use Spaze\SecurityTxt\Violations\SecurityTxtPossibleFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
@@ -372,7 +372,7 @@ final class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseString("Acknowledgments: {$uri1}\nAcknowledgements: {$uri2}\n");
 		Assert::count(0, $parseResult->getLineErrors());
 		$warning = $parseResult->getLineWarnings()[2][0];
-		Assert::type(SecurityTxtPossibelFieldTypo::class, $warning);
+		Assert::type(SecurityTxtPossibleFieldTypo::class, $warning);
 		Assert::same("Acknowledgments: {$uri2}", $warning->getCorrectValue());
 		Assert::count(1, $parseResult->getSecurityTxt()->getAcknowledgments());
 		Assert::same($uri1, $parseResult->getSecurityTxt()->getAcknowledgments()[0]->getUri());

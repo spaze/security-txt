@@ -30,7 +30,7 @@ use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
-use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
+use Spaze\SecurityTxt\Violations\SecurityTxtPossibleFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 
@@ -167,7 +167,7 @@ final class SecurityTxtParser
 			} else {
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
 				if ($suggestion !== null) {
-					$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
+					$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibleFieldTypo($field[0], $suggestion->value, $line);
 				} else {
 					$this->lineWarnings[$lineNumber][] = new SecurityTxtUnknownField($field[0], $line);
 				}

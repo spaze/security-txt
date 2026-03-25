@@ -5,7 +5,7 @@ namespace Spaze\SecurityTxt\Violations;
 
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 
-final class SecurityTxtPossibelFieldTypo extends SecurityTxtSpecViolation
+final class SecurityTxtPossibleFieldTypo extends SecurityTxtSpecViolation
 {
 
 	public function __construct(string $fieldName, string $suggestion, string $line)

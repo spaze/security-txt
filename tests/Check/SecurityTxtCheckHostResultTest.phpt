@@ -14,7 +14,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
-use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
+use Spaze\SecurityTxt\Violations\SecurityTxtPossibleFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
@@ -151,7 +151,7 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 			'lineWarnings' => [
 				1 => [
 					[
-						'class' => SecurityTxtPossibelFieldTypo::class,
+						'class' => SecurityTxtPossibleFieldTypo::class,
 						'params' => ['Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring'],
 						'message' => 'Field Hi-ring may be a typo, did you mean Hiring?',
 						'messageFormat' => 'Field %s may be a typo, did you mean %s?',
@@ -248,7 +248,7 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 			$fetchResult->getErrors(),
 			$fetchResult->getWarnings(),
 			[2 => [new SecurityTxtLineNoEol('Contact: https://example.com/contact')]],
-			[1 => [new SecurityTxtPossibelFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
+			[1 => [new SecurityTxtPossibleFieldTypo('Hi-ring', SecurityTxtField::Hiring->value, 'Hi-ring: https://example.com/hiring')]],
 			[new SecurityTxtNoContact()],
 			[new SecurityTxtSignatureExtensionNotLoaded()],
 			$securityTxt,
