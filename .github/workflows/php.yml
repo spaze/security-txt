@@ -57,6 +57,8 @@ jobs:
       run: composer phpstan
     - name: Run Tester
       run: composer tester
+    - name: Run Tester without extensions
+      run: composer tester-no-extensions
 
   psalm:
     runs-on: ubuntu-latest
