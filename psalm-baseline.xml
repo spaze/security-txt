@@ -15,6 +15,9 @@
     </PossiblyUndefinedArrayOffset>
   </file>
   <file src="src/Fetcher/SecurityTxtFetcher.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$ipAddressType]]></code>
+    </ArgumentTypeCoercion>
     <TypeDoesNotContainNull>
       <code><![CDATA[$topLevelContents === null]]></code>
     </TypeDoesNotContainNull>

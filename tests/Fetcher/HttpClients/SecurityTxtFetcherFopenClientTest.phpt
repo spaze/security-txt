@@ -21,7 +21,7 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 	{
 		needsInternet();
 		$client = new SecurityTxtFetcherFopenClient();
-		$response = $client->getResponse(new SecurityTxtFetcherUrl('https://example.com', []), null);
+		$response = $client->getResponse(new SecurityTxtFetcherUrl('https://example.com', [], '1.1.1.0', DNS_A), null);
 		Assert::contains('Example Domain', $response->getContents());
 		Assert::same(200, $response->getHttpCode());
 		Assert::true(str_starts_with($response->getHeader('Content-Type') ?? '', 'text/html'));
@@ -34,7 +34,7 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherFopenClient();
 		$url = 'http://ipv4.download.thinkbroadband.com/5MB.zip'; // From https://www.thinkbroadband.com/download
-		$response = $client->getResponse(new SecurityTxtFetcherUrl($url, []), null);
+		$response = $client->getResponse(new SecurityTxtFetcherUrl($url, [], '1.1.1.0', DNS_A), null);
 		Assert::same(200, $response->getHttpCode());
 		Assert::true($response->isTruncated());
 	}
@@ -44,7 +44,7 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 	{
 		needsInternet();
 		$client = new SecurityTxtFetcherFopenClient();
-		$response = $client->getResponse(new SecurityTxtFetcherUrl('https://httpbin.org/headers', []), 'www.httpbin.org');
+		$response = $client->getResponse(new SecurityTxtFetcherUrl('https://httpbin.org/headers', [], '1.1.1.0', DNS_A), 'www.httpbin.org');
 		Assert::same(200, $response->getHttpCode());
 		$json = $response->getContents();
 		$headers = json_decode($json, true);
@@ -65,7 +65,7 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherFopenClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', []), null);
+			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', [], '1.1.1.0', DNS_A), null);
 		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/");
 	}
 

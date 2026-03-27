@@ -23,7 +23,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 			'192.0.2.1',
 			DNS_A,
 			200,
-			new SecurityTxtFetcherResponse(200, [], '', true),
+			new SecurityTxtFetcherResponse(200, [], '', true, '1.1.1.0', DNS_A),
 		);
 		$result2 = new SecurityTxtFetcherFetchHostResult(
 			'https://2.example/',
@@ -31,7 +31,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 			'2001:DB8::2',
 			DNS_AAAA,
 			200,
-			new SecurityTxtFetcherResponse(200, [], '', false),
+			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', DNS_A),
 		);
 		$result3 = new SecurityTxtFetcherFetchHostResult(
 			'https://3.example/',
@@ -39,7 +39,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 			'2001:DB8::3',
 			DNS_AAAA,
 			200,
-			new SecurityTxtFetcherResponse(200, [], '', false),
+			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', DNS_A),
 		);
 		$result4 = new SecurityTxtFetcherFetchHostResult(
 			'https://4.example/',
@@ -47,7 +47,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 			'2001:DB8::4',
 			DNS_AAAA,
 			200,
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', true),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', true, '1.1.1.0', DNS_A),
 		);
 		$result5 = new SecurityTxtFetcherFetchHostResult(
 			'https://5.example/',
@@ -55,7 +55,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 			'2001:DB8::5',
 			DNS_AAAA,
 			200,
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', false),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', false, '1.1.1.0', DNS_A),
 		);
 		$redirects = [
 			'https://1.example/' => ['https://redir1.example/'],

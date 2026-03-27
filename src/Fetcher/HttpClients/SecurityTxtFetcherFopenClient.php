@@ -68,7 +68,14 @@ final readonly class SecurityTxtFetcherFopenClient implements SecurityTxtFetcher
 			$parts = explode(':', $wrapperData[$i], 2);
 			$headers[strtolower(trim($parts[0]))] = trim($parts[1]);
 		}
-		return new SecurityTxtFetcherResponse($code, $headers, $contents, $truncated ?? false);
+		return new SecurityTxtFetcherResponse(
+			$code,
+			$headers,
+			$contents,
+			$truncated ?? false,
+			$url->getIpAddress(),
+			$url->getIpAddressType(),
+		);
 	}
 
 }
