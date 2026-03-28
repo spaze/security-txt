@@ -21,7 +21,7 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 	{
 		needsInternet();
 		$client = new SecurityTxtFetcherFopenClient();
-		$response = $client->getResponse(new SecurityTxtFetcherUrl('https://example.com', [], '1.1.1.0', DNS_A), null);
+		$response = $client->getResponse(new SecurityTxtFetcherUrl('https://example.com', [], '104.18.26.120', DNS_A), 'example.com');
 		Assert::contains('Example Domain', $response->getContents());
 		Assert::same(200, $response->getHttpCode());
 		Assert::true(str_starts_with($response->getHeader('Content-Type') ?? '', 'text/html'));
@@ -34,7 +34,7 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherFopenClient();
 		$url = 'http://ipv4.download.thinkbroadband.com/5MB.zip'; // From https://www.thinkbroadband.com/download
-		$response = $client->getResponse(new SecurityTxtFetcherUrl($url, [], '1.1.1.0', DNS_A), null);
+		$response = $client->getResponse(new SecurityTxtFetcherUrl($url, [], '80.249.99.148', DNS_A), 'ipv4.download.thinkbroadband.com');
 		Assert::same(200, $response->getHttpCode());
 		Assert::true($response->isTruncated());
 	}
@@ -65,7 +65,7 @@ final class SecurityTxtFetcherFopenClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherFopenClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', [], '1.1.1.0', DNS_A), null);
+			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', [], '1.1.1.0', DNS_A), 'com.example');
 		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/");
 	}
 

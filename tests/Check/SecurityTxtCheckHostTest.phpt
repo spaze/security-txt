@@ -306,7 +306,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 
 			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse
+			public function getResponse(SecurityTxtFetcherUrl $url, string $contextHost): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse[$this->position++] ?? $this->fetcherResponse[$this->lastKey];
 			}

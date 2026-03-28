@@ -27,7 +27,7 @@ final readonly class SecurityTxtFetcherFopenClient implements SecurityTxtFetcher
 	 * @throws SecurityTxtNoHttpCodeException
 	 */
 	#[Override]
-	public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse
+	public function getResponse(SecurityTxtFetcherUrl $url, string $contextHost): SecurityTxtFetcherResponse
 	{
 
 		$options = [
@@ -37,12 +37,10 @@ final readonly class SecurityTxtFetcherFopenClient implements SecurityTxtFetcher
 				'user_agent' => $this->userAgent,
 			],
 		];
-		if ($contextHost !== null) {
-			$options['ssl'] = [
-				'peer_name' => $contextHost,
-			];
-			$options['http']['header'] = ["Host: {$contextHost}"];
-		}
+		$options['ssl'] = [
+			'peer_name' => $contextHost,
+		];
+		$options['http']['header'] = ["Host: {$contextHost}"];
 		$fp = @fopen($url->getUrl(), 'r', context: stream_context_create($options)); // intentionally @, converted to exception
 		if ($fp === false) {
 			throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
