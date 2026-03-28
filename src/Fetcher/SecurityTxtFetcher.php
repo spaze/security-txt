@@ -7,6 +7,7 @@ use LogicException;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidTypeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
@@ -76,6 +77,8 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtCannotParseHostnameException
+	 * @throws SecurityTxtConnectedToWrongIpAddressException
+	 * @throws SecurityTxtHostIpAddressInvalidException
 	 */
 	public function fetchHost(string $host, bool $requireTopLevelLocation = false, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
@@ -99,6 +102,8 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtCannotParseHostnameException
+	 * @throws SecurityTxtConnectedToWrongIpAddressException
+	 * @throws SecurityTxtHostIpAddressInvalidException
 	 */
 	private function fetchUrl(string $url, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
@@ -141,6 +146,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
+	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 */
 	private function getResponse(string $url, string $host, string $originalUrl, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
 	{
@@ -292,6 +298,9 @@ final class SecurityTxtFetcher
 
 	/**
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtConnectedToWrongIpAddressException
+	 * @throws SecurityTxtHostIpAddressInvalidException
+	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 * @throws SecurityTxtHostIpAddressInvalidTypeException
 	 * @throws SecurityTxtHostIpAddressNotFoundException
 	 * @throws SecurityTxtHostNotFoundException

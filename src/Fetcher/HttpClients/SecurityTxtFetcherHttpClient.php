@@ -9,6 +9,6 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 interface SecurityTxtFetcherHttpClient
 {
 
-	public function getResponse(SecurityTxtFetcherUrl $url, string $contextHost): SecurityTxtFetcherResponse;
+	public function getResponse(SecurityTxtFetcherUrl $url, string $host): SecurityTxtFetcherResponse;
 
 }

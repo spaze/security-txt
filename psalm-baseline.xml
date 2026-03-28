@@ -5,14 +5,11 @@
       <code><![CDATA[$_SERVER['argv']]]></code>
     </PossiblyUndefinedArrayOffset>
   </file>
-  <file src="src/Fetcher/HttpClients/SecurityTxtFetcherFopenClient.php">
-    <PossiblyFalseArgument>
-      <code><![CDATA[$contents]]></code>
-      <code><![CDATA[$contents]]></code>
-    </PossiblyFalseArgument>
-    <PossiblyUndefinedArrayOffset>
-      <code><![CDATA[$parts[1]]]></code>
-    </PossiblyUndefinedArrayOffset>
+  <file src="src/Fetcher/HttpClients/SecurityTxtFetcherCurlClient.php">
+    <RedundantCondition>
+      <code><![CDATA[!$truncated]]></code>
+      <code><![CDATA[!$truncated]]></code>
+    </RedundantCondition>
   </file>
   <file src="src/Fetcher/SecurityTxtFetcher.php">
     <ArgumentTypeCoercion>
