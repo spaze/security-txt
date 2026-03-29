@@ -46,7 +46,8 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 		if ($components === false) {
 			throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
 		}
-		$port = $components['port'] ?? (isset($components['scheme']) && strtolower($components['scheme']) === 'http' ? 80 : 443);
+		$port = $components['port'] ?? null;
+		$defaultPort = isset($components['scheme']) && strtolower($components['scheme']) === 'http' ? 80 : 443;
 		curl_setopt_array($ch, [
 			CURLOPT_RETURNTRANSFER => false,
 			CURLOPT_FOLLOWLOCATION => false,
@@ -60,10 +61,10 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			CURLOPT_ENCODING => '', // '' means that the Accept-Encoding: header containing all supported encoding types is sent
 			CURLOPT_FORBID_REUSE => true,
 			CURLOPT_FRESH_CONNECT => true,
-			CURLOPT_HTTPHEADER => ["Host: {$host}"],
+			CURLOPT_HTTPHEADER => ["Host: {$host}" . ($port !== null ? ":{$port}" : '')],
 			CURLOPT_USERAGENT => $this->userAgent,
 			CURLOPT_HEADER => false,
-			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host, $port, $ipAddressType === DNS_AAAA ? "[{$ipAddress}]" : $ipAddress)],
+			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host, $port ?? $defaultPort, $ipAddressType === DNS_AAAA ? "[{$ipAddress}]" : $ipAddress)],
 			CURLOPT_HEADERFUNCTION => function (CurlHandle $ch, string $header) use (&$rawHeaders): int {
 				$rawHeaders[] = trim($header);
 				return strlen($header);
