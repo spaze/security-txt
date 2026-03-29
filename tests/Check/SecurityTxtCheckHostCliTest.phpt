@@ -161,7 +161,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Not found [1mhttps://example.com/.well-known/security.txt[0m
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/security.txt[0m
 		[1;90m[Info][0m Not found [1mhttps://example.com/security.txt[0m
-		[1;31m[Error][0m Can't read security.txt: https://example.com/.well-known/security.txt (192.0.2.1) => 404, https://example.com/security.txt (192.0.2.1) => 404
+		[1;31m[Error][0m Can't read security.txt: https://example.com/.well-known/security.txt (1.1.1.0) => 404, https://example.com/security.txt (1.1.1.0) => 404
 		EOT;
 		Assert::same($expected . "\n", $output);
 		Assert::same(CheckExitStatus::FileError->value, $this->exitStatus);
@@ -191,7 +191,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
 		$splitLines = new SecurityTxtSplitLines($pregSplitProvider);
 		$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', null)), 1);
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
 		$checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 		$checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);
 		return new SecurityTxtCheckHostCli(
