@@ -17,7 +17,7 @@ final class SecurityTxtFetcherUrlTest extends TestCase
 
 	public function testGetters(): void
 	{
-		$url = new SecurityTxtFetcherUrl('https://example.com/', ['https://1.example/', 'https://2.example/'], '1.1.1.0', DNS_A);
+		$url = new SecurityTxtFetcherUrl('https://example.com/', ['https://1.example/', 'https://2.example/']);
 		Assert::same('https://example.com/', $url->getUrl());
 		Assert::same(['https://1.example/', 'https://2.example/'], $url->getRedirects());
 	}
@@ -26,14 +26,14 @@ final class SecurityTxtFetcherUrlTest extends TestCase
 	public function testUnsupportedScheme(): void
 	{
 		Assert::noError(function (): void {
-			new SecurityTxtFetcherUrl('http://example.com/', [], '1.1.1.0', DNS_A);
-			new SecurityTxtFetcherUrl('https://example.com/', [], '1.1.1.0', DNS_A);
-			new SecurityTxtFetcherUrl('HTTP://example.com/', [], '1.1.1.0', DNS_A);
-			new SecurityTxtFetcherUrl('HTTPS://example.com/', [], '1.1.1.0', DNS_A);
+			new SecurityTxtFetcherUrl('http://example.com/', []);
+			new SecurityTxtFetcherUrl('https://example.com/', []);
+			new SecurityTxtFetcherUrl('HTTP://example.com/', []);
+			new SecurityTxtFetcherUrl('HTTPS://example.com/', []);
 		});
 
 		Assert::throws(function (): void {
-			new SecurityTxtFetcherUrl('scheme://example/', ['https://1.example/', 'file:///foo/bar'], '1.1.1.0', DNS_A);
+			new SecurityTxtFetcherUrl('scheme://example/', ['https://1.example/', 'file:///foo/bar']);
 		}, SecurityTxtUrlUnsupportedSchemeException::class, 'URL scheme://example/ has an unsupported scheme (redirects: https://1.example/ → file:///foo/bar)');
 	}
 

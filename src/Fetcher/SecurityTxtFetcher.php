@@ -110,7 +110,7 @@ final class SecurityTxtFetcher
 		$finalUrl = $url;
 		$this->callOnCallback($this->onUrl, $url);
 		try {
-			$response = $this->getResponse($url, $host, $url, $finalUrl, $noIpv6);
+			$response = $this->getResponse(new SecurityTxtFetcherUrl($url, $this->getRedirects($url)), $host, $url, $finalUrl, $noIpv6);
 			$ipAddress = $response->getIpAddress();
 			$ipAddressType = $response->getIpAddressType();
 		} catch (SecurityTxtUrlNotFoundException $e) {
@@ -148,48 +148,43 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 */
-	private function getResponse(string $url, string $host, string $originalUrl, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
+	private function getResponse(SecurityTxtFetcherUrl $url, string $host, string $originalUrl, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
 	{
-		$dnsRecords = $this->dnsLookupProvider->getRecords($url, $host);
+		$dnsRecords = $this->dnsLookupProvider->getRecords($url->getUrl(), $host);
 		$ipRecord = $dnsRecords->getIpRecord();
 		$ipv6Record = $dnsRecords->getIpv6Record();
 		if ($noIpv6 && $ipv6Record !== null && $ipRecord === null) {
-			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url);
+			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl());
 		}
 		if (!$noIpv6 && $ipv6Record !== null) {
 			if (filter_var($ipv6Record, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
-				throw new SecurityTxtHostIpAddressInvalidException($host, $ipv6Record, DNS_AAAA, $url);
+				throw new SecurityTxtHostIpAddressInvalidException($host, $ipv6Record, DNS_AAAA, $url->getUrl());
 			}
 			if (filter_var($ipv6Record, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-				throw new SecurityTxtHostIpAddressNotPublicException($host, $ipv6Record, $url);
+				throw new SecurityTxtHostIpAddressNotPublicException($host, $ipv6Record, $url->getUrl());
 			}
 			$ipAddress = $ipv6Record;
 			$ipAddressType = DNS_AAAA;
 		} elseif ($ipRecord !== null) {
 			if (filter_var($ipRecord, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
-				throw new SecurityTxtHostIpAddressInvalidException($host, $ipRecord, DNS_A, $url);
+				throw new SecurityTxtHostIpAddressInvalidException($host, $ipRecord, DNS_A, $url->getUrl());
 			}
 			if (filter_var($ipRecord, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-				throw new SecurityTxtHostIpAddressNotPublicException($host, $ipRecord, $url);
+				throw new SecurityTxtHostIpAddressNotPublicException($host, $ipRecord, $url->getUrl());
 			}
 			$ipAddress = $ipRecord;
 			$ipAddressType = DNS_A;
 		}
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
-			throw new SecurityTxtHostIpAddressNotFoundException($url, $host);
+			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host);
 		}
 
-
-		$redirects = $this->redirects[$originalUrl] ?? [];
-		if ($redirects !== []) {
-			array_unshift($redirects, $originalUrl);
-		}
-		$response = $this->httpClient->getResponse(new SecurityTxtFetcherUrl($url, $redirects, $ipAddress, $ipAddressType), $host);
+		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
-			throw new SecurityTxtUrlNotFoundException($url, $response->getHttpCode(), $ipAddress, $ipAddressType);
+			throw new SecurityTxtUrlNotFoundException($url->getUrl(), $response->getHttpCode(), $ipAddress, $ipAddressType);
 		}
 		if ($response->getHttpCode() >= 300) {
-			return $this->redirect($url, $originalUrl, $response, $finalUrl, $noIpv6);
+			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6);
 		}
 		return $response;
 	}
@@ -327,8 +322,21 @@ final class SecurityTxtFetcher
 			if (count($this->redirects[$originalUrl]) > $this->maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], $this->maxAllowedRedirects);
 			}
-			return $this->getResponse($location, $this->urlParser->getHostFromUrl($location), $originalUrl, $finalUrl, $noIpv6);
+			return $this->getResponse(new SecurityTxtFetcherUrl($location, $this->getRedirects($originalUrl)), $this->urlParser->getHostFromUrl($location), $originalUrl, $finalUrl, $noIpv6);
 		}
+	}
+
+
+	/**
+	 * @return list<string>
+	 */
+	private function getRedirects(string $url): array
+	{
+		$redirects = $this->redirects[$url] ?? [];
+		if ($redirects !== []) {
+			array_unshift($redirects, $url);
+		}
+		return $redirects;
 	}
 
 }

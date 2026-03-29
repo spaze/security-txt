@@ -11,16 +11,12 @@ final readonly class SecurityTxtFetcherUrl
 
 	/**
 	 * @param list<string> $redirects
-	 * @phpstan-param DNS_A|DNS_AAAA $ipAddressType
-	 * @psalm-param int $ipAddressType
 	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 */
 	public function __construct(
 		private string $url,
 		private array $redirects,
-		private string $ipAddress,
-		private int $ipAddressType,
 	) {
 		$scheme = parse_url($this->url, PHP_URL_SCHEME);
 		if ($scheme === null || $scheme === false) {
@@ -44,22 +40,6 @@ final readonly class SecurityTxtFetcherUrl
 	public function getRedirects(): array
 	{
 		return $this->redirects;
-	}
-
-
-	public function getIpAddress(): string
-	{
-		return $this->ipAddress;
-	}
-
-
-	/**
-	 * @phpstan-return DNS_A|DNS_AAAA
-	 * @psalm-return int
-	 */
-	public function getIpAddressType(): int
-	{
-		return $this->ipAddressType;
 	}
 
 }

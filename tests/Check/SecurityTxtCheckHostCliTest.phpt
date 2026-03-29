@@ -222,7 +222,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 
 
 			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, string $host): SecurityTxtFetcherResponse
+			public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, int $ipAddressType): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse[$this->position++];
 			}

@@ -25,12 +25,14 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 
 
 	/**
+	 * @phpstan-param DNS_A|DNS_AAAA $ipAddressType
+	 * @psalm-param int $ipAddressType
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 */
 	#[Override]
-	public function getResponse(SecurityTxtFetcherUrl $url, string $host): SecurityTxtFetcherResponse
+	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, int $ipAddressType): SecurityTxtFetcherResponse
 	{
 		$ch = curl_init($url->getUrl());
 		if ($ch === false) {
@@ -61,7 +63,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			CURLOPT_HTTPHEADER => ["Host: {$host}"],
 			CURLOPT_USERAGENT => $this->userAgent,
 			CURLOPT_HEADER => false,
-			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host, $port, $url->getIpAddressType() === DNS_AAAA ? "[{$url->getIpAddress()}]" : $url->getIpAddress())],
+			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host, $port, $ipAddressType === DNS_AAAA ? "[{$ipAddress}]" : $ipAddress)],
 			CURLOPT_HEADERFUNCTION => function (CurlHandle $ch, string $header) use (&$rawHeaders): int {
 				$rawHeaders[] = trim($header);
 				return strlen($header);
@@ -93,9 +95,9 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 
 		$primaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
 		$primaryIpBinary = inet_pton($primaryIp);
-		$expectedIpBinary = inet_pton($url->getIpAddress());
+		$expectedIpBinary = inet_pton($ipAddress);
 		if ($primaryIpBinary === false || $expectedIpBinary === false || $primaryIpBinary !== $expectedIpBinary) {
-			throw new SecurityTxtConnectedToWrongIpAddressException($url->getIpAddress(), $primaryIp, $url->getUrl(), $url->getRedirects());
+			throw new SecurityTxtConnectedToWrongIpAddressException($ipAddress, $primaryIp, $url->getUrl(), $url->getRedirects());
 		}
 
 		$code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
@@ -123,8 +125,8 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			$headers,
 			$contents,
 			$truncated,
-			$url->getIpAddress(),
-			$url->getIpAddressType(),
+			$ipAddress,
+			$ipAddressType,
 		);
 	}
 
