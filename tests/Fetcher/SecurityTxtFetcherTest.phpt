@@ -67,7 +67,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, string $host): SecurityTxtFetcherResponse
+			public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, int $ipAddressType): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse[$this->position++] ?? $this->fetcherResponse[$this->lastKey];
 			}
@@ -149,10 +149,10 @@ final class SecurityTxtFetcherTest extends TestCase
 		$finalUrl = 'passed by ref';
 		if ($expectedException !== null) {
 			Assert::throws(function () use ($method, $fetcher, $finalUrl): void {
-				$method->invokeArgs($fetcher, ['https://example.com/foo', 'example.com', 'https://example.com/foo', &$finalUrl, true]);
+				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true]);
 			}, $expectedException);
 		} else {
-			$response = $method->invokeArgs($fetcher, ['https://example.com/foo', 'example.com', 'https://example.com/foo', &$finalUrl, true]);
+			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true]);
 			assert($response instanceof SecurityTxtFetcherResponse);
 			Assert::same($expectedHttpCode, $response->getHttpCode());
 			Assert::same($expectedLocation, $response->getHeader('location'));
@@ -405,7 +405,10 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testFetchUnsupportedSchemeRedirect(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, ['location' => 'file:///etc/passwd'], '', false, '1.1.1.0', DNS_A));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(
+			new SecurityTxtDnsRecords('1.1.1.0', null),
+			new SecurityTxtDnsRecords(null, null),
+		));
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
 			$method->invoke($fetcher, 'https://foo/bar', 'foo', false);
