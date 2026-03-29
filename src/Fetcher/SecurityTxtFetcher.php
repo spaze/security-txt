@@ -157,27 +157,16 @@ final class SecurityTxtFetcher
 			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl());
 		}
 		if (!$noIpv6 && $ipv6Record !== null) {
-			if (filter_var($ipv6Record, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
-				throw new SecurityTxtHostIpAddressInvalidException($host, $ipv6Record, DNS_AAAA, $url->getUrl());
-			}
-			if (filter_var($ipv6Record, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-				throw new SecurityTxtHostIpAddressNotPublicException($host, $ipv6Record, $url->getUrl());
-			}
 			$ipAddress = $ipv6Record;
 			$ipAddressType = DNS_AAAA;
 		} elseif ($ipRecord !== null) {
-			if (filter_var($ipRecord, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
-				throw new SecurityTxtHostIpAddressInvalidException($host, $ipRecord, DNS_A, $url->getUrl());
-			}
-			if (filter_var($ipRecord, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-				throw new SecurityTxtHostIpAddressNotPublicException($host, $ipRecord, $url->getUrl());
-			}
 			$ipAddress = $ipRecord;
 			$ipAddressType = DNS_A;
 		}
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
 			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host);
 		}
+		$this->validateIpAddress($ipAddress, $ipAddressType, $host, $url);
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
@@ -187,6 +176,24 @@ final class SecurityTxtFetcher
 			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6);
 		}
 		return $response;
+	}
+
+
+	/**
+	 * @phpstan-param DNS_A|DNS_AAAA $type
+	 * @psalm-param int $type
+	 * @throws SecurityTxtHostIpAddressInvalidException
+	 * @throws SecurityTxtHostIpAddressNotPublicException
+	 */
+	private function validateIpAddress(string $ipAddress, int $type, string $host, SecurityTxtFetcherUrl $url): void
+	{
+		$flag = $type === DNS_A ? FILTER_FLAG_IPV4 : FILTER_FLAG_IPV6;
+		if (filter_var($ipAddress, FILTER_VALIDATE_IP, $flag) === false) {
+			throw new SecurityTxtHostIpAddressInvalidException($host, $ipAddress, $type, $url->getUrl());
+		}
+		if (filter_var($ipAddress, FILTER_VALIDATE_IP, $flag | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_GLOBAL_RANGE) === false) {
+			throw new SecurityTxtHostIpAddressNotPublicException($host, $ipAddress, $url->getUrl());
+		}
 	}
 
 

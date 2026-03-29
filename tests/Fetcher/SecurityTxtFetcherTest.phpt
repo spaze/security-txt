@@ -277,7 +277,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testFetchHostOnlyIpv6Address(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', DNS_A));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords(null, '2001:DB8::1')));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords(null, '2001:cafe:f00d::1')));
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetchHost('example.com', false, true);
 		}, SecurityTxtOnlyIpv6HostButIpv6DisabledException::class);
