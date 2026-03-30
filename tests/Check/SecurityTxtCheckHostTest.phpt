@@ -177,10 +177,10 @@ final class SecurityTxtCheckHostTest extends TestCase
 	{
 		$contents = "Contact: foo@example.com\nExpires: " . $this->validExpires->modify('+10 years')->format(DATE_RFC3339) . "\n";
 		$httpClient = $this->getHttpClient(
-			new SecurityTxtFetcherResponse(301, ['location' => 'https://example.net/'], 'redirect', false),
-			new SecurityTxtFetcherResponse(200, [], $contents, false),
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://example.net/'], 'redirect', false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, [], $contents, false, '1.1.1.0', DNS_A),
 		);
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', null)), 1);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
 		$checkHost = new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
 
 		$onRedirectCalled = false;
@@ -231,10 +231,10 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$wellKnownContents = $this->validExpiresLine . "\n";
 		$topLevelContents = 'Content differs';
 		$httpClient = $this->getHttpClient(
-			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $wellKnownContents, false),
-			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $topLevelContents, false),
+			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $wellKnownContents, false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $topLevelContents, false, '1.1.1.0', DNS_A),
 		);
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', null)), 1);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
 		$checkHost = new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
 
 		$onFetchErrorCalled = $onFetchWarningCalled = false;
@@ -280,8 +280,8 @@ final class SecurityTxtCheckHostTest extends TestCase
 	 */
 	private function getCheckHost(int $httpCode, array $lowercaseHeaders, string $contents): SecurityTxtCheckHost
 	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, $contents, false));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('192.0.2.1', null)), 1);
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, $contents, false, '1.1.1.0', DNS_A));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
 		return new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
 	}
 
@@ -306,7 +306,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 
 			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, ?string $contextHost): SecurityTxtFetcherResponse
+			public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, int $ipAddressType): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse[$this->position++] ?? $this->fetcherResponse[$this->lastKey];
 			}

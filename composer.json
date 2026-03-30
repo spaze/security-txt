@@ -9,7 +9,8 @@
 		}
 	],
 	"require": {
-		"php": "^8.3"
+		"php": "^8.3",
+		"ext-curl": "*"
 	},
 	"require-dev": {
 		"nette/tester": "^2.5",

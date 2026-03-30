@@ -8,9 +8,34 @@ use Throwable;
 final class SecurityTxtUrlNotFoundException extends SecurityTxtFetcherException
 {
 
-	public function __construct(string $url, int $code, ?Throwable $previous = null)
+	/**
+	 * @phpstan-param DNS_A|DNS_AAAA $ipAddressType
+	 * @psalm-param int $ipAddressType
+	 */
+	public function __construct(
+		string $url,
+		int $code,
+		private readonly string $ipAddress,
+		private readonly int $ipAddressType,
+		?Throwable $previous = null,
+	) {
+		parent::__construct([$url, $code, $ipAddress, $ipAddressType], 'URL %s not found, code %s', [$url, (string)$code], $url, code: $code, previous: $previous);
+	}
+
+
+	public function getIpAddress(): string
 	{
-		parent::__construct([$url, $code], 'URL %s not found, code %s', [$url, (string)$code], $url, code: $code, previous: $previous);
+		return $this->ipAddress;
+	}
+
+
+	/**
+	 * @phpstan-return DNS_A|DNS_AAAA
+	 * @psalm-return int
+	 */
+	public function getIpAddressType(): int
+	{
+		return $this->ipAddressType;
 	}
 
 }
