@@ -267,7 +267,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testFetchNoRecords(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false, '1.1.1.0', DNS_A));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords(null, null)));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(null, new SecurityTxtDnsRecords(null, null)));
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetch('https://example.com/');
 		}, SecurityTxtHostIpAddressNotFoundException::class);
@@ -277,7 +277,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testFetchOnlyIpv6Address(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', DNS_A));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords(null, '2001:cafe:f00d::1')));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(null, new SecurityTxtDnsRecords(null, '2001:cafe:f00d::1')));
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetch('https://example.com/', false, true);
 		}, SecurityTxtOnlyIpv6HostButIpv6DisabledException::class);
@@ -406,6 +406,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, ['location' => 'file:///etc/passwd'], '', false, '1.1.1.0', DNS_A));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(
+			null,
 			new SecurityTxtDnsRecords('1.1.1.0', null),
 			new SecurityTxtDnsRecords(null, null),
 		));
@@ -457,7 +458,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testFetchNonPublicIpAddress(?string $ipRecord, ?string $ipv6Record, bool $isValid): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false, '1.1.1.0', DNS_A));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords($ipRecord, $ipv6Record)));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(null, new SecurityTxtDnsRecords($ipRecord, $ipv6Record)));
 		if ($isValid) {
 			Assert::noError(function () use ($fetcher): void {
 				$fetcher->fetch('https://example.com/');
@@ -494,7 +495,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	public function testFetchInvalidIpAddress(?string $ipRecord, ?string $ipv6Record, int $invalidType): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false, 'anyway', DNS_A));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords($ipRecord, $ipv6Record)));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(null, new SecurityTxtDnsRecords($ipRecord, $ipv6Record)));
 		if ($invalidType === DNS_A) {
 			$type = 'IPv4';
 			$address = $ipRecord;
@@ -515,6 +516,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			new SecurityTxtFetcherResponse(200, [], 'lolcat host', false, '1.1.1.0', DNS_A),
 		);
 		$dnsProvider = $this->getDnsProvider(
+			null,
 			new SecurityTxtDnsRecords('1.1.1.1', null),
 			new SecurityTxtDnsRecords('127.0.0.1', null),
 		);
@@ -525,12 +527,40 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
-	private function getDnsProvider(SecurityTxtDnsRecords ...$dnsRecords): SecurityTxtDnsProvider
+	public function testFetchIpAddressNoDnsLookup(): void
+	{
+		$ipAddress = '1.1.1.0';
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, $ipAddress, DNS_A));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv4 addresses')));
+		$result = null;
+		Assert::noError(function () use (&$result, $fetcher, $ipAddress): void {
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://{$ipAddress}/", $ipAddress, false);
+		});
+		assert($result instanceof SecurityTxtFetcherFetchHostResult);
+		Assert::same($ipAddress, $result->getIpAddress());
+	}
+
+
+	public function testFetchIpv6AddressNoDnsLookup(): void
+	{
+		$ipv6Address = '2001:db42::1';
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, $ipv6Address, DNS_AAAA));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv6 addresses')));
+		$result = null;
+		Assert::noError(function () use (&$result, $fetcher, $ipv6Address): void {
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://[{$ipv6Address}]/", "[{$ipv6Address}]", false);
+		});
+		assert($result instanceof SecurityTxtFetcherFetchHostResult);
+		Assert::same($ipv6Address, $result->getIpAddress());
+	}
+
+
+	private function getDnsProvider(?LogicException $throw = null, SecurityTxtDnsRecords ...$dnsRecords): SecurityTxtDnsProvider
 	{
 		if ($dnsRecords === []) {
 			$dnsRecords = [new SecurityTxtDnsRecords('1.1.1.0', null)];
 		}
-		return new class (...$dnsRecords) implements SecurityTxtDnsProvider {
+		return new class ($throw, ...$dnsRecords) implements SecurityTxtDnsProvider {
 
 			/**
 			 * @var list<SecurityTxtDnsRecords>
@@ -540,8 +570,10 @@ final class SecurityTxtFetcherTest extends TestCase
 			private int $lastKey;
 
 
-			public function __construct(SecurityTxtDnsRecords ...$dnsRecords)
-			{
+			public function __construct(
+				private readonly ?LogicException $throw = null,
+				SecurityTxtDnsRecords ...$dnsRecords,
+			) {
 				$this->dnsRecords = array_values($dnsRecords);
 				$this->lastKey = count($dnsRecords) - 1;
 			}
@@ -550,6 +582,9 @@ final class SecurityTxtFetcherTest extends TestCase
 			#[Override]
 			public function getRecords(string $url, string $host): SecurityTxtDnsRecords
 			{
+				if ($this->throw !== null) {
+					throw $this->throw;
+				}
 				return $this->dnsRecords[$this->position++] ?? $this->dnsRecords[$this->lastKey];
 			}
 

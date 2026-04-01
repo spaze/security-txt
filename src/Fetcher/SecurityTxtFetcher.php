@@ -151,9 +151,22 @@ final class SecurityTxtFetcher
 	 */
 	private function getResponse(SecurityTxtFetcherUrl $url, string $host, string $originalUrl, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
 	{
-		$dnsRecords = $this->dnsLookupProvider->getRecords($url->getUrl(), $host);
-		$ipRecord = $dnsRecords->getIpRecord();
-		$ipv6Record = $dnsRecords->getIpv6Record();
+		$ipRecord = $ipv6Record = null;
+		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+			$ipRecord = $host;
+		} else {
+			if (preg_match('/^\[(.*)]$/', $host, $matches) === 1) {
+				$hostIpv6 = $matches[1];
+				if (filter_var($hostIpv6, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+					$ipv6Record = $hostIpv6;
+				}
+			}
+		}
+		if ($ipRecord === null && $ipv6Record === null) {
+			$dnsRecords = $this->dnsLookupProvider->getRecords($url->getUrl(), $host);
+			$ipRecord = $dnsRecords->getIpRecord();
+			$ipv6Record = $dnsRecords->getIpv6Record();
+		}
 		if ($noIpv6 && $ipv6Record !== null && $ipRecord === null) {
 			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl());
 		}
