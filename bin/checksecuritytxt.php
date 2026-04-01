@@ -5,7 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtPhpDnsProvider;
-use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherFopenClient;
+use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherCurlClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
@@ -38,7 +38,7 @@ if (!$autoloadLoaded) {
 $validator = new SecurityTxtValidator();
 $gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
 $signature = new SecurityTxtSignature($gnuPgProvider);
-$fopenClient = new SecurityTxtFetcherFopenClient();
+$fopenClient = new SecurityTxtFetcherCurlClient();
 $urlParser = new SecurityTxtUrlParser();
 $expiresFactory = new SecurityTxtExpiresFactory();
 $pregSplitProvider = new SecurityTxtPregSplitProvider();
