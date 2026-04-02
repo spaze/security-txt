@@ -3,18 +3,18 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Throwable;
 
 final class SecurityTxtHostIpAddressInvalidException extends SecurityTxtFetcherException
 {
 
 	/**
-	 * @phpstan-param DNS_A|DNS_AAAA $ipAddressType
-	 * @psalm-param int $ipAddressType
+	 * @param value-of<SecurityTxtIpAddressType> $ipAddressType
 	 */
 	public function __construct(string $host, string $ip, int $ipAddressType, string $url, ?Throwable $previous = null)
 	{
-		if ($ipAddressType === DNS_A) {
+		if ($ipAddressType === SecurityTxtIpAddressType::V4->value) {
 			$type = 'IPv4';
 		} else {
 			$type = 'IPv6';

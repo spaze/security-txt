@@ -3,14 +3,14 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Throwable;
 
 final class SecurityTxtUrlNotFoundException extends SecurityTxtFetcherException
 {
 
 	/**
-	 * @phpstan-param DNS_A|DNS_AAAA $ipAddressType
-	 * @psalm-param int $ipAddressType
+	 * @param value-of<SecurityTxtIpAddressType> $ipAddressType
 	 */
 	public function __construct(
 		string $url,
@@ -29,10 +29,6 @@ final class SecurityTxtUrlNotFoundException extends SecurityTxtFetcherException
 	}
 
 
-	/**
-	 * @phpstan-return DNS_A|DNS_AAAA
-	 * @psalm-return int
-	 */
 	public function getIpAddressType(): int
 	{
 		return $this->ipAddressType;
