@@ -40,7 +40,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 				new SecurityTxtFetcherUrl('https://example.com', []),
 				'example.com',
 				$ipAddress,
-				DNS_A,
+				SecurityTxtIpAddressType::V4,
 			);
 			Assert::contains('Example Domain', $response->getContents());
 			Assert::same(200, $response->getHttpCode());
@@ -63,7 +63,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 				new SecurityTxtFetcherUrl($url, []),
 				'ipv4.download.thinkbroadband.com',
 				$ipAddress,
-				DNS_A,
+				SecurityTxtIpAddressType::V4,
 			);
 			Assert::same(200, $response->getHttpCode());
 			Assert::true($response->isTruncated());
@@ -76,7 +76,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://httpbin.org/headers', []), 'foobar', '1.1.1.0', DNS_A);
+			$client->getResponse(new SecurityTxtFetcherUrl('https://httpbin.org/headers', []), 'foobar', '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtConnectedToWrongIpAddressException::class, "Can't open https://httpbin.org/headers, connected to %S% instead of 1.1.1.0 as expected");
 	}
 
@@ -86,7 +86,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', []), 'com.example', '1.1.1.0', DNS_A);
+			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/");
 	}
 

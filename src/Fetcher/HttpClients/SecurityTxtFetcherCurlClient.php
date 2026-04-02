@@ -10,6 +10,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressExc
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 
 final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherHttpClient
 {
@@ -25,14 +26,12 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 
 
 	/**
-	 * @phpstan-param DNS_A|DNS_AAAA $ipAddressType
-	 * @psalm-param int $ipAddressType
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 */
 	#[Override]
-	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, int $ipAddressType): SecurityTxtFetcherResponse
+	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
 	{
 		$ch = curl_init($url->getUrl());
 		if ($ch === false) {
@@ -64,7 +63,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			CURLOPT_HTTPHEADER => ["Host: {$host}" . ($port !== null ? ":{$port}" : '')],
 			CURLOPT_USERAGENT => $this->userAgent,
 			CURLOPT_HEADER => false,
-			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host, $port ?? $defaultPort, $ipAddressType === DNS_AAAA ? "[{$ipAddress}]" : $ipAddress)],
+			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host, $port ?? $defaultPort, $ipAddressType === SecurityTxtIpAddressType::V6 ? "[{$ipAddress}]" : $ipAddress)],
 			CURLOPT_HEADERFUNCTION => function (CurlHandle $ch, string $header) use (&$rawHeaders): int {
 				$rawHeaders[] = trim($header);
 				return strlen($header);

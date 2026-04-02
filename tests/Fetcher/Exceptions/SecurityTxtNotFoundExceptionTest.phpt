@@ -21,41 +21,41 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 			'https://1.example/',
 			'https://final1.example/',
 			'192.0.2.1',
-			DNS_A,
+			SecurityTxtIpAddressType::V4,
 			200,
-			new SecurityTxtFetcherResponse(200, [], '', true, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, [], '', true, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$result2 = new SecurityTxtFetcherFetchHostResult(
 			'https://2.example/',
 			'https://2.example/',
 			'2001:DB8::2',
-			DNS_AAAA,
+			SecurityTxtIpAddressType::V6,
 			200,
-			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$result3 = new SecurityTxtFetcherFetchHostResult(
 			'https://3.example/',
 			'https://3.example/',
 			'2001:DB8::3',
-			DNS_AAAA,
+			SecurityTxtIpAddressType::V6,
 			200,
-			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$result4 = new SecurityTxtFetcherFetchHostResult(
 			'https://4.example/',
 			'https://final4.example/',
 			'2001:DB8::4',
-			DNS_AAAA,
+			SecurityTxtIpAddressType::V6,
 			200,
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', true, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', true, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$result5 = new SecurityTxtFetcherFetchHostResult(
 			'https://5.example/',
 			'https://final5.example/',
 			'2001:DB8::5',
-			DNS_AAAA,
+			SecurityTxtIpAddressType::V6,
 			200,
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$redirects = [
 			'https://1.example/' => ['https://redir1.example/'],
@@ -65,11 +65,11 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 		Assert::same($redirects, $exception->getAllRedirects());
 		Assert::same([], $exception->getRedirects());
 		$allIps = [
-			'192.0.2.1' => [DNS_A, 200],
-			'2001:DB8::2' => [DNS_AAAA, 200],
-			'2001:DB8::3' => [DNS_AAAA, 200],
-			'2001:DB8::4' => [DNS_AAAA, 200],
-			'2001:DB8::5' => [DNS_AAAA, 200],
+			'192.0.2.1' => [SecurityTxtIpAddressType::V4, 200],
+			'2001:DB8::2' => [SecurityTxtIpAddressType::V6, 200],
+			'2001:DB8::3' => [SecurityTxtIpAddressType::V6, 200],
+			'2001:DB8::4' => [SecurityTxtIpAddressType::V6, 200],
+			'2001:DB8::5' => [SecurityTxtIpAddressType::V6, 200],
 		];
 		Assert::same($allIps, $exception->getIpAddresses());
 		Assert::same(

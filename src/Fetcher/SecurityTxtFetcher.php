@@ -118,7 +118,7 @@ final class SecurityTxtFetcher
 			$this->callOnCallback($this->onUrlNotFound, $e->getUrl());
 			$response = null;
 			$ipAddress = $e->getIpAddress();
-			$ipAddressType = $e->getIpAddressType();
+			$ipAddressType = SecurityTxtIpAddressType::from($e->getIpAddressType());
 		}
 		return new SecurityTxtFetcherFetchHostResult(
 			$url,
@@ -172,10 +172,10 @@ final class SecurityTxtFetcher
 		}
 		if (!$noIpv6 && $ipv6Record !== null) {
 			$ipAddress = $ipv6Record;
-			$ipAddressType = DNS_AAAA;
+			$ipAddressType = SecurityTxtIpAddressType::V6;
 		} elseif ($ipRecord !== null) {
 			$ipAddress = $ipRecord;
-			$ipAddressType = DNS_A;
+			$ipAddressType = SecurityTxtIpAddressType::V4;
 		}
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
 			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host);
@@ -184,7 +184,7 @@ final class SecurityTxtFetcher
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
-			throw new SecurityTxtUrlNotFoundException($url->getUrl(), $response->getHttpCode(), $ipAddress, $ipAddressType);
+			throw new SecurityTxtUrlNotFoundException($url->getUrl(), $response->getHttpCode(), $ipAddress, $ipAddressType->value);
 		}
 		if ($response->getHttpCode() >= 300) {
 			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6);
@@ -194,16 +194,14 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @phpstan-param DNS_A|DNS_AAAA $type
-	 * @psalm-param int $type
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 */
-	private function validateIpAddress(string $ipAddress, int $type, string $host, SecurityTxtFetcherUrl $url): void
+	private function validateIpAddress(string $ipAddress, SecurityTxtIpAddressType $type, string $host, SecurityTxtFetcherUrl $url): void
 	{
-		$flag = $type === DNS_A ? FILTER_FLAG_IPV4 : FILTER_FLAG_IPV6;
+		$flag = $type === SecurityTxtIpAddressType::V4 ? FILTER_FLAG_IPV4 : FILTER_FLAG_IPV6;
 		if (filter_var($ipAddress, FILTER_VALIDATE_IP, $flag) === false) {
-			throw new SecurityTxtHostIpAddressInvalidException($host, $ipAddress, $type, $url->getUrl());
+			throw new SecurityTxtHostIpAddressInvalidException($host, $ipAddress, $type->value, $url->getUrl());
 		}
 		if (filter_var($ipAddress, FILTER_VALIDATE_IP, $flag | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_GLOBAL_RANGE) === false) {
 			throw new SecurityTxtHostIpAddressNotPublicException($host, $ipAddress, $url->getUrl());

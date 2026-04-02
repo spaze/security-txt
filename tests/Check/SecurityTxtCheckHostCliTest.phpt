@@ -13,6 +13,7 @@ use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
@@ -45,9 +46,9 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	{
 		$contents = "Contact: mailto:foo@example.com\nExpires: {$this->expires}\n";
 		$httpClient = $this->getHttpClient(
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain'], $contents, false, '1.1.1.0', DNS_A),
-			new SecurityTxtFetcherResponse(302, ['location' => 'https://nah.example/'], 'yes but', false, '1.1.1.0', DNS_A),
-			new SecurityTxtFetcherResponse(404, [], 'yeah nah', false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain'], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(302, ['location' => 'https://nah.example/'], 'yes but', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'yeah nah', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
@@ -78,8 +79,8 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 
 		$contents = "Contact: mailto:foo@example.com\nExpires: {$expires}\n";
 		$httpClient = $this->getHttpClient(
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], $contents, false, '1.1.1.0', DNS_A),
-			new SecurityTxtFetcherResponse(404, [], $contents, false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
@@ -122,8 +123,8 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		EOT . "\n";
 
 		$httpClient = $this->getHttpClient(
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], $contents, false, '1.1.1.0', DNS_A),
-			new SecurityTxtFetcherResponse(404, [], $contents, false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
@@ -147,8 +148,8 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	public function testCheckNotFound(): void
 	{
 		$httpClient = $this->getHttpClient(
-			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', DNS_A),
-			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', DNS_A),
+			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
@@ -222,7 +223,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 
 
 			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, int $ipAddressType): SecurityTxtFetcherResponse
+			public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse[$this->position++];
 			}

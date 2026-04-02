@@ -4,12 +4,13 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherFetchHostResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Throwable;
 
 final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 {
 
-	/** @var array<string, array{0:1|134217728, 1:int}> IP address => DNS type, HTTP code */
+	/** @var array<string, array{0:SecurityTxtIpAddressType, 1:int}> IP address => DNS type, HTTP code */
 	private array $ipAddresses = [];
 
 	/** @var array<string, list<string>> original URL => redirects */
@@ -58,7 +59,7 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 
 
 	/**
-	 * @return array<string, array{0:1|134217728, 1:int}> IP address => DNS type, HTTP code
+	 * @return array<string, array{0:SecurityTxtIpAddressType, 1:int}> IP address => DNS type, HTTP code
 	 */
 	public function getIpAddresses(): array
 	{

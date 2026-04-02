@@ -5,14 +5,11 @@ namespace Spaze\SecurityTxt\Fetcher\HttpClients;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 
 interface SecurityTxtFetcherHttpClient
 {
 
-	/**
-	 * @phpstan-param DNS_A|DNS_AAAA $ipAddressType
-	 * @psalm-param int $ipAddressType
-	 */
-	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, int $ipAddressType): SecurityTxtFetcherResponse;
+	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse;
 
 }
