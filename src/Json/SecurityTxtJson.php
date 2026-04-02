@@ -28,6 +28,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Throwable;
 
 final readonly class SecurityTxtJson
 {
@@ -400,7 +401,11 @@ final readonly class SecurityTxtJson
 		if (!isset($values['error']['params']) || !is_array($values['error']['params'])) {
 			throw new SecurityTxtCannotParseJsonException('error > params is missing or not an array');
 		}
-		$exception = new $values['error']['class'](...$values['error']['params']);
+		try {
+			$exception = new $values['error']['class'](...$values['error']['params']);
+		} catch (Throwable $e) {
+			throw new SecurityTxtCannotParseJsonException("Cannot create an object of class {$values['error']['class']}", previous: $e);
+		}
 		if (!$exception instanceof SecurityTxtFetcherException) {
 			throw new SecurityTxtCannotParseJsonException(sprintf('The exception is %s, not %s', $exception::class, SecurityTxtFetcherException::class));
 		}
