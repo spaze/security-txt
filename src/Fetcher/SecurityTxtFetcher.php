@@ -218,7 +218,27 @@ final class SecurityTxtFetcher
 		$wellKnownContents = $wellKnown->isRegularHtmlPage() || $wellKnown->isTruncated() ? null : $wellKnown->getContents();
 		$topLevelContents = $topLevel->isRegularHtmlPage() || $topLevel->isTruncated() ? null : $topLevel->getContents();
 		if ($wellKnownContents === null && $topLevelContents === null) {
-			throw new SecurityTxtNotFoundException([$wellKnown, $topLevel], $this->redirects);
+			throw new SecurityTxtNotFoundException(
+				[
+					$wellKnown->getUrl() => [
+						'ip' => $wellKnown->getIpAddress(),
+						'type' => $wellKnown->getIpAddressType()->value,
+						'code' => $wellKnown->getHttpCode(),
+						'redirects' => $this->redirects[$wellKnown->getUrl()] ?? [],
+						'html' => $wellKnown->isRegularHtmlPage(),
+						'truncated' => $wellKnown->isTruncated(),
+					],
+					$topLevel->getUrl() => [
+						'ip' => $topLevel->getIpAddress(),
+						'type' => $topLevel->getIpAddressType()->value,
+						'code' => $topLevel->getHttpCode(),
+						'redirects' => $this->redirects[$topLevel->getUrl()] ?? [],
+						'html' => $topLevel->isRegularHtmlPage(),
+						'truncated' => $topLevel->isTruncated(),
+					],
+				],
+				$wellKnown->getUrl(),
+			);
 		} elseif ($wellKnownContents !== null && $topLevelContents === null) {
 			if ($requireTopLevelLocation) {
 				$warnings[] = new SecurityTxtWellKnownPathOnly();

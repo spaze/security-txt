@@ -328,7 +328,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			$fetcher->fetch('https://com.example/');
 		}, SecurityTxtNotFoundException::class, "Can't read security.txt: https://com.example/.well-known/security.txt (1.1.1.0) => 404, https://com.example/security.txt (1.1.1.0) => 404");
 		assert($exception instanceof SecurityTxtNotFoundException);
-		Assert::same(['1.1.1.0' => [SecurityTxtIpAddressType::V4, 404]], $exception->getIpAddresses());
+		Assert::same(['1.1.1.0' => [SecurityTxtIpAddressType::V4->value, 404]], $exception->getIpAddresses());
 		Assert::same([], $exception->getAllRedirects());
 	}
 

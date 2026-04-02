@@ -3,14 +3,13 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
-use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherFetchHostResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Throwable;
 
 final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 {
 
-	/** @var array<string, array{0:SecurityTxtIpAddressType, 1:int}> IP address => DNS type, HTTP code */
+	/** @var array<string, array{0:value-of<SecurityTxtIpAddressType>, 1:int}> IP address => DNS type, HTTP code */
 	private array $ipAddresses = [];
 
 	/** @var array<string, list<string>> original URL => redirects */
@@ -18,48 +17,42 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 
 
 	/**
-	 * @param non-empty-list<SecurityTxtFetcherFetchHostResult> $results
-	 * @param array<string, list<string>> $observedRedirects
-	 * @param Throwable|null $previous
+	 * @param non-empty-array<string, array{ip:string, type:value-of<SecurityTxtIpAddressType>, code:int, redirects:list<string>, html:bool, truncated:bool}> $urls URL => IP address, IP address type, HTTP code, redirects, regular HTML page?, response too long?
 	 */
-	public function __construct(array $results, array $observedRedirects, ?Throwable $previous = null)
+	public function __construct(array $urls, string $wellKnownUrl, ?Throwable $previous = null)
 	{
 		$message = "Can't read %s: ";
 		$messageValues = ['security.txt'];
-
-		$urls = [];
-		foreach ($results as $result) {
-			$urls[] = $result->getUrl();
+		foreach ($urls as $url => $components) {
 			if ($this->ipAddresses !== []) {
 				$message .= ', '; // Not added in the first iteration
 			}
-			if ($result->isTruncated() && $result->isRegularHtmlPage()) {
+			if ($components['truncated'] && $components['html']) {
 				$message .= '%s (%s) => regular HTML page and too long';
-			} elseif ($result->isTruncated()) {
+			} elseif ($components['truncated']) {
 				$message .= '%s (%s) => response too long';
-			} elseif ($result->isRegularHtmlPage()) {
+			} elseif ($components['html']) {
 				$message .= '%s (%s) => regular HTML page';
 			} else {
 				$message .= '%s (%s) => %s';
 			}
-			$messageValues[] = $result->getUrl();
-			$messageValues[] = $result->getIpAddress();
-			if (!$result->isRegularHtmlPage() && !$result->isTruncated()) {
-				$messageValues[] = (string)$result->getHttpCode();
+			$messageValues[] = $url;
+			$messageValues[] = $components['ip'];
+			if (!$components['html'] && !$components['truncated']) {
+				$messageValues[] = (string)$components['code'];
 			}
-			$this->ipAddresses[$result->getIpAddress()] = [$result->getIpAddressType(), $result->getHttpCode()];
-			$redirects = $observedRedirects[$result->getUrl()] ?? [];
-			if ($redirects !== []) {
-				$this->allRedirects[$result->getUrl()] = $redirects;
-				$message .= $result->isRegularHtmlPage() || $result->isTruncated() ? ' (final page after redirects)' : ' (final code after redirects)';
+			$this->ipAddresses[$components['ip']] = [$components['type'], $components['code']];
+			if ($components['redirects'] !== []) {
+				$this->allRedirects[$url] = $components['redirects'];
+				$message .= $components['html'] || $components['truncated'] ? ' (final page after redirects)' : ' (final code after redirects)';
 			}
 		}
-		parent::__construct([$urls], $message, $messageValues, $urls[0], previous: $previous);
+		parent::__construct([$urls, $wellKnownUrl], $message, $messageValues, $wellKnownUrl, previous: $previous);
 	}
 
 
 	/**
-	 * @return array<string, array{0:SecurityTxtIpAddressType, 1:int}> IP address => DNS type, HTTP code
+	 * @return array<string, array{0:value-of<SecurityTxtIpAddressType>, 1:int}> IP address => DNS type, HTTP code
 	 */
 	public function getIpAddresses(): array
 	{

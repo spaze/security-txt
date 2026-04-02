@@ -8,9 +8,11 @@ use DateInterval;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -181,9 +183,44 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
-	public function testCreateFetcherExceptionFromJsonValues(): void
+	/**
+	 * @return array<class-string<SecurityTxtFetcherException>, array{0:SecurityTxtFetcherException}>
+	 */
+	public function getExceptions(): array
 	{
-		$exception = new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1);
+		return [
+			SecurityTxtTooManyRedirectsException::class => [
+				new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1),
+			],
+			SecurityTxtNotFoundException::class => [
+				new SecurityTxtNotFoundException([
+					'https://1.example/' => [
+						'ip' => '192.0.2.1',
+						'type' => SecurityTxtIpAddressType::V4->value,
+						'code' => 200,
+						'redirects' => ['https://redir1.example/'],
+						'html' => false,
+						'truncated' => true,
+					],
+					'https://2.example/' => [
+						'ip' => '2001:DB8::2',
+						'type' => SecurityTxtIpAddressType::V6->value,
+						'code' => 200,
+						'redirects' => ['https://redir1.example/'],
+						'html' => false,
+						'truncated' => false,
+					],
+				], 'https://1.example/'),
+			],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getExceptions
+	 */
+	public function testCreateFetcherExceptionFromJsonValues(SecurityTxtFetcherException $exception): void
+	{
 		$encoded = json_encode(['error' => $exception]);
 		assert(is_string($encoded));
 		$decoded = json_decode($encoded, true);

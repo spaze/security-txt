@@ -17,59 +17,60 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 
 	public function testGetters(): void
 	{
-		$result1 = new SecurityTxtFetcherFetchHostResult(
-			'https://1.example/',
-			'https://final1.example/',
-			'192.0.2.1',
-			SecurityTxtIpAddressType::V4,
-			200,
-			new SecurityTxtFetcherResponse(200, [], '', true, '1.1.1.0', SecurityTxtIpAddressType::V4),
-		);
-		$result2 = new SecurityTxtFetcherFetchHostResult(
-			'https://2.example/',
-			'https://2.example/',
-			'2001:DB8::2',
-			SecurityTxtIpAddressType::V6,
-			200,
-			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
-		);
-		$result3 = new SecurityTxtFetcherFetchHostResult(
-			'https://3.example/',
-			'https://3.example/',
-			'2001:DB8::3',
-			SecurityTxtIpAddressType::V6,
-			200,
-			new SecurityTxtFetcherResponse(200, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
-		);
-		$result4 = new SecurityTxtFetcherFetchHostResult(
-			'https://4.example/',
-			'https://final4.example/',
-			'2001:DB8::4',
-			SecurityTxtIpAddressType::V6,
-			200,
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', true, '1.1.1.0', SecurityTxtIpAddressType::V4),
-		);
-		$result5 = new SecurityTxtFetcherFetchHostResult(
-			'https://5.example/',
-			'https://final5.example/',
-			'2001:DB8::5',
-			SecurityTxtIpAddressType::V6,
-			200,
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<body', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
-		);
+		$exception = new SecurityTxtNotFoundException([
+			'https://1.example/' => [
+				'ip' => '192.0.2.1',
+				'type' => SecurityTxtIpAddressType::V4->value,
+				'code' => 200,
+				'redirects' => ['https://redir1.example/'],
+				'html' => false,
+				'truncated' => true,
+			],
+			'https://2.example/' => [
+				'ip' => '2001:DB8::2',
+				'type' => SecurityTxtIpAddressType::V6->value,
+				'code' => 200,
+				'redirects' => [],
+				'html' => false,
+				'truncated' => false,
+			],
+			'https://3.example/' => [
+				'ip' => '2001:DB8::3',
+				'type' => SecurityTxtIpAddressType::V6->value,
+				'code' => 200,
+				'redirects' => ['https://redir3.example/'],
+				'html' => false,
+				'truncated' => false,
+			],
+			'https://4.example/' => [
+				'ip' => '2001:DB8::4',
+				'type' => SecurityTxtIpAddressType::V6->value,
+				'code' => 200,
+				'redirects' => [],
+				'html' => true,
+				'truncated' => true,
+			],
+			'https://5.example/' => [
+				'ip' => '2001:DB8::5',
+				'type' => SecurityTxtIpAddressType::V6->value,
+				'code' => 200,
+				'redirects' => [],
+				'html' => true,
+				'truncated' => false,
+			],
+		], 'https://1.example/');
 		$redirects = [
 			'https://1.example/' => ['https://redir1.example/'],
 			'https://3.example/' => ['https://redir3.example/'],
 		];
-		$exception = new SecurityTxtNotFoundException([$result1, $result2, $result3, $result4, $result5], $redirects);
 		Assert::same($redirects, $exception->getAllRedirects());
 		Assert::same([], $exception->getRedirects());
 		$allIps = [
-			'192.0.2.1' => [SecurityTxtIpAddressType::V4, 200],
-			'2001:DB8::2' => [SecurityTxtIpAddressType::V6, 200],
-			'2001:DB8::3' => [SecurityTxtIpAddressType::V6, 200],
-			'2001:DB8::4' => [SecurityTxtIpAddressType::V6, 200],
-			'2001:DB8::5' => [SecurityTxtIpAddressType::V6, 200],
+			'192.0.2.1' => [SecurityTxtIpAddressType::V4->value, 200],
+			'2001:DB8::2' => [SecurityTxtIpAddressType::V6->value, 200],
+			'2001:DB8::3' => [SecurityTxtIpAddressType::V6->value, 200],
+			'2001:DB8::4' => [SecurityTxtIpAddressType::V6->value, 200],
+			'2001:DB8::5' => [SecurityTxtIpAddressType::V6->value, 200],
 		];
 		Assert::same($allIps, $exception->getIpAddresses());
 		Assert::same(
