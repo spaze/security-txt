@@ -44,5 +44,10 @@
 				<file name="bin/checksecuritytxt.php" /> <!-- Psalm doesn't need the $_SERVER['argv'] type, but PHPStan does -->
 			</errorLevel>
 		</UnnecessaryVarAnnotation>
+		<UnsafeInstantiation>
+			<errorLevel type="suppress">
+				<file name="src/Json/SecurityTxtJson.php" /> <!-- Fetcher exceptions deserialized from JSON -->
+			</errorLevel>
+		</UnsafeInstantiation>
 	</issueHandlers>
 </psalm>

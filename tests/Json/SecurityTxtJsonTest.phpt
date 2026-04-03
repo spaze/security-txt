@@ -8,9 +8,12 @@ use DateInterval;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundExceptionWrongUrlStructureException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -181,9 +184,44 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
-	public function testCreateFetcherExceptionFromJsonValues(): void
+	/**
+	 * @return array<class-string<SecurityTxtFetcherException>, array{0:SecurityTxtFetcherException}>
+	 */
+	public function getExceptions(): array
 	{
-		$exception = new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1);
+		return [
+			SecurityTxtTooManyRedirectsException::class => [
+				new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1),
+			],
+			SecurityTxtNotFoundException::class => [
+				new SecurityTxtNotFoundException([
+					'https://1.example/' => [
+						'ip' => '192.0.2.1',
+						'type' => SecurityTxtIpAddressType::V4->value,
+						'code' => 200,
+						'redirects' => ['https://redir1.example/'],
+						'html' => false,
+						'truncated' => true,
+					],
+					'https://2.example/' => [
+						'ip' => '2001:DB8::2',
+						'type' => SecurityTxtIpAddressType::V6->value,
+						'code' => 200,
+						'redirects' => ['https://redir1.example/'],
+						'html' => false,
+						'truncated' => false,
+					],
+				], 'https://1.example/'),
+			],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getExceptions
+	 */
+	public function testCreateFetcherExceptionFromJsonValues(SecurityTxtFetcherException $exception): void
+	{
 		$encoded = json_encode(['error' => $exception]);
 		assert(is_string($encoded));
 		$decoded = json_decode($encoded, true);
@@ -218,8 +256,13 @@ final class SecurityTxtJsonTest extends TestCase
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class, 'params' => 'string']]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > params is missing or not an array');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class, 'params' => []]]);
-		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: The exception is %s, not %s', DateTimeImmutable::class, SecurityTxtFetcherException::class));
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateInterval::class, 'params' => []]]); // If the constructor was called, it would generate a different message because we're passing it a wrong number of arguments
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: The exception class %s is not a subclass of %s', DateInterval::class, SecurityTxtFetcherException::class));
+		$e = Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtNotFoundException::class, 'params' => [['https://example.com/' => []], 'https://example.com/']]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtNotFoundException::class);
+		Assert::type(SecurityTxtNotFoundExceptionWrongUrlStructureException::class, $e?->getPrevious());
+		Assert::same('Cannot create Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException: securityTxtUrls > https://example.com/ > ip is not set or not a string', $e?->getPrevious()?->getMessage());
 		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['url', 303, '1.1.1.0', DNS_A]]]));
 	}
 
