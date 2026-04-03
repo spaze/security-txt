@@ -256,8 +256,8 @@ final class SecurityTxtJsonTest extends TestCase
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class, 'params' => 'string']]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > params is missing or not an array');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class, 'params' => []]]);
-		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: The exception is %s, not %s', DateTimeImmutable::class, SecurityTxtFetcherException::class));
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateInterval::class, 'params' => []]]); // If the constructor was called, it would generate a different message because we're passing it a wrong number of arguments
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: The exception class %s is not a subclass of %s', DateInterval::class, SecurityTxtFetcherException::class));
 		$e = Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtNotFoundException::class, 'params' => [['https://example.com/' => []], 'https://example.com/']]]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtNotFoundException::class);

@@ -401,13 +401,14 @@ final readonly class SecurityTxtJson
 		if (!isset($values['error']['params']) || !is_array($values['error']['params'])) {
 			throw new SecurityTxtCannotParseJsonException('error > params is missing or not an array');
 		}
-		try {
-			$exception = new $values['error']['class'](...$values['error']['params']);
-		} catch (Throwable $e) {
-			throw new SecurityTxtCannotParseJsonException("Cannot create an object of class {$values['error']['class']}", previous: $e);
+		$class = $values['error']['class'];
+		if (!is_subclass_of($class, SecurityTxtFetcherException::class)) {
+			throw new SecurityTxtCannotParseJsonException(sprintf('The exception class %s is not a subclass of %s', $class, SecurityTxtFetcherException::class));
 		}
-		if (!$exception instanceof SecurityTxtFetcherException) {
-			throw new SecurityTxtCannotParseJsonException(sprintf('The exception is %s, not %s', $exception::class, SecurityTxtFetcherException::class));
+		try {
+			$exception = new $class(...$values['error']['params']);
+		} catch (Throwable $e) {
+			throw new SecurityTxtCannotParseJsonException("Cannot create an object of class {$class}", previous: $e);
 		}
 		return $exception;
 	}
