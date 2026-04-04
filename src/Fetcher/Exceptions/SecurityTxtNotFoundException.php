@@ -18,7 +18,7 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 
 	/**
 	 * @param array<array-key, mixed>|non-empty-array<string, array{ip:string, type:value-of<SecurityTxtIpAddressType>, code:int, redirects:list<string>, html:bool, truncated:bool}> $securityTxtUrls URL => IP address, IP address type, HTTP code, redirects, regular HTML page?, response too long?
-	 * @throws SecurityTxtNotFoundExceptionWrongUrlStructureException
+	 * @throws SecurityTxtNotFoundWrongUrlStructureException
 	 */
 	public function __construct(array $securityTxtUrls, string $wellKnownUrl, ?Throwable $previous = null)
 	{
@@ -26,46 +26,46 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 		$messageValues = ['security.txt'];
 		$urls = [];
 		if ($securityTxtUrls === []) {
-			throw new SecurityTxtNotFoundExceptionWrongUrlStructureException('securityTxtUrls is empty');
+			throw new SecurityTxtNotFoundWrongUrlStructureException('securityTxtUrls is empty');
 		}
 		if (!array_key_exists($wellKnownUrl, $securityTxtUrls)) {
-			throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls does not contain the well-known URL {$wellKnownUrl}");
+			throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls does not contain the well-known URL {$wellKnownUrl}");
 		}
 		foreach ($securityTxtUrls as $url => $components) {
 			if (!is_string($url)) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException('securityTxtUrls key is not a string');
+				throw new SecurityTxtNotFoundWrongUrlStructureException('securityTxtUrls key is not a string');
 			}
 			if (!is_array($components)) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} is not an array");
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} is not an array");
 			}
 			if (!isset($components['ip']) || !is_string($components['ip'])) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > ip is not set or not a string");
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > ip is not set or not a string");
 			}
 			if (!isset($components['type']) || !is_int($components['type'])) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > type is not set or not an int");
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > type is not set or not an int");
 			}
 			$type = SecurityTxtIpAddressType::tryFrom($components['type']);
 			if ($type === null) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > type is not a value of " . SecurityTxtIpAddressType::class);
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > type is not a value of " . SecurityTxtIpAddressType::class);
 			}
 			if (!isset($components['code']) || !is_int($components['code'])) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > code is not set or not an int");
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > code is not set or not an int");
 			}
 			if (!isset($components['redirects']) || !is_array($components['redirects'])) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > redirects is not set or not an array");
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > redirects is not set or not an array");
 			}
 			$redirects = [];
 			foreach ($components['redirects'] as $key => $redirect) {
 				if (!is_string($redirect)) {
-					throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > redirects > {$key} is not a string");
+					throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > redirects > {$key} is not a string");
 				}
 				$redirects[] = $redirect;
 			}
 			if (!isset($components['html']) || !is_bool($components['html'])) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > html is not set or not a bool");
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > html is not set or not a bool");
 			}
 			if (!isset($components['truncated']) || !is_bool($components['truncated'])) {
-				throw new SecurityTxtNotFoundExceptionWrongUrlStructureException("securityTxtUrls > {$url} > truncated is not set or not a bool");
+				throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls > {$url} > truncated is not set or not a bool");
 			}
 			$urls[$url] = [
 				'ip' => $components['ip'],

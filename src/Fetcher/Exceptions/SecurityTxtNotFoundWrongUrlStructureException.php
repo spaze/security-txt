@@ -9,7 +9,7 @@ use Throwable;
 /**
  * Exception thrown when SecurityTxtNotFoundException could not be created because the URL structure was invalid. So meta.
  */
-final class SecurityTxtNotFoundExceptionWrongUrlStructureException extends Exception
+final class SecurityTxtNotFoundWrongUrlStructureException extends Exception
 {
 
 	public function __construct(string $message, ?Throwable $previous = null)

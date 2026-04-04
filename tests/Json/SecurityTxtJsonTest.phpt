@@ -10,7 +10,7 @@ use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundExceptionWrongUrlStructureException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
@@ -267,7 +267,7 @@ final class SecurityTxtJsonTest extends TestCase
 		$e = Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtNotFoundException::class, 'params' => [['https://example.com/' => []], 'https://example.com/']]]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtNotFoundException::class);
-		Assert::type(SecurityTxtNotFoundExceptionWrongUrlStructureException::class, $e?->getPrevious());
+		Assert::type(SecurityTxtNotFoundWrongUrlStructureException::class, $e?->getPrevious());
 		Assert::same('Cannot create Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException: securityTxtUrls > https://example.com/ > ip is not set or not a string', $e?->getPrevious()?->getMessage());
 		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['url', 303, '1.1.1.0', DNS_A]]]));
 	}
