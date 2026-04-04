@@ -84,6 +84,7 @@ final class SecurityTxtFetcher
 	 */
 	public function fetch(string $url, bool $requireTopLevelLocation = false, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
+		$this->redirects = [];
 		$host = $this->urlParser->getHostFromUrl($url);
 		$wellKnown = $this->fetchUrl(sprintf('https://%s/.well-known/security.txt', $host), $host, $noIpv6);
 		$topLevel = $this->fetchUrl(sprintf('https://%s/security.txt', $host), $host, $noIpv6);

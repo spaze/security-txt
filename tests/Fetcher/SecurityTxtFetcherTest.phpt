@@ -305,6 +305,44 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
+	public function testFetchRedirects(): void
+	{
+		$httpClient = $this->getHttpClient(
+			// For the first fetch(), well-known location
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://location1.example/.well-known/'], 'random location', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random final', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			// For the first fetch(), top-level location
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://location1.example/'], 'random location', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random final', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			// For the second fetch(), well-known location
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://location2.example/.well-known/'], 'random location', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random final', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			// For the second fetch(), top-level location
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://location2.example/'], 'random location', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random final', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
+		$fetchResult = $fetcher->fetch('https://com.example/', false, true);
+		Assert::same([], $fetchResult->getErrors());
+		Assert::same([], $fetchResult->getWarnings());
+		Assert::same('random final', $fetchResult->getContents());
+		Assert::same('https://location1.example/.well-known/', $fetchResult->getFinalUrl());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		$redirects = [
+			'https://com.example/.well-known/security.txt' => ['https://location1.example/.well-known/'],
+			'https://com.example/security.txt' => ['https://location1.example/'],
+		];
+		Assert::same($redirects, $fetchResult->getRedirects());
+
+		$redirects = [
+			'https://com.example/.well-known/security.txt' => ['https://location2.example/.well-known/'],
+			'https://com.example/security.txt' => ['https://location2.example/'],
+		];
+		$fetchResult = $fetcher->fetch('https://com.example/', false, true);
+		Assert::same($redirects, $fetchResult->getRedirects());
+	}
+
+
 	public function testFetchWrongCharset(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-42'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
