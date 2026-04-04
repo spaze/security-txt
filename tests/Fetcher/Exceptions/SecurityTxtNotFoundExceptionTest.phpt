@@ -6,7 +6,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundExceptionWrongUrlStructureException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureException;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -176,7 +176,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 	{
 		Assert::throws(function () use ($urls): void {
 			new SecurityTxtNotFoundException($urls, 'https://example.com/');
-		}, SecurityTxtNotFoundExceptionWrongUrlStructureException::class, 'Cannot create Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException: ' . $error);
+		}, SecurityTxtNotFoundWrongUrlStructureException::class, 'Cannot create Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException: ' . $error);
 	}
 
 }
