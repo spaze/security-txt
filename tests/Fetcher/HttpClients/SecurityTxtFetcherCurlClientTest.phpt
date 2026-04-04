@@ -7,6 +7,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtPhpDnsProvider;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherCurlClient;
 use Tester\Assert;
@@ -88,6 +89,32 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		Assert::throws(function () use ($client): void {
 			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/");
+	}
+
+
+	/**
+	 * @return list<array{0:string}>
+	 */
+	public function getInvalidUserAgents(): array
+	{
+		return [
+			["foo\nbar"],
+			["foo\r\nbar"],
+			["foo\rbar"],
+			["foo\tbar"],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getInvalidUserAgents
+	 */
+	public function testGetResponseInvalidUserAgent(string $userAgent): void
+	{
+		$client = new SecurityTxtFetcherCurlClient($userAgent);
+		Assert::throws(function () use ($client): void {
+			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
+		}, SecurityTxtCannotOpenUrlUserAgentInvalidException::class, "Can't open https://com.example/, the specified user agent contains a control character and is invalid");
 	}
 
 }

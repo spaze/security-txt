@@ -7,6 +7,7 @@ use CurlHandle;
 use Override;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
@@ -31,12 +32,16 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
+	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
 	#[Override]
 	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
 	{
 		if (!extension_loaded('curl')) {
 			throw new SecurityTxtCannotOpenUrlExtensionNotLoadedException($url->getUrl());
+		}
+		if (preg_match('/[\x00-\x1F\x7F]/', $this->userAgent) === 1) {
+			throw new SecurityTxtCannotOpenUrlUserAgentInvalidException($url->getUrl());
 		}
 		$ch = curl_init($url->getUrl());
 		if ($ch === false) {

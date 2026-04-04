@@ -7,6 +7,7 @@ use LogicException;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
@@ -81,6 +82,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotParseHostnameException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 * @throws SecurityTxtHostIpAddressInvalidException
+	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
 	public function fetch(string $url, bool $requireTopLevelLocation = false, bool $noIpv6 = false): SecurityTxtFetchResult
 	{
@@ -109,6 +111,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotParseHostnameException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 * @throws SecurityTxtHostIpAddressInvalidException
+	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
 	private function fetchUrl(string $url, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
 	{
@@ -153,6 +156,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
+	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
 	private function getResponse(SecurityTxtFetcherUrl $url, string $host, string $originalUrl, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
 	{
@@ -353,6 +357,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtCannotParseHostnameException
+	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
 	private function redirect(string $url, string $originalUrl, SecurityTxtFetcherResponse $response, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
 	{
