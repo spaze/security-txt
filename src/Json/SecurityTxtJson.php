@@ -55,9 +55,14 @@ final readonly class SecurityTxtJson
 			if (!isset($violation['params']) || !is_array($violation['params'])) {
 				throw new SecurityTxtCannotParseJsonException('params is missing or not an array');
 			}
-			$object = new $violation['class'](...$violation['params']);
-			if (!$object instanceof SecurityTxtSpecViolation) {
-				throw new SecurityTxtCannotParseJsonException(sprintf("class %s doesn't extend %s", $violation['class'], SecurityTxtSpecViolation::class));
+			$class = $violation['class'];
+			if (!is_subclass_of($class, SecurityTxtSpecViolation::class)) {
+				throw new SecurityTxtCannotParseJsonException(sprintf("class %s doesn't extend %s", $class, SecurityTxtSpecViolation::class));
+			}
+			try {
+				$object = new $class(...$violation['params']);
+			} catch (Throwable $e) {
+				throw new SecurityTxtCannotParseJsonException("Cannot create an object of class {$class}", previous: $e);
 			}
 			$objects[] = $object;
 		}

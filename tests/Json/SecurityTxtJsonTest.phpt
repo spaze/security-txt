@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Json;
 
+use ArgumentCountError;
 use DateInterval;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
@@ -28,6 +29,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtCsafWrongFile;
 use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
+use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
@@ -72,6 +74,10 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createViolationsFromJsonValues([['class' => DateTimeImmutable::class, 'params' => []]]);
 		}, SecurityTxtCannotParseJsonException::class, sprintf("Cannot parse JSON: class %s doesn't extend %s", DateTimeImmutable::class, SecurityTxtSpecViolation::class));
+		$e = Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtPolicyNotHttps::class, 'params' => []]]);
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: Cannot create an object of class %s', SecurityTxtPolicyNotHttps::class));
+		Assert::type(ArgumentCountError::class, $e?->getPrevious());
 		Assert::equal([new SecurityTxtNoContact()], $this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtNoContact::class, 'params' => []]]));
 	}
 
