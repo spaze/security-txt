@@ -5,7 +5,10 @@ namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidTypeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
@@ -80,6 +83,7 @@ final class SecurityTxtCheckHost
 	/**
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtCannotParseHostnameException
+	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
@@ -91,6 +95,8 @@ final class SecurityTxtCheckHost
 	 * @throws SecurityTxtHostIpAddressNotFoundException
 	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
+	 * @throws SecurityTxtConnectedToWrongIpAddressException
+	 * @throws SecurityTxtHostIpAddressInvalidException
 	 */
 	public function check(string $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false): SecurityTxtCheckHostResult
 	{
