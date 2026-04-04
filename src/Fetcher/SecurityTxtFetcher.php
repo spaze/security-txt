@@ -52,6 +52,9 @@ final class SecurityTxtFetcher
 	private array $onUrlNotFound = [];
 
 
+	/**
+	 * @param non-negative-int $maxAllowedRedirects
+	 */
 	public function __construct(
 		private readonly SecurityTxtFetcherHttpClient $httpClient,
 		private readonly SecurityTxtUrlParser $urlParser,
@@ -59,13 +62,12 @@ final class SecurityTxtFetcher
 		private readonly SecurityTxtDnsProvider $dnsLookupProvider,
 		private readonly int $maxAllowedRedirects = 5,
 	) {
-		if ($this->maxAllowedRedirects < 0) {
-			throw new LogicException('maxAllowedRedirects must be greater than or equal to 0 (0 means no redirects allowed)');
-		}
+		$this->validateMaxAllowedRedirects($this->maxAllowedRedirects);
 	}
 
 
 	/**
+	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNotFoundException
@@ -84,17 +86,21 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	public function fetch(string $url, bool $requireTopLevelLocation = false, bool $noIpv6 = false): SecurityTxtFetchResult
+	public function fetch(string $url, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtFetchResult
 	{
 		$this->redirects = [];
+		if ($maxAllowedRedirects !== null) {
+			$this->validateMaxAllowedRedirects($maxAllowedRedirects);
+		}
 		$host = $this->urlParser->getHostFromUrl($url);
-		$wellKnown = $this->fetchUrl(sprintf('https://%s/.well-known/security.txt', $host), $host, $noIpv6);
-		$topLevel = $this->fetchUrl(sprintf('https://%s/security.txt', $host), $host, $noIpv6);
+		$wellKnown = $this->fetchUrl(sprintf('https://%s/.well-known/security.txt', $host), $host, $noIpv6, $maxAllowedRedirects);
+		$topLevel = $this->fetchUrl(sprintf('https://%s/security.txt', $host), $host, $noIpv6, $maxAllowedRedirects);
 		return $this->getResult($wellKnown, $topLevel, $requireTopLevelLocation);
 	}
 
 
 	/**
+	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
@@ -113,12 +119,12 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	private function fetchUrl(string $url, string $host, bool $noIpv6): SecurityTxtFetcherFetchHostResult
+	private function fetchUrl(string $url, string $host, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherFetchHostResult
 	{
 		$finalUrl = $url;
 		$this->callOnCallback($this->onUrl, $url);
 		try {
-			$response = $this->getResponse(new SecurityTxtFetcherUrl($url, $this->getRedirects($url)), $host, $url, $finalUrl, $noIpv6);
+			$response = $this->getResponse(new SecurityTxtFetcherUrl($url, $this->getRedirects($url)), $host, $url, $finalUrl, $noIpv6, $maxAllowedRedirects);
 			$ipAddress = $response->getIpAddress();
 			$ipAddressType = $response->getIpAddressType();
 		} catch (SecurityTxtUrlNotFoundException $e) {
@@ -139,6 +145,7 @@ final class SecurityTxtFetcher
 
 
 	/**
+	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
@@ -158,7 +165,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	private function getResponse(SecurityTxtFetcherUrl $url, string $host, string $originalUrl, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
+	private function getResponse(SecurityTxtFetcherUrl $url, string $host, string $originalUrl, string &$finalUrl, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherResponse
 	{
 		$ipRecord = $ipv6Record = null;
 		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
@@ -196,7 +203,7 @@ final class SecurityTxtFetcher
 			throw new SecurityTxtUrlNotFoundException($url->getUrl(), $response->getHttpCode(), $ipAddress, $ipAddressType->value);
 		}
 		if ($response->getHttpCode() >= 300) {
-			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6);
+			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 		return $response;
 	}
@@ -340,6 +347,7 @@ final class SecurityTxtFetcher
 
 
 	/**
+	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
@@ -359,8 +367,11 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotParseHostnameException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	private function redirect(string $url, string $originalUrl, SecurityTxtFetcherResponse $response, string &$finalUrl, bool $noIpv6): SecurityTxtFetcherResponse
+	private function redirect(string $url, string $originalUrl, SecurityTxtFetcherResponse $response, string &$finalUrl, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherResponse
 	{
+		if ($maxAllowedRedirects === null) {
+			$maxAllowedRedirects = $this->maxAllowedRedirects;
+		}
 		$location = $response->getHeader('Location');
 		if ($location === null) {
 			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
@@ -369,10 +380,10 @@ final class SecurityTxtFetcher
 			$this->callOnCallback($this->onRedirect, $previousUrl, $location);
 			$this->redirects[$originalUrl][] = $location;
 			$finalUrl = $location = $this->urlParser->getRedirectUrl($location, $url);
-			if (count($this->redirects[$originalUrl]) > $this->maxAllowedRedirects) {
-				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], $this->maxAllowedRedirects);
+			if (count($this->redirects[$originalUrl]) > $maxAllowedRedirects) {
+				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrl], $maxAllowedRedirects);
 			}
-			return $this->getResponse(new SecurityTxtFetcherUrl($location, $this->getRedirects($originalUrl)), $this->urlParser->getHostFromUrl($location), $originalUrl, $finalUrl, $noIpv6);
+			return $this->getResponse(new SecurityTxtFetcherUrl($location, $this->getRedirects($originalUrl)), $this->urlParser->getHostFromUrl($location), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 	}
 
@@ -387,6 +398,14 @@ final class SecurityTxtFetcher
 			array_unshift($redirects, $url);
 		}
 		return $redirects;
+	}
+
+
+	private function validateMaxAllowedRedirects(int $maxAllowedRedirects): void
+	{
+		if ($maxAllowedRedirects < 0) {
+			throw new LogicException('maxAllowedRedirects must be greater than or equal to 0 (0 means no redirects allowed)');
+		}
 	}
 
 }
