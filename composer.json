@@ -9,8 +9,7 @@
 		}
 	],
 	"require": {
-		"php": "^8.3",
-		"ext-curl": "*"
+		"php": "^8.3"
 	},
 	"require-dev": {
 		"nette/tester": "^2.5",
@@ -24,6 +23,7 @@
 		"spaze/phpstan-disallowed-calls": "^4.5"
 	},
 	"suggest": {
+		"ext-curl": "To validate security.txt on remote hosts",
 		"ext-gnupg": "Needed to verify and create signatures"
 	},
 	"config": {
@@ -51,7 +51,7 @@
 			"@tester",
 			"@psalm"
 		],
-		"tester-no-extensions": "TEST_CASE_RUNNER_FORCE_EXT_GNUPG_NOT_LOADED=1 vendor/bin/tester -s -c tests/php-unix-no-extensions.ini -d zend.assertions=1 --colors 1 tests/Signature/Providers/SecurityTxtSignatureGnuPgProviderNoExtensionTest.phpt",
+		"tester-no-extensions": "TEST_CASE_RUNNER_FORCE_EXTENSIONS_NOT_LOADED=1 vendor/bin/tester -s -c tests/php-unix-no-extensions.ini -d zend.assertions=1 --colors 1 tests/Signature/Providers/SecurityTxtSignatureGnuPgProviderNoExtensionTest.phpt tests/Fetcher/HttpClients/SecurityTxtFetcherCurlClientNoExtensionTest.phpt",
 		"tester": "vendor/bin/tester -s -c tests/php-unix.ini -d zend.assertions=1 --colors 1 --coverage tests/temp/coverage.html --coverage-src src/ tests/"
 	}
 }

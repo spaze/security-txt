@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher\HttpClients;
 use CurlHandle;
 use Override;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
@@ -27,12 +28,16 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 
 	/**
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 */
 	#[Override]
 	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
 	{
+		if (!extension_loaded('curl')) {
+			throw new SecurityTxtCannotOpenUrlExtensionNotLoadedException($url->getUrl());
+		}
 		$ch = curl_init($url->getUrl());
 		if ($ch === false) {
 			throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
