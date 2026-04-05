@@ -54,6 +54,10 @@ When specified, the top-level `/security.txt` location must also exist (or be re
 
 Because some environments do not support IPv6, looking at you GitHub Actions
 
+`?int $maxAllowedRedirects = null`
+
+Maximum number of redirects to follow when fetching `security.txt`. Set to `0` to disable redirects, `null` to use the default (`5`).
+
 `Spaze\SecurityTxt\Check\SecurityTxtCheckHost::check()` returns a `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult` object with some obvious and less obvious properties.
 The less obvious ones can be obtained with the following methods. All of them return an array of `SecurityTxtSpecViolation` descendants.
 

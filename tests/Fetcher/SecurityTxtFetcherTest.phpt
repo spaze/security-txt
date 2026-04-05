@@ -149,10 +149,10 @@ final class SecurityTxtFetcherTest extends TestCase
 		$finalUrl = 'passed by ref';
 		if ($expectedException !== null) {
 			Assert::throws(function () use ($method, $fetcher, $finalUrl): void {
-				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true]);
+				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true, null]);
 			}, $expectedException);
 		} else {
-			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true]);
+			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true, null]);
 			assert($response instanceof SecurityTxtFetcherResponse);
 			Assert::same($expectedHttpCode, $response->getHttpCode());
 			Assert::same($expectedLocation, $response->getHeader('location'));
@@ -419,11 +419,11 @@ final class SecurityTxtFetcherTest extends TestCase
 
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, '//foo/bar', 'foo', false);
+			$method->invoke($fetcher, '//foo/bar', 'foo', false, null);
 		}, SecurityTxtUrlNoSchemeException::class);
 
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, ':', 'foo', false);
+			$method->invoke($fetcher, ':', 'foo', false, null);
 		}, SecurityTxtUrlNoSchemeException::class);
 	}
 
@@ -435,7 +435,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, 'file://foo/bar', 'foo', false);
+			$method->invoke($fetcher, 'file://foo/bar', 'foo', false, null);
 		}, SecurityTxtUrlUnsupportedSchemeException::class, 'URL file://foo/bar has an unsupported scheme');
 	}
 
@@ -450,17 +450,32 @@ final class SecurityTxtFetcherTest extends TestCase
 		));
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, 'https://foo/bar', 'foo', false);
+			$method->invoke($fetcher, 'https://foo/bar', 'foo', false, null);
 		}, SecurityTxtUrlUnsupportedSchemeException::class, 'URL file:///etc/passwd has an unsupported scheme (redirects: https://foo/bar → file:///etc/passwd)');
 	}
 
 
 	public function testCheckMaxAllowedRedirects(): void
 	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
-		Assert::throws(function () use ($httpClient): void {
-			new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), -1);
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
+
+		Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetch('https://example.com', maxAllowedRedirects: -2); // @phpstan-ignore argument.type (Testing $maxAllowedRedirects validation)
 		}, LogicException::class, 'maxAllowedRedirects must be greater than or equal to 0 (0 means no redirects allowed)');
+
+		Assert::throws(function () use ($httpClient): void {
+			new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), -1); // @phpstan-ignore argument.type (Testing $maxAllowedRedirects validation)
+		}, LogicException::class, 'maxAllowedRedirects must be greater than or equal to 0 (0 means no redirects allowed)');
+
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://redir.example/'], 'random redir', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), maxAllowedRedirects: 5);
+		Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetch('https://example.com', maxAllowedRedirects: 0);
+		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (https://redir.example/ [not loaded])");
 	}
 
 
@@ -569,7 +584,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv4 addresses')));
 		$result = null;
 		Assert::noError(function () use (&$result, $fetcher, $ipAddress): void {
-			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://{$ipAddress}/", $ipAddress, false);
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://{$ipAddress}/", $ipAddress, false, null);
 		});
 		assert($result instanceof SecurityTxtFetcherFetchHostResult);
 		Assert::same($ipAddress, $result->getIpAddress());
@@ -583,7 +598,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv6 addresses')));
 		$result = null;
 		Assert::noError(function () use (&$result, $fetcher, $ipv6Address): void {
-			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://[{$ipv6Address}]/", "[{$ipv6Address}]", false);
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://[{$ipv6Address}]/", "[{$ipv6Address}]", false, null);
 		});
 		assert($result instanceof SecurityTxtFetcherFetchHostResult);
 		Assert::same($ipv6Address, $result->getIpAddress());
