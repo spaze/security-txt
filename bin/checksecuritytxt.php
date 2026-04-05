@@ -65,7 +65,7 @@ $checkHostCli->check(
 	in_array('--no-ipv6', $args, true),
 	in_array('--help', $args, true) || in_array('-h', $args, true),
 	'Usage: ' . basename(__FILE__) . " <URL or hostname> [days] [--colors] [--strict] [--require-top-level-location] [--no-ipv6] [-h|--help]\n"
-		. "If the file expires in less than <days>, the script will print a warning.\n"
+		. "If <days> is specified, and if the file expires in less than <days>, the script will print a warning.\n"
 		. "When --require-top-level-location is specified, the /security.txt location must also exist or be redirected, otherwise a warning will be issued.\n"
 		. "The check will return 1 instead of 0 if any of the following conditions are true: the file has expired, has errors, or has warnings when using --strict.",
 );
