@@ -81,6 +81,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
+	 * @param non-empty-string $url Only the host part of the URL will be used
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtCannotParseHostnameException
