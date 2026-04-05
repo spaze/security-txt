@@ -17,6 +17,12 @@ Install the package with Composer:
 composer require spaze/security-txt
 ```
 
+# Requirements and supported versions
+
+| Version | Requirements                                                                                                                   | Notes      |
+|---------|--------------------------------------------------------------------------------------------------------------------------------|------------|
+| 1.x     | PHP 8.3, 8.4, 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures | Unreleased |
+
 # As a validator
 
 ## How does the validation work
