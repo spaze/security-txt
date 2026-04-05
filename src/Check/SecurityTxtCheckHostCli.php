@@ -28,8 +28,22 @@ final readonly class SecurityTxtCheckHostCli
 		bool $strictMode,
 		bool $requireTopLevelLocation,
 		bool $noIpv6,
+		bool $showUsageHelp,
 		string $usageHelp,
 	): void {
+		if ($colors) {
+			$this->consolePrinter->enableColors();
+		}
+		if ($showUsageHelp) {
+			$this->consolePrinter->info($usageHelp);
+			$this->exit(CheckExitStatus::Ok);
+			return;
+		} elseif ($url === null || str_starts_with($url, '-')) {
+			$this->consolePrinter->info($usageHelp);
+			$this->exit(CheckExitStatus::NoFile);
+			return;
+		}
+
 		$this->checkHost->addOnUrl(
 			function (string $url): void {
 				$this->consolePrinter->info('Loading security.txt from ' . $this->consolePrinter->colorBold($url));
@@ -102,31 +116,23 @@ final readonly class SecurityTxtCheckHostCli
 		$this->checkHost->addOnLineWarning($onWarning);
 		$this->checkHost->addOnFileWarning($onWarning);
 
-		if ($colors) {
-			$this->consolePrinter->enableColors();
-		}
-		if ($url === null) {
-			$this->consolePrinter->info($usageHelp);
-			$this->exit(CheckExitStatus::NoFile);
-		} else {
-			try {
-				$checkResult = $this->checkHost->check(
-					$url,
-					$expiresWarningThreshold,
-					$strictMode,
-					$requireTopLevelLocation,
-					$noIpv6,
-				);
-				if (!$checkResult->isValid()) {
-					$this->consolePrinter->error($this->consolePrinter->colorRed('Please update the file!'));
-					$this->exit(CheckExitStatus::Error);
-				} else {
-					$this->exit(CheckExitStatus::Ok);
-				}
-			} catch (SecurityTxtFetcherException $e) {
-				$this->consolePrinter->error($e->getMessage());
-				$this->exit(CheckExitStatus::FileError);
+		try {
+			$checkResult = $this->checkHost->check(
+				$url,
+				$expiresWarningThreshold,
+				$strictMode,
+				$requireTopLevelLocation,
+				$noIpv6,
+			);
+			if (!$checkResult->isValid()) {
+				$this->consolePrinter->error($this->consolePrinter->colorRed('Please update the file!'));
+				$this->exit(CheckExitStatus::Error);
+			} else {
+				$this->exit(CheckExitStatus::Ok);
 			}
+		} catch (SecurityTxtFetcherException $e) {
+			$this->consolePrinter->error($e->getMessage());
+			$this->exit(CheckExitStatus::FileError);
 		}
 	}
 

@@ -53,7 +53,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', null, true, true, true, true, 'Help I need some<body>');
+		$checkHostCli->check('https://example.com', null, true, true, true, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
@@ -85,7 +85,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', 10, true, true, false, true, 'Help I need some<body>');
+		$checkHostCli->check('https://example.com', 10, true, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
@@ -129,7 +129,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', null, true, true, false, true, 'Help I need some<body>');
+		$checkHostCli->check('https://example.com', null, true, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
@@ -154,9 +154,37 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', null, true, true, false, true, 'Help I need some<body>');
+		$checkHostCli->check('https://example.com', null, true, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
+		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
+		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/.well-known/security.txt[0m
+		[1;90m[Info][0m Not found [1mhttps://example.com/.well-known/security.txt[0m
+		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/security.txt[0m
+		[1;90m[Info][0m Not found [1mhttps://example.com/security.txt[0m
+		[1;31m[Error][0m Can't read security.txt: https://example.com/.well-known/security.txt (1.1.1.0) => 404, https://example.com/security.txt (1.1.1.0) => 404
+		EOT;
+		Assert::same($expected . "\n", $output);
+		Assert::same(CheckExitStatus::FileError->value, $this->exitStatus);
+	}
+
+
+	public function testCheckShowHelpThenNotFound(): void
+	{
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$checkHostCli = $this->getCheckHostCli($httpClient);
+
+		ob_start();
+		$checkHostCli->check('https://example.com', null, true, true, false, true, true, 'Help I need some1');
+		$checkHostCli->check('--an-option', null, true, true, false, true, false, 'Help I need someone');
+		$checkHostCli->check('https://example.com', null, true, true, false, true, false, 'Help I need some<body>');
+		$output = ob_get_clean();
+		$expected = <<< EOT
+		[1;90m[Info][0m Help I need some1
+		[1;90m[Info][0m Help I need someone
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/.well-known/security.txt[0m
 		[1;90m[Info][0m Not found [1mhttps://example.com/.well-known/security.txt[0m
@@ -175,7 +203,33 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check(null, null, false, true, false, true, 'Help I need some<body>');
+		$checkHostCli->check(null, null, false, true, false, true, false, 'Help I need some<body>');
+		$output = ob_get_clean();
+		Assert::same("[Info] Help I need some<body>\n", $output);
+		Assert::same(CheckExitStatus::NoFile->value, $this->exitStatus);
+	}
+
+
+	public function testCheckHelpOption(): void
+	{
+		$httpClient = $this->getHttpClient();
+		$checkHostCli = $this->getCheckHostCli($httpClient);
+
+		ob_start();
+		$checkHostCli->check('example.com', null, false, true, false, true, true, 'Help I need some<body>');
+		$output = ob_get_clean();
+		Assert::same("[Info] Help I need some<body>\n", $output);
+		Assert::same(CheckExitStatus::Ok->value, $this->exitStatus);
+	}
+
+
+	public function testCheckNoUrlOptionInstead(): void
+	{
+		$httpClient = $this->getHttpClient();
+		$checkHostCli = $this->getCheckHostCli($httpClient);
+
+		ob_start();
+		$checkHostCli->check('--some-option-instead-of-url', null, false, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		Assert::same("[Info] Help I need some<body>\n", $output);
 		Assert::same(CheckExitStatus::NoFile->value, $this->exitStatus);
