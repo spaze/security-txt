@@ -229,9 +229,10 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
+		$checkHostCli->check('', null, false, true, false, true, false, 'Help I need some1');
 		$checkHostCli->check('--some-option-instead-of-url', null, false, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
-		Assert::same("[Info] Help I need some<body>\n", $output);
+		Assert::same("[Info] Help I need some1\n[Info] Help I need some<body>\n", $output);
 		Assert::same(CheckExitStatus::NoFile->value, $this->exitStatus);
 	}
 

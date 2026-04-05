@@ -57,7 +57,7 @@ $checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost, $exit);
 /** @var list<string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
 $checkHostCli->check(
-	$args[1] ?? null,
+	isset($args[1]) && $args[1] !== '' ? $args[1] : null,
 	isset($args[2]) && $args[2] !== '' ? (int)$args[2] : null,
 	in_array('--colors', $args, true),
 	in_array('--strict', $args, true),

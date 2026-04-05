@@ -38,7 +38,7 @@ final readonly class SecurityTxtCheckHostCli
 			$this->consolePrinter->info($usageHelp);
 			$this->exit(CheckExitStatus::Ok);
 			return;
-		} elseif ($url === null || str_starts_with($url, '-')) {
+		} elseif ($url === null || $url === '' || str_starts_with($url, '-')) {
 			$this->consolePrinter->info($usageHelp);
 			$this->exit(CheckExitStatus::NoFile);
 			return;
