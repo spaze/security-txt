@@ -5,6 +5,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
@@ -25,35 +26,39 @@ final class SecurityTxtUrlParserTest extends TestCase
 
 
 	/**
-	 * @return array<string, array{0:string, 1:string}>
+	 * @return array<string, array{0:string, 1:string, 2:int|null}>
 	 */
 	public function getUrls(): array
 	{
 		return [
-			'with scheme' => ['https://example.com', 'example.com'],
-			'no scheme' => ['example.com', 'example.com'],
-			'relative scheme' => ['//example.com', 'example.com'],
-			'scheme with one slash' => ['https:/example.com', 'example.com'],
-			'scheme with one slash and a port' => ['https:/example.com:444', 'example.com'],
-			'no scheme with one slash' => ['/example.com', 'example.com'],
-			'no scheme three slashes' => ['///example.com', 'example.com'],
-			'no scheme four slashes' => ['////example.com', 'example.com'],
-			'with scheme mixed case' => ['https://EXAMPLE.com', 'example.com'],
-			'no scheme mixed case' => ['EXAMPLE.com', 'example.com'],
-			'relative scheme mixed case' => ['//EXAMPLE.com', 'example.com'],
-			'scheme with one slash mixed case' => ['https:/EXAMPLE.com', 'example.com'],
-			'scheme with one slash and a port mixed case' => ['https:/EXAMPLE.com:444', 'example.com'],
-			'IPv4 address' => ['https://192.0.2.1/foo', '192.0.2.1'],
-			'IPv6 address' => ['https://[2001:db8::1]/foo', '[2001:db8::1]'],
+			'with scheme' => ['https://example.com', 'example.com', null],
+			'no scheme' => ['example.com', 'example.com', null],
+			'relative scheme' => ['//example.com', 'example.com', null],
+			'scheme with one slash' => ['https:/example.com', 'example.com', null],
+			'scheme with one slash and a port' => ['https:/example.com:444', 'example.com', 444],
+			'no scheme with one slash' => ['/example.com', 'example.com', null],
+			'no scheme three slashes' => ['///example.com', 'example.com', null],
+			'no scheme four slashes' => ['////example.com', 'example.com', null],
+			'with scheme mixed case' => ['https://EXAMPLE.com', 'example.com', null],
+			'no scheme mixed case' => ['EXAMPLE.com', 'example.com', null],
+			'relative scheme mixed case' => ['//EXAMPLE.com', 'example.com', null],
+			'scheme with one slash mixed case' => ['https:/EXAMPLE.com', 'example.com', null],
+			'scheme with one slash and a port mixed case' => ['https:/EXAMPLE.com:444', 'example.com', 444],
+			'IPv4 address' => ['https://192.0.2.1/foo', '192.0.2.1', null],
+			'IPv6 address' => ['https://[2001:db8::1]/foo', '[2001:db8::1]', null],
+			'with scheme with port' => ['https://example.com:4433', 'example.com', 4433],
+			'with scheme with default port' => ['https://example.com:443', 'example.com', null],
 		];
 	}
 
 
 	/** @dataProvider getUrls */
-	public function testGetUrl(string $input, string $expectedHost): void
+	public function testGetUrl(string $input, string $expectedHost, ?int $expectedPort): void
 	{
 		foreach (['', '/', '/foo'] as $path) {
-			Assert::same($expectedHost, $this->securityTxtUrlParser->getUrl($input . $path)->getUnicodeHost(), $input . $path);
+			$url = $this->securityTxtUrlParser->getUrl($input . $path);
+			Assert::same($expectedHost, $url->getUnicodeHost(), $input . $path);
+			Assert::same($expectedPort, $url->getPort(), $input . $path);
 		}
 	}
 
@@ -68,17 +73,19 @@ final class SecurityTxtUrlParserTest extends TestCase
 			'space' => [' '],
 			'scheme:' => ['https:'],
 			'scheme://' => ['https://'],
+			'no scheme with port' => ['example.com:4433'],
 		];
 	}
 
 
 	/**
 	 * @dataProvider getBadUrls
-	 * @throws \Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException
 	 */
 	public function testGetUrlBad(string $input): void
 	{
-		$this->securityTxtUrlParser->getUrl($input);
+		Assert::throws(function () use ($input): void {
+			$this->securityTxtUrlParser->getUrl($input);
+		}, SecurityTxtCannotParseHostnameException::class);
 	}
 
 

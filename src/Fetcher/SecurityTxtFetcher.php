@@ -30,6 +30,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
+use Uri\WhatWg\InvalidUrlException;
 use Uri\WhatWg\Url;
 
 final class SecurityTxtFetcher
@@ -93,8 +94,20 @@ final class SecurityTxtFetcher
 		if ($host === null) {
 			throw new SecurityTxtCannotParseHostnameException($url->toUnicodeString());
 		}
-		$wellKnown = $this->fetchUrl(new Url("https://{$host}/.well-known/security.txt"), $host, $noIpv6, $maxAllowedRedirects);
-		$topLevel = $this->fetchUrl(new Url("https://{$host}/security.txt"), $host, $noIpv6, $maxAllowedRedirects);
+		try {
+			$baseUrl = $url
+				->withUsername(null)
+				->withPassword(null)
+				->withScheme('https')
+				->withQuery(null)
+				->withFragment(null);
+			$wellKnownUrl = $baseUrl->withPath('/.well-known/security.txt');
+			$topLevelUrl = $baseUrl->withPath('/security.txt');
+		} catch (InvalidUrlException $e) {
+			throw new LogicException("Can't set URL components: {$e->getMessage()}", previous: $e);
+		}
+		$wellKnown = $this->fetchUrl($wellKnownUrl, $host, $noIpv6, $maxAllowedRedirects);
+		$topLevel = $this->fetchUrl($topLevelUrl, $host, $noIpv6, $maxAllowedRedirects);
 		return $this->getResult($wellKnown, $topLevel, $requireTopLevelLocation);
 	}
 
