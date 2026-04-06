@@ -99,9 +99,17 @@ Returns `list<SecurityTxtSpecViolation>`, the list contains file-level warnings 
 
 ## JSON
 The `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult` object can be encoded to JSON with `json_encode()`,
-and decoded back with `Spaze\SecurityTxt\Check\SecurityTxtJson::createCheckHostResultFromJsonValues()`.
+and decoded back with `Spaze\SecurityTxt\Json\SecurityTxtJson::createCheckHostResultFromJsonValues()`.
 
-Exceptions can be recreated with `Spaze\SecurityTxt\Check\SecurityTxtJson::createFetcherExceptionFromJsonValues()`.
+The primary use case for JSON-encoded objects is a result cache. But JSON can also be used when you want to fetch `security.txt` using serverless services like AWS Lambda,
+and then process the fetch result yourself.
+
+If that's the case, then you may want to encode the `Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult` object created by `Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher::fetch()`.
+`Spaze\SecurityTxt\Json\SecurityTxtJson::createFetchResultFromJsonValues()` then decodes it back from JSON.
+
+Fetch exceptions can be recreated with `Spaze\SecurityTxt\Json\SecurityTxtJson::createFetcherExceptionFromJsonValues()`.
+
+JSON is not versioned. Newer versions of this library will make a best effort to decode JSON created by previous versions, but compatibility cannot be guaranteed across refactors or format changes.
 
 ## The other methods
 Both `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseString()` and `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseHost()` return a `Spaze\SecurityTxt\Parser\SecurityTxtParseResult` object with similar methods as what's described above for `SecurityTxtCheckHostResult`.
