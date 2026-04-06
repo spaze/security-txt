@@ -79,7 +79,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param Url $url Only the host part of the URL will be used
+	 * @param Url $url Only the host and port parts of the URL will be used
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtCannotParseHostnameException

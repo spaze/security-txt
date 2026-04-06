@@ -319,6 +319,34 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
+	public function testFetchPortSpecified(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
+		$fetchResult = $fetcher->fetch(new Url('https://example.com:4433/'), false, false);
+		Assert::same([], $fetchResult->getErrors());
+		Assert::same([], $fetchResult->getWarnings());
+		Assert::same('random', $fetchResult->getContents());
+		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getFinalUrl());
+		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same([], $fetchResult->getRedirects());
+	}
+
+
+	public function testFetchPortSpecifiedIpv6Address(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '2001:1337:42:ec00:2468:7ea:cafe:d00d', SecurityTxtIpAddressType::V6));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
+		$fetchResult = $fetcher->fetch(new Url('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/'), false, false);
+		Assert::same([], $fetchResult->getErrors());
+		Assert::same([], $fetchResult->getWarnings());
+		Assert::same('random', $fetchResult->getContents());
+		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getFinalUrl());
+		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same([], $fetchResult->getRedirects());
+	}
+
+
 	public function testFetchRedirects(): void
 	{
 		$httpClient = $this->getHttpClient(

@@ -19,6 +19,9 @@ final class SecurityTxtUrlParser
 		// $url = https://example.com or https://example.com/foo or https:/example.com or https:/example.com/foo
 		$parsed = Url::parse($url, null, $errors);
 		if ($parsed !== null) {
+			if ($parsed->getUnicodeHost() === null) {
+				throw new SecurityTxtCannotParseHostnameException($url);
+			}
 			return $parsed;
 		}
 
