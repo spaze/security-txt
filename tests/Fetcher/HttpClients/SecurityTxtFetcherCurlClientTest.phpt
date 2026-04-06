@@ -12,6 +12,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressExc
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherCurlClient;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 use function Spaze\SecurityTxt\Test\needsInternet;
 
 require __DIR__ . '/../../bootstrap.php';
@@ -33,12 +34,13 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	{
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
-		$ipAddress = $this->dnsProvider->getRecords('...', 'example.com')->getIpRecord();
+		$url = new Url('https://example.com/');
+		$ipAddress = $this->dnsProvider->getRecords($url, 'example.com')->getIpRecord();
 		if ($ipAddress === null) {
 			Assert::fail("Can't find an IP address for example.com");
 		} else {
 			$response = $client->getResponse(
-				new SecurityTxtFetcherUrl('https://example.com', []),
+				new SecurityTxtFetcherUrl($url, []),
 				'example.com',
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
@@ -55,8 +57,8 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	{
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
-		$url = 'http://ipv4.download.thinkbroadband.com/5MB.zip'; // From https://www.thinkbroadband.com/download
-		$ipAddress = $this->dnsProvider->getRecords('...', 'ipv4.download.thinkbroadband.com')->getIpRecord();
+		$url = new Url('http://ipv4.download.thinkbroadband.com/5MB.zip'); // From https://www.thinkbroadband.com/download
+		$ipAddress = $this->dnsProvider->getRecords($url, 'ipv4.download.thinkbroadband.com')->getIpRecord();
 		if ($ipAddress === null) {
 			Assert::fail("Can't find an IP address for ipv4.download.thinkbroadband.com");
 		} else {
@@ -77,7 +79,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://httpbin.org/headers', []), 'foobar', '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://httpbin.org/headers'), []), 'foobar', '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtConnectedToWrongIpAddressException::class, "Can't open https://httpbin.org/headers, connected to %S% instead of 1.1.1.0 as expected");
 	}
 
@@ -87,7 +89,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/");
 	}
 
@@ -113,7 +115,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	{
 		$client = new SecurityTxtFetcherCurlClient($userAgent);
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://com.example/', []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlUserAgentInvalidException::class, "Can't open https://com.example/, the specified user agent contains a control character and is invalid");
 	}
 

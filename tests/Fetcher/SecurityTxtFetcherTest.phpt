@@ -18,7 +18,6 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNoSchemeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
@@ -29,6 +28,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -149,10 +149,10 @@ final class SecurityTxtFetcherTest extends TestCase
 		$finalUrl = 'passed by ref';
 		if ($expectedException !== null) {
 			Assert::throws(function () use ($method, $fetcher, $finalUrl): void {
-				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true, null]);
+				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), []), 'example.com', new Url('https://example.com/foo'), &$finalUrl, true, null]);
 			}, $expectedException);
 		} else {
-			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl('https://example.com/foo', []), 'example.com', 'https://example.com/foo', &$finalUrl, true, null]);
+			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), []), 'example.com', new Url('https://example.com/foo'), &$finalUrl, true, null]);
 			assert($response instanceof SecurityTxtFetcherResponse);
 			Assert::same($expectedHttpCode, $response->getHttpCode());
 			Assert::same($expectedLocation, $response->getHeader('location'));
@@ -269,7 +269,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(null, new SecurityTxtDnsRecords(null, null)));
 		Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch('https://example.com/');
+			$fetcher->fetch(new Url('https://example.com/'));
 		}, SecurityTxtHostIpAddressNotFoundException::class);
 	}
 
@@ -279,10 +279,10 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(null, new SecurityTxtDnsRecords(null, '2001:cafe:f00d::1')));
 		Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch('https://example.com/', false, true);
+			$fetcher->fetch(new Url('https://example.com/'), false, true);
 		}, SecurityTxtOnlyIpv6HostButIpv6DisabledException::class);
 
-		$fetchResult = $fetcher->fetch('https://example.net/');
+		$fetchResult = $fetcher->fetch(new Url('https://example.net/'));
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
@@ -295,7 +295,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
-		$fetchResult = $fetcher->fetch('https://com.example/', false, true);
+		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
@@ -322,7 +322,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random final', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
-		$fetchResult = $fetcher->fetch('https://com.example/', false, true);
+		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random final', $fetchResult->getContents());
@@ -338,7 +338,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			'https://com.example/.well-known/security.txt' => ['https://location2.example/.well-known/'],
 			'https://com.example/security.txt' => ['https://location2.example/'],
 		];
-		$fetchResult = $fetcher->fetch('https://com.example/', false, true);
+		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
 		Assert::same($redirects, $fetchResult->getRedirects());
 	}
 
@@ -347,7 +347,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-42'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
-		$fetchResult = $fetcher->fetch('https://com.example/', false, true);
+		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
 		$expectedError = new SecurityTxtContentTypeWrongCharset('https://com.example/.well-known/security.txt', 'text/plain', 'charset=utf-42');
 		Assert::equal([$expectedError], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
@@ -363,7 +363,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, ['content-type' => 'text/plain; charset=utf-42'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
 		$exception = Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch('https://com.example/');
+			$fetcher->fetch(new Url('https://com.example/'));
 		}, SecurityTxtNotFoundException::class, "Can't read security.txt: https://com.example/.well-known/security.txt (1.1.1.0) => 404, https://com.example/security.txt (1.1.1.0) => 404");
 		assert($exception instanceof SecurityTxtNotFoundException);
 		Assert::same(['1.1.1.0' => [SecurityTxtIpAddressType::V4->value, 404]], $exception->getIpAddresses());
@@ -382,7 +382,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher->addOnFinalUrl(function (string $url) use (&$onFinalUrl): void {
 			$onFinalUrl = $url;
 		});
-		$fetcher->fetch('https://com.example/');
+		$fetcher->fetch(new Url('https://com.example/'));
 		Assert::same('https://com.example/security.txt', $onUrl);
 		Assert::same('https://com.example/.well-known/security.txt', $onFinalUrl);
 
@@ -394,7 +394,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			$onRedirectDestination = $destination;
 		});
 		Assert::throws(function () use (&$fetcher): void {
-			$fetcher->fetch('https://com.example/');
+			$fetcher->fetch(new Url('https://com.example/'));
 		}, SecurityTxtTooManyRedirectsException::class);
 		Assert::same('https://com.example/.well-known/security.txt', $onRedirectUrl);
 		Assert::same('https://location.example/', $onRedirectDestination);
@@ -406,25 +406,9 @@ final class SecurityTxtFetcherTest extends TestCase
 			$onUrlNotFound = $url;
 		});
 		Assert::throws(function () use (&$fetcher): void {
-			$fetcher->fetch('https://com.example/');
+			$fetcher->fetch(new Url('https://com.example/'));
 		}, SecurityTxtNotFoundException::class);
 		Assert::same('https://com.example/security.txt', $onUrlNotFound);
-	}
-
-
-	public function testFetchNoScheme(): void
-	{
-		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
-
-		$method = new ReflectionMethod($fetcher, 'fetchUrl');
-		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, '//foo/bar', 'foo', false, null);
-		}, SecurityTxtUrlNoSchemeException::class);
-
-		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, ':', 'foo', false, null);
-		}, SecurityTxtUrlNoSchemeException::class);
 	}
 
 
@@ -435,7 +419,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, 'file://foo/bar', 'foo', false, null);
+			$method->invoke($fetcher, new Url('file://foo/bar'), 'foo', false, null);
 		}, SecurityTxtUrlUnsupportedSchemeException::class, 'URL file://foo/bar has an unsupported scheme');
 	}
 
@@ -450,7 +434,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		));
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, 'https://foo/bar', 'foo', false, null);
+			$method->invoke($fetcher, new Url('https://foo/bar'), 'foo', false, null);
 		}, SecurityTxtUrlUnsupportedSchemeException::class, 'URL file:///etc/passwd has an unsupported scheme (redirects: https://foo/bar → file:///etc/passwd)');
 	}
 
@@ -461,7 +445,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider());
 
 		Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch('https://example.com', maxAllowedRedirects: -2); // @phpstan-ignore argument.type (Testing $maxAllowedRedirects validation)
+			$fetcher->fetch(new Url('https://example.com'), maxAllowedRedirects: -2); // @phpstan-ignore argument.type (Testing $maxAllowedRedirects validation)
 		}, LogicException::class, 'maxAllowedRedirects must be greater than or equal to 0 (0 means no redirects allowed)');
 
 		Assert::throws(function () use ($httpClient): void {
@@ -474,7 +458,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), maxAllowedRedirects: 5);
 		Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch('https://example.com', maxAllowedRedirects: 0);
+			$fetcher->fetch(new Url('https://example.com'), maxAllowedRedirects: 0);
 		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (https://redir.example/ [not loaded])");
 	}
 
@@ -514,11 +498,11 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(null, new SecurityTxtDnsRecords($ipRecord, $ipv6Record)));
 		if ($isValid) {
 			Assert::noError(function () use ($fetcher): void {
-				$fetcher->fetch('https://example.com/');
+				$fetcher->fetch(new Url('https://example.com/'));
 			});
 		} else {
 			Assert::throws(function () use ($fetcher): void {
-				$fetcher->fetch('https://example.com/');
+				$fetcher->fetch(new Url('https://example.com/'));
 			}, SecurityTxtHostIpAddressNotPublicException::class);
 		}
 	}
@@ -554,7 +538,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			$address = $ipv6Record;
 		}
 		Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch('https://example.com/');
+			$fetcher->fetch(new Url('https://example.com/'));
 		}, SecurityTxtHostIpAddressInvalidException::class, "Host example.com resolves to an invalid {$type} address {$address}");
 	}
 
@@ -572,7 +556,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $dnsProvider);
 		Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch('https://example.com/');
+			$fetcher->fetch(new Url('https://example.com/'));
 		}, SecurityTxtHostIpAddressNotPublicException::class, 'Host example.net resolves to a non-public IP address 127.0.0.1');
 	}
 
@@ -584,7 +568,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv4 addresses')));
 		$result = null;
 		Assert::noError(function () use (&$result, $fetcher, $ipAddress): void {
-			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://{$ipAddress}/", $ipAddress, false, null);
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, new Url("https://{$ipAddress}/"), $ipAddress, false, null);
 		});
 		assert($result instanceof SecurityTxtFetcherFetchHostResult);
 		Assert::same($ipAddress, $result->getIpAddress());
@@ -598,7 +582,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv6 addresses')));
 		$result = null;
 		Assert::noError(function () use (&$result, $fetcher, $ipv6Address): void {
-			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, "https://[{$ipv6Address}]/", "[{$ipv6Address}]", false, null);
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, new Url("https://[{$ipv6Address}]/"), "[{$ipv6Address}]", false, null);
 		});
 		assert($result instanceof SecurityTxtFetcherFetchHostResult);
 		Assert::same($ipv6Address, $result->getIpAddress());
@@ -630,7 +614,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 			#[Override]
-			public function getRecords(string $url, string $host): SecurityTxtDnsRecords
+			public function getRecords(Url $url, string $host): SecurityTxtDnsRecords
 			{
 				if ($this->throw !== null) {
 					throw $this->throw;

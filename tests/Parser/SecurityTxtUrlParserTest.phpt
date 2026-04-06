@@ -7,6 +7,7 @@ namespace Spaze\SecurityTxt\Parser;
 
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -26,7 +27,7 @@ final class SecurityTxtUrlParserTest extends TestCase
 	/**
 	 * @return array<string, array{0:string, 1:string}>
 	 */
-	public function getHosts(): array
+	public function getUrls(): array
 	{
 		return [
 			'with scheme' => ['https://example.com', 'example.com'],
@@ -34,6 +35,9 @@ final class SecurityTxtUrlParserTest extends TestCase
 			'relative scheme' => ['//example.com', 'example.com'],
 			'scheme with one slash' => ['https:/example.com', 'example.com'],
 			'scheme with one slash and a port' => ['https:/example.com:444', 'example.com'],
+			'no scheme with one slash' => ['/example.com', 'example.com'],
+			'no scheme three slashes' => ['///example.com', 'example.com'],
+			'no scheme four slashes' => ['////example.com', 'example.com'],
 			'with scheme mixed case' => ['https://EXAMPLE.com', 'example.com'],
 			'no scheme mixed case' => ['EXAMPLE.com', 'example.com'],
 			'relative scheme mixed case' => ['//EXAMPLE.com', 'example.com'],
@@ -45,33 +49,36 @@ final class SecurityTxtUrlParserTest extends TestCase
 	}
 
 
-	/** @dataProvider getHosts */
-	public function testGetHostFromUrl(string $input, string $expected): void
+	/** @dataProvider getUrls */
+	public function testGetUrl(string $input, string $expectedHost): void
 	{
 		foreach (['', '/', '/foo'] as $path) {
-			Assert::same($expected, $this->securityTxtUrlParser->getHostFromUrl($input . $path), $input . $path);
+			Assert::same($expectedHost, $this->securityTxtUrlParser->getUrl($input . $path)->getUnicodeHost(), $input . $path);
 		}
 	}
 
 
 	/**
-	 * @return list<array{0:string}>
+	 * @return array<string, array{0:string}>
 	 */
-	public function getBadHosts(): array
+	public function getBadUrls(): array
 	{
 		return [
-			['/example.com'],
+			'empty string' => [''],
+			'space' => [' '],
+			'scheme:' => ['https:'],
+			'scheme://' => ['https://'],
 		];
 	}
 
 
 	/**
-	 * @dataProvider getBadHosts
+	 * @dataProvider getBadUrls
 	 * @throws \Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException
 	 */
-	public function testGetHostFromUrlBad(string $input): void
+	public function testGetUrlBad(string $input): void
 	{
-		$this->securityTxtUrlParser->getHostFromUrl($input);
+		$this->securityTxtUrlParser->getUrl($input);
 	}
 
 
@@ -90,10 +97,10 @@ final class SecurityTxtUrlParserTest extends TestCase
 			['/new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/new1/new2'],
 			['new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/foo/new1/new2'],
 			['/', 'https://example.com/foo/bar', 'https://example.com/'],
-			['../new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/foo/../new1/new2'],
-			['../new1/new2', 'https://example.com/', 'https://example.com/../new1/new2'],
-			['/../new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/../new1/new2'],
-			['/../new1/new2', 'https://example.com/', 'https://example.com/../new1/new2'],
+			['../new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/new1/new2'],
+			['../new1/new2', 'https://example.com/', 'https://example.com/new1/new2'],
+			['/../new1/new2', 'https://example.com/foo/bar.ext', 'https://example.com/new1/new2'],
+			['/../new1/new2', 'https://example.com/', 'https://example.com/new1/new2'],
 			['/new1/new2/new3', 'https://example.com/foo/bar.ext', 'https://example.com/new1/new2/new3'],
 			['/new1/new2?new=query', 'https://example.com/foo/bar/baz', 'https://example.com/new1/new2?new=query'],
 			['/new1/new2?new=query', 'https://example.com/foo/bar/baz?old=query', 'https://example.com/new1/new2?new=query'],
@@ -109,9 +116,8 @@ final class SecurityTxtUrlParserTest extends TestCase
 			['https://new.test/new?query', 'https://example.com/bar', 'https://new.test/new?query'],
 			['https://new.test/new?query#fragment', 'https://example.com/bar', 'https://new.test/new?query#fragment'],
 			['//new.test/new', 'https://example.com/bar', 'https://new.test/new'],
-			['https://new.test', 'https://example.com/bar', 'https://new.test'], // up to the client to deal with an empty path
-			[':', 'https://example.com/foo', ':'], // the new location can't be parsed but still go with it
-			['/new', ':', '/new'],
+			['https://new.test', 'https://example.com/bar', 'https://new.test/'],
+			[':', 'https://example.com/foo', 'https://example.com/:'],
 			['?bar', 'https://example.com/foo/file.ext', 'https://example.com/foo/file.ext?bar'],
 			['?bar', 'https://example.com', 'https://example.com/?bar'],
 			['/new', 'https://example.org:1337/foo', 'https://example.org:1337/new'],
@@ -120,7 +126,6 @@ final class SecurityTxtUrlParserTest extends TestCase
 			['file://../etc/passwd', 'https://example.org/foo', 'file://../etc/passwd'],
 			['file://foo/etc/passwd', 'https://example.org/foo', 'file://foo/etc/passwd'],
 			['scheme://foo-bar', 'https://example.org/foo', 'scheme://foo-bar'],
-			['//what.ever', 'foo', '//what.ever'],
 		];
 	}
 
@@ -130,7 +135,30 @@ final class SecurityTxtUrlParserTest extends TestCase
 	 */
 	public function testGetRedirectUrl(string $location, string $url, string $expected): void
 	{
-		Assert::same($expected, $this->securityTxtUrlParser->getRedirectUrl($location, $url));
+		$currentUrl = Url::parse($url);
+		assert(isset($currentUrl));
+		Assert::same($expected, $this->securityTxtUrlParser->getRedirectUrl($location, $currentUrl)->toUnicodeString());
+	}
+
+
+	/**
+	 * @return list<array{0:string}>
+	 */
+	public function getBadCurrentUrls(): array
+	{
+		return [
+			[':'],
+			['foo'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getBadCurrentUrls
+	 */
+	public function testGetRedirectBadCurrentUrl(string $url): void
+	{
+		Assert::null(Url::parse($url));
 	}
 
 }

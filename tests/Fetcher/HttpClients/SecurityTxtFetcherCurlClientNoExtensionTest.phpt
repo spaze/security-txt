@@ -10,6 +10,7 @@ use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherCurlClient;
 use Tester\Assert;
 use Tester\Environment;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -29,7 +30,7 @@ final class SecurityTxtFetcherCurlClientNoExtensionTest extends TestCase
 
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client) {
-			$client->getResponse(new SecurityTxtFetcherUrl('https://example.com/', []), 'example.com', '192.0.2.1', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://example.com/'), []), 'example.com', '192.0.2.1', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlExtensionNotLoadedException::class);
 	}
 

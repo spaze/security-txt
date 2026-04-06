@@ -33,6 +33,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -129,7 +130,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			$onFileWarningCalled = true;
 		});
 
-		$result = $checkHost->check('https://foo.bar.example/');
+		$result = $checkHost->check(new Url('https://foo.bar.example/'));
 		Assert::same($contents, $result->getContents());
 		Assert::false($result->getIsExpired());
 		Assert::true($onUrlCalled);
@@ -166,7 +167,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$checkHost->addOnLineWarning(function () use (&$onLineWarningCalled): void {
 			$onLineWarningCalled = true;
 		});
-		$result = $checkHost->check('https://example.com');
+		$result = $checkHost->check(new Url('https://example.com'));
 		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com')]], $result->getLineErrors());
 		Assert::equal([2 => [new SecurityTxtExpiresTooLong()]], $result->getLineWarnings());
 		Assert::true($onLineErrorCalled);
@@ -182,13 +183,13 @@ final class SecurityTxtCheckHostTest extends TestCase
 			new SecurityTxtFetcherResponse(200, [], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
-		$checkHost = new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
+		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
 
 		$onRedirectCalled = false;
 		$checkHost->addOnRedirect(function () use (&$onRedirectCalled): void {
 			$onRedirectCalled = true;
 		});
-		$result = $checkHost->check('https://example.com');
+		$result = $checkHost->check(new Url('https://example.com'));
 		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com')]], $result->getLineErrors());
 		Assert::equal([2 => [new SecurityTxtExpiresTooLong()]], $result->getLineWarnings());
 		Assert::true($onRedirectCalled);
@@ -203,7 +204,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			$onUrlNotFoundCalled = true;
 		});
 		Assert::throws(function () use ($checkHost): void {
-			$checkHost->check('https://example.com');
+			$checkHost->check(new Url('https://example.com'));
 		}, SecurityTxtNotFoundException::class);
 		Assert::true($onUrlNotFoundCalled);
 	}
@@ -217,7 +218,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$checkHost->addOnIsExpired(function () use (&$onIsExpiredCalled): void {
 			$onIsExpiredCalled = true;
 		});
-		$result = $checkHost->check('https://example.com');
+		$result = $checkHost->check(new Url('https://example.com'));
 		Assert::true($result->getIsExpired());
 		Assert::equal([1 => [new SecurityTxtLineNoEol($contents), new SecurityTxtExpired()]], $result->getLineErrors());
 		Assert::true($onIsExpiredCalled);
@@ -236,7 +237,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $topLevelContents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
-		$checkHost = new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
+		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
 
 		$onFetchErrorCalled = $onFetchWarningCalled = false;
 		$checkHost->addOnFetchError(function () use (&$onFetchErrorCalled): void {
@@ -245,7 +246,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$checkHost->addOnFetchWarning(function () use (&$onFetchWarningCalled): void {
 			$onFetchWarningCalled = true;
 		});
-		$result = $checkHost->check($url);
+		$result = $checkHost->check(new Url($url));
 		Assert::equal([new SecurityTxtContentTypeInvalid($url, $contentType)], $result->getFetchErrors());
 		Assert::equal([new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents)], $result->getFetchWarnings());
 		Assert::true($onFetchErrorCalled);
@@ -268,7 +269,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			$onFileWarningCalled = true;
 		});
 		$url = 'https://example.com/.well-known/security.txt';
-		$result = $checkHost->check($url);
+		$result = $checkHost->check(new Url($url));
 		Assert::equal([new SecurityTxtNoContact()], $result->getFileErrors());
 		Assert::equal([new SecurityTxtCanonicalUriMismatch($url, [$canonical1, $canonical2])], $result->getFileWarnings());
 		Assert::true($onFileErrorCalled);
@@ -283,7 +284,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
-		return new SecurityTxtCheckHost($this->parser, $this->urlParser, $fetcher, $this->checkHostResultFactory);
+		return new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
 	}
 
 
@@ -326,7 +327,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 
 			#[Override]
-			public function getRecords(string $url, string $host): SecurityTxtDnsRecords
+			public function getRecords(Url $url, string $host): SecurityTxtDnsRecords
 			{
 				return $this->dnsRecords;
 			}

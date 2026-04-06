@@ -18,12 +18,11 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
-use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNoSchemeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
-use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Uri\WhatWg\Url;
 
 final class SecurityTxtCheckHost
 {
@@ -73,7 +72,6 @@ final class SecurityTxtCheckHost
 
 	public function __construct(
 		private readonly SecurityTxtParser $parser,
-		private readonly SecurityTxtUrlParser $urlParser,
 		private readonly SecurityTxtFetcher $fetcher,
 		private readonly SecurityTxtCheckHostResultFactory $resultFactory,
 	) {
@@ -81,7 +79,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param non-empty-string $url Only the host part of the URL will be used
+	 * @param Url $url Only the host part of the URL will be used
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtCannotParseHostnameException
@@ -94,17 +92,19 @@ final class SecurityTxtCheckHost
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 * @throws SecurityTxtHostIpAddressNotFoundException
-	 * @throws SecurityTxtUrlNoSchemeException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	public function check(string $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtCheckHostResult
+	public function check(Url $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtCheckHostResult
 	{
 		$this->initFetcherCallbacks();
 
-		$host = $this->urlParser->getHostFromUrl($url);
+		$host = $url->getUnicodeHost();
+		if ($host === null) {
+			throw new SecurityTxtCannotParseHostnameException($url->toUnicodeString());
+		}
 		$this->callOnCallback($this->onHost, $host);
 		$fetchResult = $this->fetcher->fetch($url, $requireTopLevelLocation, $noIpv6, $maxAllowedRedirects);
 		$parseResult = $this->parser->parseFetchResult($fetchResult, $expiresWarningThreshold, $strictMode);

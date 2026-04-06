@@ -38,25 +38,21 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
 	{
 		if (!extension_loaded('curl')) {
-			throw new SecurityTxtCannotOpenUrlExtensionNotLoadedException($url->getUrl());
+			throw new SecurityTxtCannotOpenUrlExtensionNotLoadedException($url->getUrl()->toUnicodeString());
 		}
 		if (preg_match('/[\x00-\x1F\x7F]/', $this->userAgent) === 1) {
-			throw new SecurityTxtCannotOpenUrlUserAgentInvalidException($url->getUrl());
+			throw new SecurityTxtCannotOpenUrlUserAgentInvalidException($url->getUrl()->toUnicodeString());
 		}
-		$ch = curl_init($url->getUrl());
+		$ch = curl_init($url->getUrl()->toUnicodeString());
 		if ($ch === false) {
-			throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
+			throw new SecurityTxtCannotOpenUrlException($url->getUrl()->toUnicodeString(), $url->getRedirects());
 		}
 
 		$rawHeaders = [];
 		$contents = '';
 		$truncated = false;
-		$components = parse_url($url->getUrl());
-		if ($components === false) {
-			throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
-		}
-		$port = $components['port'] ?? null;
-		$defaultPort = isset($components['scheme']) && strtolower($components['scheme']) === 'http' ? 80 : 443;
+		$port = $url->getUrl()->getPort();
+		$defaultPort = $url->getUrl()->getScheme() === 'http' ? 80 : 443;
 		curl_setopt_array($ch, [
 			CURLOPT_RETURNTRANSFER => false,
 			CURLOPT_FOLLOWLOCATION => false,
@@ -100,7 +96,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 		if ($result === false) {
 			$error = curl_errno($ch);
 			if ($error !== CURLE_WRITE_ERROR || !$truncated) {
-				throw new SecurityTxtCannotOpenUrlException($url->getUrl(), $url->getRedirects());
+				throw new SecurityTxtCannotOpenUrlException($url->getUrl()->toUnicodeString(), $url->getRedirects());
 			}
 		}
 
@@ -108,12 +104,12 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 		$primaryIpBinary = inet_pton($primaryIp);
 		$expectedIpBinary = inet_pton($ipAddress);
 		if ($primaryIpBinary === false || $expectedIpBinary === false || $primaryIpBinary !== $expectedIpBinary) {
-			throw new SecurityTxtConnectedToWrongIpAddressException($ipAddress, $primaryIp, $url->getUrl(), $url->getRedirects());
+			throw new SecurityTxtConnectedToWrongIpAddressException($ipAddress, $primaryIp, $url->getUrl()->toUnicodeString(), $url->getRedirects());
 		}
 
 		$code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
 		if ($code === 0) {
-			throw new SecurityTxtNoHttpCodeException($url->getUrl(), $url->getRedirects());
+			throw new SecurityTxtNoHttpCodeException($url->getUrl()->toUnicodeString(), $url->getRedirects());
 		}
 
 		$headers = [];
