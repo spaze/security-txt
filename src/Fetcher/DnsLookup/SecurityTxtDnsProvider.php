@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher\DnsLookup;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
+use Uri\WhatWg\Url;
 
 interface SecurityTxtDnsProvider
 {
@@ -11,6 +12,6 @@ interface SecurityTxtDnsProvider
 	/**
 	 * @throws SecurityTxtHostNotFoundException
 	 */
-	public function getRecords(string $url, string $host): SecurityTxtDnsRecords;
+	public function getRecords(Url $url, string $host): SecurityTxtDnsRecords;
 
 }

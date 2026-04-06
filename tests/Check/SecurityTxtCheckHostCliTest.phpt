@@ -25,6 +25,7 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -53,7 +54,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', null, true, true, true, true, false, 'Help I need some<body>');
+		$checkHostCli->check(new Url('https://example.com'), null, true, true, true, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
@@ -85,7 +86,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', 10, true, true, false, true, false, 'Help I need some<body>');
+		$checkHostCli->check(new Url('https://example.com'), 10, true, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
@@ -129,7 +130,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', null, true, true, false, true, false, 'Help I need some<body>');
+		$checkHostCli->check(new Url('https://example.com'), null, true, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
@@ -154,7 +155,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', null, true, true, false, true, false, 'Help I need some<body>');
+		$checkHostCli->check(new Url('https://example.com'), null, true, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
@@ -178,13 +179,11 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('https://example.com', null, true, true, false, true, true, 'Help I need some1');
-		$checkHostCli->check('--an-option', null, true, true, false, true, false, 'Help I need someone');
-		$checkHostCli->check('https://example.com', null, true, true, false, true, false, 'Help I need some<body>');
+		$checkHostCli->check(new Url('https://example.com'), null, true, true, false, true, true, 'Help I need some1');
+		$checkHostCli->check(new Url('https://example.com'), null, true, true, false, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
 		[1;90m[Info][0m Help I need some1
-		[1;90m[Info][0m Help I need someone
 		[1;90m[Info][0m Parsing security.txt for [1mexample.com[0m
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/.well-known/security.txt[0m
 		[1;90m[Info][0m Not found [1mhttps://example.com/.well-known/security.txt[0m
@@ -216,24 +215,10 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
-		$checkHostCli->check('example.com', null, false, true, false, true, true, 'Help I need some<body>');
+		$checkHostCli->check(new Url('https://example.com'), null, false, true, false, true, true, 'Help I need some<body>');
 		$output = ob_get_clean();
 		Assert::same("[Info] Help I need some<body>\n", $output);
 		Assert::same(CheckExitStatus::Ok->value, $this->exitStatus);
-	}
-
-
-	public function testCheckNoUrlOptionInstead(): void
-	{
-		$httpClient = $this->getHttpClient();
-		$checkHostCli = $this->getCheckHostCli($httpClient);
-
-		ob_start();
-		$checkHostCli->check('', null, false, true, false, true, false, 'Help I need some1');
-		$checkHostCli->check('--some-option-instead-of-url', null, false, true, false, true, false, 'Help I need some<body>');
-		$output = ob_get_clean();
-		Assert::same("[Info] Help I need some1\n[Info] Help I need some<body>\n", $output);
-		Assert::same(CheckExitStatus::NoFile->value, $this->exitStatus);
 	}
 
 
@@ -249,7 +234,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
 		$checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
-		$checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);
+		$checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory);
 		return new SecurityTxtCheckHostCli(
 			new ConsolePrinter(),
 			$checkHost,
@@ -297,7 +282,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 
 
 			#[Override]
-			public function getRecords(string $url, string $host): SecurityTxtDnsRecords
+			public function getRecords(Url $url, string $host): SecurityTxtDnsRecords
 			{
 				return $this->dnsRecords;
 			}

@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Check;
 use Closure;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Uri\WhatWg\Url;
 
 final readonly class SecurityTxtCheckHostCli
 {
@@ -22,7 +23,7 @@ final readonly class SecurityTxtCheckHostCli
 
 
 	public function check(
-		?string $url,
+		?Url $url,
 		?int $expiresWarningThreshold,
 		bool $colors,
 		bool $strictMode,
@@ -38,7 +39,7 @@ final readonly class SecurityTxtCheckHostCli
 			$this->consolePrinter->info($usageHelp);
 			$this->exit(CheckExitStatus::Ok);
 			return;
-		} elseif ($url === null || $url === '' || str_starts_with($url, '-')) {
+		} elseif ($url === null) {
 			$this->consolePrinter->info($usageHelp);
 			$this->exit(CheckExitStatus::NoFile);
 			return;

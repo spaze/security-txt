@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtPhpDnsProvider;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherCurlClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
@@ -48,7 +49,7 @@ $dnsProvider = new SecurityTxtPhpDnsProvider();
 $fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $splitLines, $dnsProvider);
 $consolePrinter = new ConsolePrinter();
 $checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
-$checkHost = new SecurityTxtCheckHost($parser, $urlParser, $fetcher, $checkHostResultFactory);
+$checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory);
 $exit = function (int $status): void {
 	exit($status);
 };
@@ -56,8 +57,13 @@ $checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost, $exit);
 
 /** @var list<string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
+try {
+	$url = isset($args[1]) && $args[1] !== '' ? $urlParser->getUrl($args[1]) : null;
+} catch (SecurityTxtCannotParseHostnameException) {
+	$url = null;
+}
 $checkHostCli->check(
-	isset($args[1]) && $args[1] !== '' ? $args[1] : null,
+	$url,
 	isset($args[2]) && $args[2] !== '' ? (int)$args[2] : null,
 	in_array('--colors', $args, true),
 	in_array('--strict', $args, true),

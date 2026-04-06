@@ -8,6 +8,10 @@ parameters:
 		- phpt
 	level: max
 	checkMissingOverrideMethodAttribute: true
+	disallowedFunctionCalls:
+		-
+			function: 'parse_url()'
+			message: 'use new Uri\WhatWg\Url() or Uri\WhatWg\Url::parse() instead'
 
 includes:
 	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
