@@ -112,6 +112,10 @@ DNS resolution is handled by `SecurityTxtPhpDnsProvider`, which uses PHP's built
 If you need explicit DNS timeout control, or would like to use for example DNS-over-HTTPS, you can add a custom provider, which implements the `SecurityTxtDnsProvider` interface,
 and then pass it to `SecurityTxtFetcher` in the `$dnsLookupProvider` parameter.
 
+## Signature verification
+This library verifies that the signature is a valid OpenPGP cleartext signature, but cannot verify whether the signing key is trustworthy, for example when the key is not in local keyring etc. As the [`security.txt` RFC](https://www.rfc-editor.org/rfc/rfc9116#name-digital-signature) puts it:
+"it is always the security researcher's responsibility to make sure the key being used is indeed one they trust." Verify the key fingerprint or key id out-of-band, for example by checking it against the company's website or other trusted sources.
+
 ## JSON
 The `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult` object can be encoded to JSON with `json_encode()`,
 and decoded back with `Spaze\SecurityTxt\Json\SecurityTxtJson::createCheckHostResultFromJsonValues()`.
