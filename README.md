@@ -107,6 +107,11 @@ You can set it in `SecurityTxtFetcherCurlClient` constructor (the `$userAgent` p
 ## Maximum file size
 The size of the file is limited when fetching the contents from remote hosts. By default, the limit is 10 000 bytes, but you can change it in `SecurityTxtFetcherCurlClient` constructor (the `$maxResponseLength` parameter). Then, when creating `SecurityTxtFetcher`, pass that customized client as its HTTP client argument together with the other constructor arguments required by `SecurityTxtFetcher`.
 
+## DNS lookups
+DNS resolution is handled by `SecurityTxtPhpDnsProvider`, which uses PHP's built-in `dns_get_record()`. This function has no timeout parameter, the system DNS timeout applies.
+If you need explicit DNS timeout control, or would like to use for example DNS-over-HTTPS, you can add a custom provider, which implements the `SecurityTxtDnsProvider` interface,
+and then pass it to `SecurityTxtFetcher` in the `$dnsLookupProvider` parameter.
+
 ## JSON
 The `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult` object can be encoded to JSON with `json_encode()`,
 and decoded back with `Spaze\SecurityTxt\Json\SecurityTxtJson::createCheckHostResultFromJsonValues()`.
