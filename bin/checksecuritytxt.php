@@ -39,14 +39,14 @@ if (!$autoloadLoaded) {
 $validator = new SecurityTxtValidator();
 $gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
 $signature = new SecurityTxtSignature($gnuPgProvider);
-$fopenClient = new SecurityTxtFetcherCurlClient();
+$curlClient = new SecurityTxtFetcherCurlClient();
 $urlParser = new SecurityTxtUrlParser();
 $expiresFactory = new SecurityTxtExpiresFactory();
 $pregSplitProvider = new SecurityTxtPregSplitProvider();
 $splitLines = new SecurityTxtSplitLines($pregSplitProvider);
 $parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
 $dnsProvider = new SecurityTxtPhpDnsProvider();
-$fetcher = new SecurityTxtFetcher($fopenClient, $urlParser, $splitLines, $dnsProvider);
+$fetcher = new SecurityTxtFetcher($curlClient, $urlParser, $splitLines, $dnsProvider);
 $consolePrinter = new ConsolePrinter();
 $checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 $checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory);
