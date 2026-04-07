@@ -5,6 +5,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use LogicException;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtPhpDnsProvider;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
@@ -74,6 +75,28 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	}
 
 
+	public function testGetResponseMaxResponseLengthSetting(): void
+	{
+		needsInternet();
+		$client = new SecurityTxtFetcherCurlClient(maxResponseLength: 100_000);
+		$url = new Url('https://httpbin.org/bytes/31337');
+		$ipAddress = $this->dnsProvider->getRecords($url, 'httpbin.org')->getIpRecord();
+		if ($ipAddress === null) {
+			Assert::fail("Can't find an IP address for httpbin.org");
+		} else {
+			$response = $client->getResponse(
+				new SecurityTxtFetcherUrl($url, []),
+				'httpbin.org',
+				$ipAddress,
+				SecurityTxtIpAddressType::V4,
+			);
+			Assert::same(200, $response->getHttpCode());
+			Assert::false($response->isTruncated());
+			Assert::true(strlen($response->getContents()) > 10_000);
+		}
+	}
+
+
 	public function testGetResponseSettingHost(): void
 	{
 		needsInternet();
@@ -117,6 +140,17 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		Assert::throws(function () use ($client): void {
 			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlUserAgentInvalidException::class, "Can't open https://com.example/, the specified user agent contains a control character and is invalid");
+	}
+
+
+	public function testMaxResponseLengthPositive(): void
+	{
+		Assert::throws(function (): void {
+			new SecurityTxtFetcherCurlClient(maxResponseLength: 0);
+		}, LogicException::class, 'maxResponseLength must be greater than 0');
+		Assert::throws(function (): void {
+			new SecurityTxtFetcherCurlClient(maxResponseLength: -1);
+		}, LogicException::class, 'maxResponseLength must be greater than 0');
 	}
 
 }
