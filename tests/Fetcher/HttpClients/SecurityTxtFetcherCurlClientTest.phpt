@@ -58,14 +58,14 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	{
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
-		$url = new Url('http://ipv4.download.thinkbroadband.com/5MB.zip'); // From https://www.thinkbroadband.com/download
-		$ipAddress = $this->dnsProvider->getRecords($url, 'ipv4.download.thinkbroadband.com')->getIpRecord();
+		$url = new Url('https://httpbin.org/bytes/31337');
+		$ipAddress = $this->dnsProvider->getRecords($url, 'httpbin.org')->getIpRecord();
 		if ($ipAddress === null) {
-			Assert::fail("Can't find an IP address for ipv4.download.thinkbroadband.com");
+			Assert::fail("Can't find an IP address for httpbin.org");
 		} else {
 			$response = $client->getResponse(
 				new SecurityTxtFetcherUrl($url, []),
-				'ipv4.download.thinkbroadband.com',
+				'httpbin.org',
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
 			);
