@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher\HttpClients;
 
 use CurlHandle;
+use LogicException;
 use Override;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
@@ -17,13 +18,13 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherHttpClient
 {
 
-	private const int MAX_RESPONSE_LENGTH = 10_000;
-	private const string DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; spaze/security-txt; +https://github.com/spaze/security-txt)';
-
-
 	public function __construct(
-		private string $userAgent = self::DEFAULT_USER_AGENT,
+		private string $userAgent = 'Mozilla/5.0 (compatible; spaze/security-txt; +https://github.com/spaze/security-txt)',
+		private int $maxResponseLength = 10_000,
 	) {
+		if ($this->maxResponseLength <= 0) {
+			throw new LogicException('maxResponseLength must be greater than 0');
+		}
 	}
 
 
@@ -76,7 +77,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			},
 			CURLOPT_WRITEFUNCTION => function (CurlHandle $ch, string $data) use (&$contents, &$truncated): int {
 				$length = strlen($data);
-				$remaining = self::MAX_RESPONSE_LENGTH - strlen($contents);
+				$remaining = $this->maxResponseLength - strlen($contents);
 				// Returning 0 stops transfer, but also throws CURLE_WRITE_ERROR, which we'll have to discard
 				if ($remaining <= 0) {
 					$truncated = true;
