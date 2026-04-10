@@ -24,6 +24,7 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
@@ -276,6 +277,21 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::type(SecurityTxtNoContact::class, $contactError);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	public function testParseStringContentNotUtf8(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("\xFF\xFE");
+		$errors = $parseResult->getFileErrors();
+		Assert::count(1, $errors);
+		Assert::type(SecurityTxtContentNotUtf8::class, $errors[0]);
+		Assert::same([], $parseResult->getFileWarnings());
+		Assert::same([], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->hasWarnings());
+		Assert::false($parseResult->isValid());
 	}
 
 
