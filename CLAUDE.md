@@ -12,6 +12,7 @@ composer cs-fix                       # auto-fix code style
 composer phpstan                      # static analysis
 composer psalm                        # psalm static analysis
 composer tester                       # run all tests (requires curl, gnupg, pcov extensions)
+composer tester-include-skipped       # run all tests including the network-dependent ones that are skipped by default (sets TEST_CASE_RUNNER_INCLUDE_SKIPPED=1)
 composer tester-no-extensions         # run only the two extension-absence tests
 ```
 
