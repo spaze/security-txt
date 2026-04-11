@@ -18,6 +18,7 @@
 		"phpstan/phpstan": "^2.1.45",
 		"phpstan/phpstan-strict-rules": "^2.0",
 		"psalm/phar": "^6.10",
+		"shipmonk/dead-code-detector": "^1.0",
 		"spaze/coding-standard": "^1.9",
 		"spaze/phpcs-phar": "^4.0",
 		"spaze/phpstan-disallowed-calls": "^4.5"

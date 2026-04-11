@@ -1,3 +1,4 @@
 /composer.lock
 /tests/Signature/Providers/gnupg/random_seed
+/tests/Signature/Providers/gnupg/S.gpg-agent*
 /vendor
