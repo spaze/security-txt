@@ -176,7 +176,7 @@ final class SecurityTxtTest extends TestCase
 
 	/**
 	 * @param array<string, class-string<SecurityTxtSpecViolation>|null> $values
-	 * @param class-string $fieldClass
+	 * @param class-string<SecurityTxtUriField> $fieldClass
 	 * @param callable(SecurityTxt): callable $addFactory
 	 * @param callable(SecurityTxt): (callable(): list<SecurityTxtUriField>) $getFieldFactory
 	 * @param callable $getValue
