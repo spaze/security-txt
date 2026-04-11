@@ -39,7 +39,7 @@ The library has three entry points:
 ### Key objects
 
 - **`SecurityTxt`** — the main value object; validates field values on set using `SecurityTxtValidationLevel`
-- **`SecurityTxtFetcher`** — fetches both `/.well-known/security.txt` and `/security.txt`, handles redirects, enforces SSRF protections (DNS + IP validation, starts from HTTPS URLs and only allows HTTP/HTTPS schemes, 10KB limit)
+- **`SecurityTxtFetcher`** — fetches both `/.well-known/security.txt` and `/security.txt`, handles redirects, enforces SSRF protections (DNS + IP validation, starts from HTTPS URLs and only allows HTTP/HTTPS schemes, 10KB default limit but configurable)
 - **`SecurityTxtParser`** — delegates each field to a chain of `FieldProcessor` implementations
 - **`SecurityTxtValidator`** — file-level validation (mandatory fields, canonical URI presence, signed-but-no-canonical)
 - **`SecurityTxtSignature`** — OpenPGP cleartext signature verification and creation (requires `gnupg` extension)
