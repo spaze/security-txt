@@ -23,4 +23,4 @@ jobs:
     - name: Install dependencies
       run: composer update --no-progress --no-interaction
     - name: Run Tester including skipped tests
-      run: TEST_CASE_RUNNER_INCLUDE_SKIPPED=1 composer tester
+      run: composer tester-include-skipped
