@@ -50,10 +50,7 @@ $fetcher = new SecurityTxtFetcher($curlClient, $urlParser, $splitLines, $dnsProv
 $consolePrinter = new ConsolePrinter();
 $checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 $checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory);
-$exit = function (int $status): void {
-	exit($status);
-};
-$checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost, $exit);
+$checkHostCli = new SecurityTxtCheckHostCli($consolePrinter, $checkHost, exit(...));
 
 /** @var list<string> $args */
 $args = is_array($_SERVER['argv']) ? $_SERVER['argv'] : [];
