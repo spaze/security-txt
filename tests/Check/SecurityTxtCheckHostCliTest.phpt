@@ -62,12 +62,12 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/security.txt[0m
 		[1;90m[Info][0m Redirected from [1mhttps://example.com/security.txt[0m to [1mhttps://nah.example/[0m
 		[1;90m[Info][0m Not found [1mhttps://nah.example/[0m
-		[1;90m[Info][0m Selecting security.txt located at [1mhttps://example.com/.well-known/security.txt[0m for further tests
+		[1;90m[Info][0m Using [1mhttps://example.com/.well-known/security.txt[0m
 		[1;31m[Error][0m The file at https://example.com/.well-known/security.txt has a correct Content-Type of text/plain but the charset=utf-8 parameter is missing (How to fix: Add a charset=utf-8 parameter, e.g. text/plain; charset=utf-8)
 		[1;31m[Error][0m on line [1m2[0m: The file is considered stale and should not be used (How to fix: The Expires field should contain a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
 		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file has expired 42 days ago[0m ({$this->expires})
-		[1;31m[Error][0m [1;31mPlease update the file![0m
+		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
 		Assert::same($expected . "\n", $output);
 		Assert::same(CheckExitStatus::Error->value, $this->exitStatus);
@@ -93,10 +93,10 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/.well-known/security.txt[0m
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/security.txt[0m
 		[1;90m[Info][0m Not found [1mhttps://example.com/security.txt[0m
-		[1;90m[Info][0m Selecting security.txt located at [1mhttps://example.com/.well-known/security.txt[0m for further tests
+		[1;90m[Info][0m Using [1mhttps://example.com/.well-known/security.txt[0m
 		[1m[Warning][0m on line [1m2[0m: The file will be considered stale in 5 days (How to fix: Update the value of the Expires field, e.g. {$this->getExpiresExample()})
-		[1;90m[Info][0m [1;32mThe file will expire in 5 days[0m ({$expires})
-		[1;31m[Error][0m [1;31mPlease update the file![0m
+		[1;32m[OK][0m The file will expire in 5 days ({$expires})
+		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
 		Assert::same($expected . "\n", $output);
 		Assert::same(CheckExitStatus::Error->value, $this->exitStatus);
@@ -137,9 +137,10 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/.well-known/security.txt[0m
 		[1;90m[Info][0m Loading security.txt from [1mhttps://example.com/security.txt[0m
 		[1;90m[Info][0m Not found [1mhttps://example.com/security.txt[0m
-		[1;90m[Info][0m Selecting security.txt located at [1mhttps://example.com/.well-known/security.txt[0m for further tests
-		[1;90m[Info][0m [1;32mThe file will expire in 5 days[0m ({$expires})
-		[1;90m[Info][0m [1;32mSignature valid[0m, key AF6E1775E311FF78E911E7DC7F879001A9C8F50A, signed on 2025-07-22T02:10:07+00:00
+		[1;90m[Info][0m Using [1mhttps://example.com/.well-known/security.txt[0m
+		[1;32m[OK][0m The file will expire in 5 days ({$expires})
+		[1;32m[OK][0m Signature valid, key AF6E1775E311FF78E911E7DC7F879001A9C8F50A, signed on 2025-07-22T02:10:07+00:00
+		[1;32m[OK][0m [1;32mThe file is valid[0m
 		EOT;
 		Assert::same($expected . "\n", $output);
 		Assert::same(CheckExitStatus::Ok->value, $this->exitStatus);

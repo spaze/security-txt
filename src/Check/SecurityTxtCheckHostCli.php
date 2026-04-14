@@ -52,7 +52,7 @@ final readonly class SecurityTxtCheckHostCli
 		);
 		$this->checkHost->addOnFinalUrl(
 			function (string $url): void {
-				$this->consolePrinter->info('Selecting security.txt located at ' . $this->consolePrinter->colorBold($url) . ' for further tests');
+				$this->consolePrinter->info('Using ' . $this->consolePrinter->colorBold($url));
 			},
 		);
 		$this->checkHost->addOnRedirect(
@@ -72,7 +72,7 @@ final readonly class SecurityTxtCheckHostCli
 		);
 		$this->checkHost->addOnExpires(
 			function (int $inDays, DateTimeImmutable $expiryDate): void {
-				$this->consolePrinter->info($this->consolePrinter->colorGreen("The file will expire in {$inDays} " . ($inDays === 1 ? 'day' : 'days')) . " ({$expiryDate->format(DATE_RFC3339)})");
+				$this->consolePrinter->ok("The file will expire in {$inDays} " . ($inDays === 1 ? 'day' : 'days') . " ({$expiryDate->format(DATE_RFC3339)})");
 			},
 		);
 		$this->checkHost->addOnHost(
@@ -82,9 +82,8 @@ final readonly class SecurityTxtCheckHostCli
 		);
 		$this->checkHost->addOnValidSignature(
 			function (string $keyFingerprint, DateTimeImmutable $signatureDate): void {
-				$this->consolePrinter->info(sprintf(
-					'%s, key %s, signed on %s',
-					$this->consolePrinter->colorGreen('Signature valid'),
+				$this->consolePrinter->ok(sprintf(
+					'Signature valid, key %s, signed on %s',
 					$keyFingerprint,
 					$signatureDate->format(DATE_RFC3339),
 				));
@@ -126,9 +125,10 @@ final readonly class SecurityTxtCheckHostCli
 				$noIpv6,
 			);
 			if (!$checkResult->isValid()) {
-				$this->consolePrinter->error($this->consolePrinter->colorRed('Please update the file!'));
+				$this->consolePrinter->error($this->consolePrinter->colorRed('The file is invalid'));
 				$this->exit(CheckExitStatus::Error);
 			} else {
+				$this->consolePrinter->ok($this->consolePrinter->colorGreen('The file is valid'));
 				$this->exit(CheckExitStatus::Ok);
 			}
 		} catch (SecurityTxtFetcherException $e) {
