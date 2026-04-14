@@ -26,6 +26,7 @@ final readonly class SecurityTxtCheckHostCli
 		?Url $url,
 		?int $expiresWarningThreshold,
 		bool $colors,
+		bool $verbose,
 		bool $strictMode,
 		bool $requireTopLevelLocation,
 		bool $noIpv6,
@@ -45,24 +46,26 @@ final readonly class SecurityTxtCheckHostCli
 			return;
 		}
 
-		$this->checkHost->addOnUrl(
-			function (string $url): void {
-				$this->consolePrinter->info('Loading security.txt from ' . $this->consolePrinter->colorBold($url));
-			},
-		);
+		if ($verbose) {
+			$this->checkHost->addOnUrl(
+				function (string $url): void {
+					$this->consolePrinter->info('Loading security.txt from ' . $this->consolePrinter->colorBold($url));
+				},
+			);
+			$this->checkHost->addOnRedirect(
+				function (string $url, string $destination): void {
+					$this->consolePrinter->info('Redirected from ' . $this->consolePrinter->colorBold($url) . ' to ' . $this->consolePrinter->colorBold($destination));
+				},
+			);
+			$this->checkHost->addOnUrlNotFound(
+				function (string $url): void {
+					$this->consolePrinter->info('Not found ' . $this->consolePrinter->colorBold($url));
+				},
+			);
+		}
 		$this->checkHost->addOnFinalUrl(
 			function (string $url): void {
 				$this->consolePrinter->info('Using ' . $this->consolePrinter->colorBold($url));
-			},
-		);
-		$this->checkHost->addOnRedirect(
-			function (string $url, string $destination): void {
-				$this->consolePrinter->info('Redirected from ' . $this->consolePrinter->colorBold($url) . ' to ' . $this->consolePrinter->colorBold($destination));
-			},
-		);
-		$this->checkHost->addOnUrlNotFound(
-			function (string $url): void {
-				$this->consolePrinter->info('Not found ' . $this->consolePrinter->colorBold($url));
 			},
 		);
 		$this->checkHost->addOnIsExpired(
