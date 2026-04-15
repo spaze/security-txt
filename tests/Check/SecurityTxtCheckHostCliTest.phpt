@@ -74,25 +74,37 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	}
 
 
-	public function testCheckErrorWarningNonVerbose(): void
+	public function testCheckErrorWarningVerboseThenNonVerbose(): void
 	{
-		$contents = "Contact: mailto:foo@example.com\nExpires: {$this->expires}\n";
 		$httpClient = $this->getHttpClient(
-			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
-			new SecurityTxtFetcherResponse(302, ['location' => 'https://nah.example/'], 'yes but', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], "Contact: mailto:foo@example.com\nExpires: {$this->expires}\n", false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(302, ['location' => 'https://nah1.example/'], 'yes but', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'yeah nah', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], "Contact: mailto:foo@two.example\n", false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(302, ['location' => 'https://nah2.example/'], 'yes but', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 			new SecurityTxtFetcherResponse(404, [], 'yeah nah', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$checkHostCli = $this->getCheckHostCli($httpClient);
 
 		ob_start();
+		$checkHostCli->check(new Url('https://verbose.example'), null, true, true, true, true, true, false, 'Help I need some<body>');
 		$checkHostCli->check(new Url('https://non-verbose.example'), null, true, false, true, true, true, false, 'Help I need some<body>');
 		$output = ob_get_clean();
 		$expected = <<< EOT
-		[1;90m[Info][0m Parsing security.txt for [1mnon-verbose.example[0m
-		[1;90m[Info][0m Using [1mhttps://non-verbose.example/.well-known/security.txt[0m
+		[1;90m[Info][0m Parsing security.txt for [1mverbose.example[0m
+		[1;90m[Info][0m Loading security.txt from [1mhttps://verbose.example/.well-known/security.txt[0m
+		[1;90m[Info][0m Loading security.txt from [1mhttps://verbose.example/security.txt[0m
+		[1;90m[Info][0m Redirected from [1mhttps://verbose.example/security.txt[0m to [1mhttps://nah1.example/[0m
+		[1;90m[Info][0m Not found [1mhttps://nah1.example/[0m
+		[1;90m[Info][0m Using [1mhttps://verbose.example/.well-known/security.txt[0m
 		[1;31m[Error][0m on line [1m2[0m: The file is considered stale and should not be used (How to fix: The Expires field should contain a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
 		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file has expired 42 days ago[0m ({$this->expires})
+		[1;31m[Error][0m [1;31mThe file is invalid[0m
+		[1;90m[Info][0m Parsing security.txt for [1mnon-verbose.example[0m
+		[1;90m[Info][0m Using [1mhttps://non-verbose.example/.well-known/security.txt[0m
+		[1;31m[Error][0m The Expires field must always be present (How to fix: Add an Expires field with a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. 2027-04-14T23:59:59+00:00)
+		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
 		Assert::same($expected . "\n", $output);
