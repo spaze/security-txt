@@ -8,17 +8,21 @@ use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Uri\WhatWg\Url;
 
-final readonly class SecurityTxtCheckHostCli
+final class SecurityTxtCheckHostCli
 {
+
+	private bool $verbose = false;
+
 
 	/**
 	 * @param Closure(int): void $exit
 	 */
 	public function __construct(
-		private ConsolePrinter $consolePrinter,
-		private SecurityTxtCheckHost $checkHost,
-		private Closure $exit,
+		private readonly ConsolePrinter $consolePrinter,
+		private readonly SecurityTxtCheckHost $checkHost,
+		private readonly Closure $exit,
 	) {
+		$this->initCheckHostCallbacks();
 	}
 
 
@@ -26,12 +30,14 @@ final readonly class SecurityTxtCheckHostCli
 		?Url $url,
 		?int $expiresWarningThreshold,
 		bool $colors,
+		bool $verbose,
 		bool $strictMode,
 		bool $requireTopLevelLocation,
 		bool $noIpv6,
 		bool $showUsageHelp,
 		string $usageHelp,
 	): void {
+		$this->verbose = $verbose;
 		if ($colors) {
 			$this->consolePrinter->enableColors();
 		}
@@ -44,25 +50,60 @@ final readonly class SecurityTxtCheckHostCli
 			$this->exit(CheckExitStatus::NoFile);
 			return;
 		}
+		try {
+			$checkResult = $this->checkHost->check(
+				$url,
+				$expiresWarningThreshold,
+				$strictMode,
+				$requireTopLevelLocation,
+				$noIpv6,
+			);
+			if (!$checkResult->isValid()) {
+				$this->consolePrinter->error($this->consolePrinter->colorRed('The file is invalid'));
+				$this->exit(CheckExitStatus::Error);
+			} else {
+				$this->consolePrinter->ok($this->consolePrinter->colorGreen('The file is valid'));
+				$this->exit(CheckExitStatus::Ok);
+			}
+		} catch (SecurityTxtFetcherException $e) {
+			$this->consolePrinter->error($e->getMessage());
+			$this->exit(CheckExitStatus::FileError);
+		}
+	}
 
+
+	private function exit(CheckExitStatus $exitStatus): void
+	{
+		($this->exit)($exitStatus->value);
+	}
+
+
+	private function initCheckHostCallbacks(): void
+	{
 		$this->checkHost->addOnUrl(
 			function (string $url): void {
-				$this->consolePrinter->info('Loading security.txt from ' . $this->consolePrinter->colorBold($url));
+				if ($this->verbose) {
+					$this->consolePrinter->info('Loading security.txt from ' . $this->consolePrinter->colorBold($url));
+				}
+			},
+		);
+		$this->checkHost->addOnRedirect(
+			function (string $url, string $destination): void {
+				if ($this->verbose) {
+					$this->consolePrinter->info('Redirected from ' . $this->consolePrinter->colorBold($url) . ' to ' . $this->consolePrinter->colorBold($destination));
+				}
+			},
+		);
+		$this->checkHost->addOnUrlNotFound(
+			function (string $url): void {
+				if ($this->verbose) {
+					$this->consolePrinter->info('Not found ' . $this->consolePrinter->colorBold($url));
+				}
 			},
 		);
 		$this->checkHost->addOnFinalUrl(
 			function (string $url): void {
 				$this->consolePrinter->info('Using ' . $this->consolePrinter->colorBold($url));
-			},
-		);
-		$this->checkHost->addOnRedirect(
-			function (string $url, string $destination): void {
-				$this->consolePrinter->info('Redirected from ' . $this->consolePrinter->colorBold($url) . ' to ' . $this->consolePrinter->colorBold($destination));
-			},
-		);
-		$this->checkHost->addOnUrlNotFound(
-			function (string $url): void {
-				$this->consolePrinter->info('Not found ' . $this->consolePrinter->colorBold($url));
 			},
 		);
 		$this->checkHost->addOnIsExpired(
@@ -115,32 +156,6 @@ final readonly class SecurityTxtCheckHostCli
 		$this->checkHost->addOnFetchWarning($onWarning);
 		$this->checkHost->addOnLineWarning($onWarning);
 		$this->checkHost->addOnFileWarning($onWarning);
-
-		try {
-			$checkResult = $this->checkHost->check(
-				$url,
-				$expiresWarningThreshold,
-				$strictMode,
-				$requireTopLevelLocation,
-				$noIpv6,
-			);
-			if (!$checkResult->isValid()) {
-				$this->consolePrinter->error($this->consolePrinter->colorRed('The file is invalid'));
-				$this->exit(CheckExitStatus::Error);
-			} else {
-				$this->consolePrinter->ok($this->consolePrinter->colorGreen('The file is valid'));
-				$this->exit(CheckExitStatus::Ok);
-			}
-		} catch (SecurityTxtFetcherException $e) {
-			$this->consolePrinter->error($e->getMessage());
-			$this->exit(CheckExitStatus::FileError);
-		}
-	}
-
-
-	private function exit(CheckExitStatus $exitStatus): void
-	{
-		($this->exit)($exitStatus->value);
 	}
 
 }
