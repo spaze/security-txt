@@ -103,7 +103,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		[1;90m[Info][0m Parsing security.txt for [1mnon-verbose.example[0m
 		[1;90m[Info][0m Using [1mhttps://non-verbose.example/.well-known/security.txt[0m
-		[1;31m[Error][0m The Expires field must always be present (How to fix: Add an Expires field with a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. 2027-04-14T23:59:59+00:00)
+		[1;31m[Error][0m The Expires field must always be present (How to fix: Add an Expires field with a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
 		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
