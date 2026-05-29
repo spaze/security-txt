@@ -36,8 +36,7 @@ final class SecurityTxtExpiresTest extends TestCase
 	{
 		$interval = $now->diff($expires);
 		$negativePeriod = $interval->invert === 1;
-		$days = (int)$interval->days;
-		$expiresObject = new SecurityTxtExpires($expires, $negativePeriod, $negativePeriod ? -$days : $days);
+		$expiresObject = new SecurityTxtExpires($expires, $negativePeriod, $negativePeriod ? -$interval->days : $interval->days);
 		Assert::same($isExpired, $expiresObject->isExpired());
 		Assert::same($expireDays, $expiresObject->inDays());
 	}
