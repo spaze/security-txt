@@ -11,11 +11,6 @@
       <code><![CDATA[!$truncated]]></code>
     </RedundantCondition>
   </file>
-  <file src="src/Fetcher/SecurityTxtFetcher.php">
-    <TypeDoesNotContainNull>
-      <code><![CDATA[$topLevelContents === null]]></code>
-    </TypeDoesNotContainNull>
-  </file>
   <file src="src/Parser/SecurityTxtParser.php">
     <InvalidOperand>
       <code><![CDATA[(strlen($lowercaseName) / 4 + 1) * 10]]></code>
