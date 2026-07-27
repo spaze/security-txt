@@ -45,6 +45,13 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 			['::ffff:192.168.1.1', SecurityTxtIpAddressType::V6, false],
 			['::ffff:10.1.2.3', SecurityTxtIpAddressType::V6, false],
 			['::ffff:192.0.2.33', SecurityTxtIpAddressType::V6, false],
+			['64:ff9b::a9fe:a9fe', SecurityTxtIpAddressType::V6, false], // NAT64 well-known prefix (RFC 6052) embedding 169.254.169.254, rejected
+			['64:ff9b::0a00:0001', SecurityTxtIpAddressType::V6, false], // NAT64 well-known prefix embedding 10.0.0.1, rejected
+			['64:ff9b::7f00:0001', SecurityTxtIpAddressType::V6, false], // NAT64 well-known prefix embedding 127.0.0.1, rejected
+			['64:ff9b::0808:0808', SecurityTxtIpAddressType::V6, true], // NAT64 well-known prefix embedding public 8.8.8.8, allowed (a DNS64 host reaches an IPv4-only site this way)
+			['64:ff9b::0101:0101', SecurityTxtIpAddressType::V6, true], // NAT64 well-known prefix embedding public 1.1.1.1, allowed
+			['64:ff9b:1::a9fe:a9fe', SecurityTxtIpAddressType::V6, false], // NAT64 local-use prefix (RFC 8215), rejected whole
+			['64:ff9b:1::0808:0808', SecurityTxtIpAddressType::V6, false], // NAT64 local-use prefix rejected whole even for a public-embedded target
 		];
 	}
 
