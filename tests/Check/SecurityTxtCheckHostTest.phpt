@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressValidator;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
@@ -44,6 +45,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 	private SecurityTxtSplitLines $splitLines;
 	private SecurityTxtParser $parser;
 	private SecurityTxtUrlParser $urlParser;
+	private SecurityTxtIpAddressValidator $ipAddressValidator;
 	private SecurityTxtCheckHostResultFactory $checkHostResultFactory;
 	private DateTimeImmutable $validExpires;
 	private string $validExpiresLine;
@@ -58,6 +60,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
 		$this->splitLines = new SecurityTxtSplitLines($pregSplitProvider);
 		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $this->splitLines, $pregSplitProvider);
+		$this->ipAddressValidator = new SecurityTxtIpAddressValidator();
 		$this->urlParser = new SecurityTxtUrlParser();
 		$this->checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 		$this->validExpires = new DateTimeImmutable('+6 months');
@@ -182,7 +185,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			new SecurityTxtFetcherResponse(301, ['location' => 'https://example.net/'], 'redirect', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 			new SecurityTxtFetcherResponse(200, [], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator, 1);
 		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
 
 		$onRedirectCalled = false;
@@ -236,7 +239,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $wellKnownContents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $topLevelContents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator, 1);
 		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
 
 		$onFetchErrorCalled = $onFetchWarningCalled = false;
@@ -283,7 +286,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 	private function getCheckHost(int $httpCode, array $lowercaseHeaders, string $contents): SecurityTxtCheckHost
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4));
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), 1);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator, 1);
 		return new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
 	}
 
