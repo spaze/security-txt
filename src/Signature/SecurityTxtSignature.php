@@ -56,6 +56,11 @@ final class SecurityTxtSignature
 	}
 
 
+	/**
+	 * "Kinda" okay: a structurally valid signature whose key isn't in the keyring (GNUPG_SIGSUM_KEY_MISSING) is accepted
+	 * too, not only a fully verified one (GNUPG_SIGSUM_GREEN); only a bad signature (GNUPG_SIGSUM_RED) is rejected. The key
+	 * is usually absent when checking someone else's security.txt, see "Signature verification" in the README.
+	 */
 	private function isSignatureKindaOkay(int $summary): bool
 	{
 		return (($summary & GNUPG_SIGSUM_GREEN) !== 0 || ($summary & GNUPG_SIGSUM_KEY_MISSING) !== 0) && ($summary & GNUPG_SIGSUM_RED) === 0;
