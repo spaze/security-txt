@@ -270,10 +270,12 @@ If you want to verify signatures you'll need to use [the `setup-php` GitHub acti
 
 You can use my own checks as a template or for inspiration; see [the `securitytxt.yml` file](https://github.com/spaze/michalspacek.cz/blob/main/.github/workflows/securitytxt.yml) in my repository.
 
-# Exceptions
+# Formatting exceptions and contents
 The messages in the exceptions as thrown by this library do not contain any sensitive information and are safe to display to the user using the `getMessage()` method.
 But please be aware that the messages contain server-supplied information, so please do not display the messages as HTML or do not feed them into a Markdown parser or similar.
 If you'd do that, a malicious server could inject content that would result in Cross-Site Scripting attack for example.
+
+The same applies to other server-supplied values you might display, such as the fetched file contents (`SecurityTxtFetchResult::getContents()`) and the redirect URLs (`getRedirects()`): escape them before displaying and don't render them as HTML.
 
 ## Formatting messages
 If you'd like to format some of the values contained in the messages, you can use the exception's `getMessageFormat()` and `getMessageValues()` methods.
