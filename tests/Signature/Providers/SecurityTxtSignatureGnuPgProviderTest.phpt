@@ -10,6 +10,7 @@ use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureExcep
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Tester\Assert;
 use Tester\TestCase;
+use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -26,7 +27,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		Assert::same(117456895, $errorInfo->getCode());
 		Assert::same('get_key failed', $errorInfo->getMessage());
 
-		$gnuPg = new SecurityTxtSignatureGnuPgProvider(__DIR__ . '/gnupg');
+		$gnuPg = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$added = $gnuPg->addSignKey('2F632C7E0D1E115599CE14DB1E2FC2BFE8D5E8C4');
 		Assert::true($added);
 		Assert::false($gnuPg->sign('hack the planet'));
@@ -34,7 +35,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		Assert::same(67109041, $errorInfo->getCode());
 		Assert::same('data signing failed', $errorInfo->getMessage());
 
-		$gnuPg = new SecurityTxtSignatureGnuPgProvider(__DIR__ . '/gnupg');
+		$gnuPg = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$fingerprint = '81845AF734473E623BB72216EB871D6296D433D2';
 		$added = $gnuPg->addSignKey($fingerprint, 'how do you do fellow kids');
 		Assert::true($added);
@@ -48,7 +49,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 
 	public function testSignClearsignHeader(): void
 	{
-		$gnuPg = new SecurityTxtSignatureGnuPgProvider(__DIR__ . '/gnupg');
+		$gnuPg = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$signature = new SecurityTxtSignature($gnuPg);
 		$signed = $gnuPg->sign('i was zero cool');
 		assert(is_string($signed));
@@ -58,7 +59,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 
 	public function testVerifyInvalidSignature(): void
 	{
-		$gnuPg = new SecurityTxtSignatureGnuPgProvider();
+		$gnuPg = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$e = Assert::throws(function () use ($gnuPg): void {
 			$gnuPg->verify('fifteen hundred and seven systems in one day');
 		}, SecurityTxtCannotVerifySignatureException::class);
@@ -85,7 +86,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		=bZYA
 		-----END PGP SIGNATURE-----
 		EOT;
-		$verified = (new SecurityTxtSignatureGnuPgProvider())->verify($signed);
+		$verified = (new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir()))->verify($signed);
 		Assert::same('AF6E1775E311FF78E911E7DC7F879001A9C8F50A', $verified->getFingerprint());
 		Assert::same(GNUPG_SIGSUM_KEY_MISSING, $verified->getSummary());
 		Assert::same(1753150207, $verified->getTimestamp());

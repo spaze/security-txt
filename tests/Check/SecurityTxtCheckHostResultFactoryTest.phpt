@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
 use Tester\TestCase;
+use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -30,7 +31,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 	public function __construct()
 	{
 		$validator = new SecurityTxtValidator();
-		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$signature = new SecurityTxtSignature($gnuPgProvider);
 		$expiresFactory = new SecurityTxtExpiresFactory();
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();

@@ -19,6 +19,12 @@ namespace Spaze\SecurityTxt\Test {
 	}
 
 
+	function gnupgHomeDir(): string
+	{
+		return __DIR__ . '/gnupg';
+	}
+
+
 	function skipIfExtensionLoaded(string $extension): void
 	{
 		if (extension_loaded($extension)) {

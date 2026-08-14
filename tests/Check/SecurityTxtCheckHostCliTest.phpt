@@ -27,6 +27,7 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
+use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -266,7 +267,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	{
 		$urlParser = new SecurityTxtUrlParser();
 		$validator = new SecurityTxtValidator();
-		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$signature = new SecurityTxtSignature($gnuPgProvider);
 		$expiresFactory = new SecurityTxtExpiresFactory();
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
