@@ -47,6 +47,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 use Tester\Assert;
 use Tester\TestCase;
+use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -64,7 +65,7 @@ final class SecurityTxtParserTest extends TestCase
 	public function __construct()
 	{
 		$this->securityTxtValidator = new SecurityTxtValidator();
-		$securityTxtSignatureGnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$securityTxtSignatureGnuPgProvider = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$securityTxtSignature = new SecurityTxtSignature($securityTxtSignatureGnuPgProvider);
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$this->securityTxtPregSplitProvider = new SecurityTxtPregSplitProvider();
@@ -511,7 +512,9 @@ final class SecurityTxtParserTest extends TestCase
 		EOT . "\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
 		Assert::false($parseResult->hasErrors());
-		Assert::false($parseResult->hasWarnings());
+		// Not hasWarnings() so that a failure says what the warning was, verifying a signature can fail for environmental reasons
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::same([], $parseResult->getFileWarnings());
 		Assert::same('AF6E1775E311FF78E911E7DC7F879001A9C8F50A', $parseResult->getSecurityTxt()->getSignatureVerifyResult()?->getKeyFingerprint());
 	}
 

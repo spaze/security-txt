@@ -35,6 +35,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
+use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -54,7 +55,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 	public function __construct()
 	{
 		$validator = new SecurityTxtValidator();
-		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider();
+		$gnuPgProvider = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
 		$signature = new SecurityTxtSignature($gnuPgProvider);
 		$expiresFactory = new SecurityTxtExpiresFactory();
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
