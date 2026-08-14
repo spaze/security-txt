@@ -70,6 +70,8 @@ Maximum number of redirects to follow when fetching `security.txt`. Set to `0` t
 `Spaze\SecurityTxt\Check\SecurityTxtCheckHost::check()` returns a `Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult` object with some obvious and less obvious properties.
 The less obvious ones can be obtained with the following methods. All of them return an array of `SecurityTxtSpecViolation` descendants.
 
+The violation classes are part of the public API, their constructors are not. They are called by the library, and by `SecurityTxtJson` when recreating violations from stored JSON, so their parameters can change in a minor version.
+
 ### `getFetchErrors()`
 Returns `list<SecurityTxtSpecViolation>` and contains errors encountered when fetching the file from a server. For example but not limited to:
 - When the content type or charset is wrong
