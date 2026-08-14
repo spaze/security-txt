@@ -109,6 +109,15 @@ You can set it in `SecurityTxtFetcherCurlClient` constructor (the `$userAgent` p
 ## Maximum file size
 The size of the file is limited when fetching the contents from remote hosts. By default, the limit is 10 000 bytes, but you can change it in `SecurityTxtFetcherCurlClient` constructor (the `$maxResponseLength` parameter). Then, when creating `SecurityTxtFetcher`, pass that customized client as its HTTP client argument together with the other constructor arguments required by `SecurityTxtFetcher`.
 
+## Fetching restrictions
+The file is fetched from hosts you don't control, so the fetcher is restrictive by default:
+- Fetching always starts at `https://`, whatever scheme you pass in, and any username, password, query and fragment are removed from the URL first.
+- Only `http://` and `https://` are followed, a redirect anywhere else throws `SecurityTxtUrlUnsupportedSchemeException`.
+- Redirects are followed by the library, not by curl, at most 5 by default. Every target goes through the same checks as the original URL.
+- The host is resolved by the library and each address is validated before connecting: private and reserved ranges are rejected, only publicly routable addresses are used. IPv6 addresses are also checked for NAT64, because those embed an IPv4 address the range check can't see: an address with the RFC 6052 well-known prefix (`64:ff9b::/96`) is rejected when the IPv4 it embeds is not public, and the RFC 8215 local-use prefix (`64:ff9b:1::/48`) is rejected as a whole.
+- curl then connects to that validated address, and the response is rejected with `SecurityTxtConnectedToWrongIpAddressException` when it turns out to have talked to a different one.
+- The certificate and the hostname are verified, and the connection times out after 5 seconds, the whole transfer after 10.
+
 ## DNS lookups
 DNS resolution is handled by `SecurityTxtPhpDnsProvider`, which uses PHP's built-in `dns_get_record()`. This function has no timeout parameter, the system DNS timeout applies.
 If you need explicit DNS timeout control, or would like to use for example DNS-over-HTTPS, you can add a custom provider, which implements the `SecurityTxtDnsProvider` interface,
