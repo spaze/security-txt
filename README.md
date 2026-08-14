@@ -105,6 +105,7 @@ Returns `list<SecurityTxtSpecViolation>`, the list contains file-level warnings 
 ## User agent
 When fetching the `security.txt` file, the library uses a default `User-Agent` HTTP header. The default value contains a link back to the GitHub repository, but it is recommended you use a custom `User-Agent` header.
 You can set it in `SecurityTxtFetcherCurlClient` constructor (the `$userAgent` parameter), and then pass the client object to `SecurityTxtFetcher` constructor as one of its arguments.
+The value must not be empty, the constructor throws a `LogicException` if it is, and it must not contain control characters, which would make it possible to inject other headers, `SecurityTxtCannotOpenUrlUserAgentInvalidException` is thrown when it does.
 
 ## Maximum file size
 The size of the file is limited when fetching the contents from remote hosts. By default, the limit is 10 000 bytes, but you can change it in `SecurityTxtFetcherCurlClient` constructor (the `$maxResponseLength` parameter). Then, when creating `SecurityTxtFetcher`, pass that customized client as its HTTP client argument together with the other constructor arguments required by `SecurityTxtFetcher`.
