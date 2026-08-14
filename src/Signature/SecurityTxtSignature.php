@@ -46,7 +46,9 @@ final class SecurityTxtSignature
 		} catch (SecurityTxtCannotCreateSignatureExtensionNotLoadedException $e) {
 			throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded(), $e);
 		} catch (SecurityTxtCannotVerifySignatureException $e) {
-			throw new SecurityTxtWarning(new SecurityTxtSignatureCannotVerify($e->getErrorInfo()), $e);
+			$errorInfo = $e->getErrorInfo();
+			$violation = new SecurityTxtSignatureCannotVerify($errorInfo->getMessageAsString(), $errorInfo->getCodeAsString(), $errorInfo->getSourceAsString(), $errorInfo->getLibraryMessageAsString());
+			throw new SecurityTxtWarning($violation, $e);
 		}
 
 		if (!$this->isSignatureKindaOkay($signature->getSummary())) {

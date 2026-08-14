@@ -7,6 +7,9 @@ namespace Spaze\SecurityTxt\Json;
 use ArgumentCountError;
 use DateInterval;
 use DateTimeImmutable;
+use LogicException;
+use ReflectionClass;
+use ReflectionParameter;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
@@ -15,6 +18,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
@@ -106,6 +110,66 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::same('The first letter of the Bug-Bounty field value false should be uppercase', $violations[5]->getMessage());
 		Assert::same('The value of the Bug-Bounty field (cash only) should be either True or False', $violations[6]->getMessage());
 		Assert::same('The Bug-Bounty field must not appear more than once', $violations[7]->getMessage());
+	}
+
+
+	/**
+	 * @return array<class-string<SecurityTxtSpecViolation>, array{0:SecurityTxtSpecViolation}>
+	 */
+	public function getViolations(): array
+	{
+		$files = glob(__DIR__ . '/../../src/Violations/*.php');
+		assert(is_array($files));
+		$namespace = (new ReflectionClass(SecurityTxtSpecViolation::class))->getNamespaceName();
+		$violations = [];
+		foreach ($files as $file) {
+			$class = $namespace . '\\' . basename($file, '.php');
+			assert(class_exists($class));
+			$reflection = new ReflectionClass($class);
+			if ($reflection->isAbstract()) {
+				continue;
+			}
+			$params = [];
+			foreach ($reflection->getConstructor()?->getParameters() ?? [] as $parameter) {
+				$params[] = $this->getConstructorParamValue($class, $parameter);
+			}
+			$violation = $reflection->newInstanceArgs($params);
+			assert($violation instanceof SecurityTxtSpecViolation);
+			$violations[$violation::class] = [$violation];
+		}
+		assert($violations !== []); // Would be empty and the test would pass without testing anything if the path above was wrong
+		return $violations;
+	}
+
+
+	/**
+	 * @return string|int|list<string>
+	 */
+	private function getConstructorParamValue(string $class, ReflectionParameter $parameter): string|int|array
+	{
+		// A field name is used for all strings because some violations read the value as a field name, and the constructor doesn't say which ones
+		$string = SecurityTxtField::Contact->value;
+		$type = (string)$parameter->getType();
+		return match ($type) {
+			'string', '?string' => $string,
+			'int' => 303,
+			'array' => [$string],
+			// Objects would be serialized to JSON as an array and the violation couldn't be recreated from it
+			default => throw new LogicException(sprintf('%s::__construct() has the $%s param of an unsupported type %s', $class, $parameter->getName(), $type)),
+		};
+	}
+
+
+	/**
+	 * @dataProvider getViolations
+	 */
+	public function testSerializeViolationThenCreateFromJsonValues(SecurityTxtSpecViolation $violation): void
+	{
+		$encoded = json_encode([$violation]);
+		assert(is_string($encoded));
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		Assert::equal([$violation], $this->securityTxtJson->createViolationsFromJsonValues(array_values($decoded)));
 	}
 
 
