@@ -134,6 +134,9 @@ Fetch exceptions can be recreated with `Spaze\SecurityTxt\Json\SecurityTxtJson::
 
 JSON is not versioned. Newer versions of this library will make a best effort to decode JSON created by previous versions, but compatibility cannot be guaranteed across refactors or format changes.
 
+When the JSON can't be decoded, the `create*FromJsonValues()` methods throw `Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException`.
+If it's a result you have stored, treat it as a cache miss and check the host again, instead of reporting the error to the user: the stored data was either written by an older version of this library or damaged some other way, and it will not become readable later.
+
 ## The other methods
 The `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseString()` method returns a `Spaze\SecurityTxt\Parser\SecurityTxtParseStringResult` object.
 `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseFetchResult()` returns a `Spaze\SecurityTxt\Parser\SecurityTxtParseHostResult` object, which also contains a `Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult` object.
