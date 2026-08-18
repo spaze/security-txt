@@ -155,6 +155,7 @@ final class SecurityTxtParser
 			}, SecurityTxtField::cases()),
 			SecurityTxtField::cases(),
 		);
+		$signatureChecked = false;
 		for ($lineNumber = 1; $lineNumber <= count($lines); $lineNumber++) {
 			$line = trim($lines[$lineNumber - 1]);
 			if (!str_ends_with($lines[$lineNumber - 1], "\n")) {
@@ -170,7 +171,10 @@ final class SecurityTxtParser
 				continue;
 			}
 			if ($this->signature->isClearsignHeader($line)) {
-				$securityTxt = $this->checkSignature($lineNumber, $contents, $securityTxt);
+				if (!$signatureChecked) {
+					$securityTxt = $this->checkSignature($lineNumber, $contents, $securityTxt);
+					$signatureChecked = true;
+				}
 				$skipSignatureArmorHeaders = true;
 				continue;
 			}
