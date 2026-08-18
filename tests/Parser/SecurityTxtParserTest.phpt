@@ -32,6 +32,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
@@ -43,6 +44,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureMultipleCleartextHeaders;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 use Tester\Assert;
@@ -620,6 +622,102 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
 		$securityTxtParser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\n\n", 50));
 		Assert::same(1, $signatureProvider->verifyCalls);
+	}
+
+
+	public function testParseStringFieldsOutsideSignedPartOfFile(): void
+	{
+		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		Contact: https://before.example/
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		Expires: {$expires}
+		Canonical: https://foo.bar.example/
+		-----BEGIN PGP SIGNATURE-----
+
+		fake
+		-----END PGP SIGNATURE-----
+		Contact: https://after.example/
+		EOT . "\n";
+		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->isValid());
+		Assert::count(2, $parseResult->getLineErrors());
+		Assert::type(SecurityTxtFieldNotCoveredBySignature::class, $parseResult->getLineErrors()[1][0]);
+		Assert::same(['Contact'], $parseResult->getLineErrors()[1][0]->getMessageValues());
+		Assert::type(SecurityTxtFieldNotCoveredBySignature::class, $parseResult->getLineErrors()[12][0]);
+		// the fields are still parsed, the errors are what makes the file invalid
+		$contacts = $parseResult->getSecurityTxt()->getContact();
+		Assert::count(3, $contacts);
+		Assert::same('https://before.example/', $contacts[0]->getUri());
+		Assert::same('https://example.com/', $contacts[1]->getUri());
+		Assert::same('https://after.example/', $contacts[2]->getUri());
+	}
+
+
+	public function testParseStringMultipleCleartextHeaders(): void
+	{
+		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		Expires: {$expires}
+		-----BEGIN PGP SIGNATURE-----
+
+		fake
+		-----END PGP SIGNATURE-----
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://attacker.example/
+		EOT . "\n";
+		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::true($parseResult->hasErrors());
+		Assert::false($parseResult->isValid());
+		Assert::count(2, $parseResult->getLineErrors());
+		Assert::type(SecurityTxtSignatureMultipleCleartextHeaders::class, $parseResult->getLineErrors()[10][0]);
+		Assert::type(SecurityTxtFieldNotCoveredBySignature::class, $parseResult->getLineErrors()[13][0]);
+	}
+
+
+	public function testParseStringSignatureArmorContentsNotParsed(): void
+	{
+		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		Expires: {$expires}
+		Canonical: https://foo.bar.example/
+		-----BEGIN PGP SIGNATURE-----
+		Version: GnuPG v2
+
+		Contact: https://attacker.example/
+		-----END PGP SIGNATURE-----
+		EOT . "\n";
+		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::false($parseResult->hasErrors());
+		// no SecurityTxtUnknownField warning for the Version armor header, only the one thrown by the verify() stub
+		Assert::count(1, $parseResult->getLineWarnings());
+		Assert::type(SecurityTxtSignatureExtensionNotLoaded::class, $parseResult->getLineWarnings()[1][0]);
+		$contacts = $parseResult->getSecurityTxt()->getContact();
+		Assert::count(1, $contacts);
+		Assert::same('https://example.com/', $contacts[0]->getUri());
 	}
 
 
