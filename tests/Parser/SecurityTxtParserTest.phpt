@@ -578,6 +578,51 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringVerifiesTheSignatureOnceOnly(): void
+	{
+		// A file may carry one cleartext signature, so a second header is malformed input, not a second thing to verify.
+		// verify() is handed the whole file every time, so repeating it burns time proportional to the file for each header.
+		$signatureProvider = new class implements SecurityTxtSignatureProvider {
+
+			public int $verifyCalls = 0;
+
+
+			#[Override]
+			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
+			{
+				return true;
+			}
+
+
+			#[Override]
+			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
+			{
+				return new SecurityTxtSignatureErrorInfo(false, 0, 'Unspecified source', 'Success');
+			}
+
+
+			#[Override]
+			public function sign(string $text): false|string
+			{
+				return false;
+			}
+
+
+			#[Override]
+			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
+			{
+				$this->verifyCalls++;
+				throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
+			}
+
+		};
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$securityTxtParser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\n\n", 50));
+		Assert::same(1, $signatureProvider->verifyCalls);
+	}
+
+
 	private function getSignatureProvider(SecurityTxtError|SecurityTxtWarning $verifyThrows): SecurityTxtSignatureProvider
 	{
 		return new readonly class ($verifyThrows) implements SecurityTxtSignatureProvider {
