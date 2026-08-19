@@ -299,6 +299,10 @@ final class SecurityTxtJsonTest extends TestCase
 		$exceptionFromJson = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
 		Assert::type($exception::class, $exceptionFromJson);
 		Assert::same($exception->getMessage(), $exceptionFromJson->getMessage());
+		if ($exception instanceof SecurityTxtNotFoundException) {
+			assert($exceptionFromJson instanceof SecurityTxtNotFoundException);
+			Assert::same($exception->getIpAddresses(), $exceptionFromJson->getIpAddresses());
+		}
 	}
 
 

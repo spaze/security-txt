@@ -67,11 +67,11 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 		Assert::same($redirects, $exception->getAllRedirects());
 		Assert::same([], $exception->getRedirects());
 		$allIps = [
-			'192.0.2.1' => [SecurityTxtIpAddressType::V4->value, 200],
-			'2001:DB8::2' => [SecurityTxtIpAddressType::V6->value, 200],
-			'2001:DB8::3' => [SecurityTxtIpAddressType::V6->value, 200],
-			'2001:DB8::4' => [SecurityTxtIpAddressType::V6->value, 200],
-			'2001:DB8::5' => [SecurityTxtIpAddressType::V6->value, 200],
+			'192.0.2.1' => [SecurityTxtIpAddressType::V4, 200],
+			'2001:DB8::2' => [SecurityTxtIpAddressType::V6, 200],
+			'2001:DB8::3' => [SecurityTxtIpAddressType::V6, 200],
+			'2001:DB8::4' => [SecurityTxtIpAddressType::V6, 200],
+			'2001:DB8::5' => [SecurityTxtIpAddressType::V6, 200],
 		];
 		Assert::same($allIps, $exception->getIpAddresses());
 		Assert::same(
