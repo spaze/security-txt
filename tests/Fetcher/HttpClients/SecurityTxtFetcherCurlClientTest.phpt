@@ -113,7 +113,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
 			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), []), 'com.example', '1.1.1.0', SecurityTxtIpAddressType::V4);
-		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/");
+		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/ using its IPv4 address 1.1.1.0 (%a%)");
 	}
 
 
