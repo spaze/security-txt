@@ -100,7 +100,14 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 		if ($result === false) {
 			$error = curl_errno($ch);
 			if ($error !== CURLE_WRITE_ERROR || !$truncated) {
-				throw new SecurityTxtCannotOpenUrlException($url->getUrl()->toUnicodeString(), $url->getRedirects());
+				// Deliberately not curl_error(), that one embeds server controlled strings, see the exception's $error docs
+				throw new SecurityTxtCannotOpenUrlException(
+					$url->getUrl()->toUnicodeString(),
+					$url->getRedirects(),
+					$ipAddress,
+					$ipAddressType->value,
+					curl_strerror($error),
+				);
 			}
 		}
 

@@ -11,6 +11,7 @@ use LogicException;
 use ReflectionClass;
 use ReflectionParameter;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureException;
@@ -38,6 +39,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
+use ValueError;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -263,6 +265,15 @@ final class SecurityTxtJsonTest extends TestCase
 			SecurityTxtTooManyRedirectsException::class => [
 				new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1),
 			],
+			SecurityTxtCannotOpenUrlException::class => [
+				new SecurityTxtCannotOpenUrlException(
+					'https://example.com/.well-known/security.txt',
+					['https://redir1.example/'],
+					'2001:DB8::1',
+					SecurityTxtIpAddressType::V6->value,
+					'Could not connect to server',
+				),
+			],
 			SecurityTxtNotFoundException::class => [
 				new SecurityTxtNotFoundException([
 					'https://1.example/' => [
@@ -337,6 +348,11 @@ final class SecurityTxtJsonTest extends TestCase
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtNotFoundException::class);
 		Assert::type(SecurityTxtNotFoundWrongUrlStructureException::class, $e?->getPrevious());
 		Assert::same('Cannot create Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException: securityTxtUrls > https://example.com/ > ip is not set or not a string', $e?->getPrevious()?->getMessage());
+		$e = Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtCannotOpenUrlException::class, 'params' => ['https://example.com/', [], '192.0.2.1', 1337, null]]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtCannotOpenUrlException::class);
+		Assert::type(ValueError::class, $e?->getPrevious());
+		Assert::same('1337 is not a valid backing value for enum Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType', $e?->getPrevious()?->getMessage());
 		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['url', 303, '1.1.1.0', DNS_A]]]));
 	}
 
