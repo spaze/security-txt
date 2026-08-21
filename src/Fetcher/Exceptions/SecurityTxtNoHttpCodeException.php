@@ -15,8 +15,8 @@ final class SecurityTxtNoHttpCodeException extends SecurityTxtFetcherException
 	{
 		parent::__construct(
 			[$url, $redirects],
-			$redirects !== [] ? 'Missing HTTP code when fetching %s (redirects: %s' . str_repeat(' → %s', count($redirects) - 1) . ')' : 'Missing HTTP code when fetching %s',
-			$redirects !== [] ? [$url, ...$redirects] : [$url],
+			'Missing HTTP code when fetching %s' . $this->getRedirectsFormat($redirects),
+			[$url, ...$redirects],
 			$url,
 			$redirects,
 			previous: $previous,

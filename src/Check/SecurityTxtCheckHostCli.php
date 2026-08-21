@@ -38,15 +38,13 @@ final class SecurityTxtCheckHostCli
 		string $usageHelp,
 	): void {
 		$this->verbose = $verbose;
-		if ($colors) {
-			$this->consolePrinter->enableColors();
-		}
+		$this->consolePrinter->setColors($colors);
 		if ($showUsageHelp) {
-			$this->consolePrinter->info($usageHelp);
+			$this->printUsageHelp($usageHelp);
 			$this->exit(CheckExitStatus::Ok);
 			return;
 		} elseif ($url === null) {
-			$this->consolePrinter->info($usageHelp);
+			$this->printUsageHelp($usageHelp);
 			$this->exit(CheckExitStatus::NoFile);
 			return;
 		}
@@ -59,14 +57,14 @@ final class SecurityTxtCheckHostCli
 				$noIpv6,
 			);
 			if (!$checkResult->isValid()) {
-				$this->consolePrinter->error($this->consolePrinter->colorRed('The file is invalid'));
+				$this->consolePrinter->error('<red>The file is invalid</red>');
 				$this->exit(CheckExitStatus::Error);
 			} else {
-				$this->consolePrinter->ok($this->consolePrinter->colorGreen('The file is valid'));
+				$this->consolePrinter->ok('<green>The file is valid</green>');
 				$this->exit(CheckExitStatus::Ok);
 			}
 		} catch (SecurityTxtFetcherException $e) {
-			$this->consolePrinter->error($e->getMessage());
+			$this->consolePrinter->error($e->getMessageFormat(), ...$e->getMessageValues());
 			$this->exit(CheckExitStatus::FileError);
 		}
 	}
@@ -78,77 +76,105 @@ final class SecurityTxtCheckHostCli
 	}
 
 
+	/**
+	 * The text comes from whoever calls `check()`, so it goes in as a value, and a line at a time because a value cannot carry a newline.
+	 */
+	private function printUsageHelp(string $usageHelp): void
+	{
+		foreach (explode("\n", $usageHelp) as $line) {
+			$this->consolePrinter->info('%s', $line);
+		}
+	}
+
+
+	/**
+	 * Format and values are built together because they have to agree on how many placeholders there are, and nothing checks that they do: a format with one too many kills the run with a `ValueError`, one too few drops a value from the message without saying so.
+	 *
+	 * @return array{0:literal-string, 1:list<string>}
+	 */
+	private function getViolationMessage(?int $line, string $message, string $howToFix, ?string $correctValue): array
+	{
+		$format = '%s (How to fix: %s';
+		$values = [$message, $howToFix];
+		if ($line !== null) {
+			$format = 'on line <b>%s</b>: ' . $format;
+			array_unshift($values, (string)$line);
+		}
+		if ($correctValue !== null) {
+			$format .= ', e.g. %s';
+			$values[] = $correctValue;
+		}
+		return [$format . ')', $values];
+	}
+
+
 	private function initCheckHostCallbacks(): void
 	{
 		$this->checkHost->addOnUrl(
 			function (string $url): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Loading security.txt from ' . $this->consolePrinter->colorBold($url));
+					$this->consolePrinter->info('Loading security.txt from <b>%s</b>', $url);
 				}
 			},
 		);
 		$this->checkHost->addOnRedirect(
 			function (string $url, string $destination): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Redirected from ' . $this->consolePrinter->colorBold($url) . ' to ' . $this->consolePrinter->colorBold($destination));
+					$this->consolePrinter->info('Redirected from <b>%s</b> to <b>%s</b>', $url, $destination);
 				}
 			},
 		);
 		$this->checkHost->addOnUrlNotFound(
 			function (string $url): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Not found ' . $this->consolePrinter->colorBold($url));
+					$this->consolePrinter->info('Not found <b>%s</b>', $url);
 				}
 			},
 		);
 		$this->checkHost->addOnFinalUrl(
 			function (string $url): void {
-				$this->consolePrinter->info('Using ' . $this->consolePrinter->colorBold($url));
+				$this->consolePrinter->info('Using <b>%s</b>', $url);
 			},
 		);
 		$this->checkHost->addOnIsExpired(
 			function (int $daysAgo, DateTimeImmutable $expiryDate): void {
-				$this->consolePrinter->error($this->consolePrinter->colorRed("The file has expired {$daysAgo} " . ($daysAgo === 1 ? 'day' : 'days') . ' ago') . " ({$expiryDate->format(DATE_RFC3339)})");
+				$this->consolePrinter->error(
+					'<red>The file has expired %s ' . ($daysAgo === 1 ? 'day' : 'days') . ' ago</red> (%s)',
+					(string)$daysAgo,
+					$expiryDate->format(DATE_RFC3339),
+				);
 			},
 		);
 		$this->checkHost->addOnExpires(
 			function (int $inDays, DateTimeImmutable $expiryDate): void {
-				$this->consolePrinter->ok("The file will expire in {$inDays} " . ($inDays === 1 ? 'day' : 'days') . " ({$expiryDate->format(DATE_RFC3339)})");
+				$this->consolePrinter->ok(
+					'The file will expire in %s ' . ($inDays === 1 ? 'day' : 'days') . ' (%s)',
+					(string)$inDays,
+					$expiryDate->format(DATE_RFC3339),
+				);
 			},
 		);
 		$this->checkHost->addOnHost(
 			function (string $host): void {
-				$this->consolePrinter->info('Parsing security.txt for ' . $this->consolePrinter->colorBold($host));
+				$this->consolePrinter->info('Parsing security.txt for <b>%s</b>', $host);
 			},
 		);
 		$this->checkHost->addOnValidSignature(
 			function (string $keyFingerprint, DateTimeImmutable $signatureDate): void {
-				$this->consolePrinter->ok(sprintf(
+				$this->consolePrinter->ok(
 					'Signature valid, key %s, signed on %s',
 					$keyFingerprint,
 					$signatureDate->format(DATE_RFC3339),
-				));
+				);
 			},
 		);
 		$onError = function (?int $line, string $message, string $howToFix, ?string $correctValue): void {
-			$this->consolePrinter->error(sprintf(
-				'%s%s%s (How to fix: %s%s)',
-				$line !== null ? 'on line ' : '',
-				$line !== null ? $this->consolePrinter->colorBold((string)$line) . ': ' : '',
-				$message,
-				$howToFix,
-				$correctValue !== null ? ", e.g. {$correctValue}" : '',
-			));
+			[$format, $values] = $this->getViolationMessage($line, $message, $howToFix, $correctValue);
+			$this->consolePrinter->error($format, ...$values);
 		};
 		$onWarning = function (?int $line, string $message, string $howToFix, ?string $correctValue): void {
-			$this->consolePrinter->warning(sprintf(
-				'%s%s%s (How to fix: %s%s)',
-				$line !== null ? 'on line ' : '',
-				$line !== null ? $this->consolePrinter->colorBold((string)$line) . ': ' : '',
-				$message,
-				$howToFix,
-				$correctValue !== null ? ", e.g. {$correctValue}" : '',
-			));
+			[$format, $values] = $this->getViolationMessage($line, $message, $howToFix, $correctValue);
+			$this->consolePrinter->warning($format, ...$values);
 		};
 		$this->checkHost->addOnFetchError($onError);
 		$this->checkHost->addOnLineError($onError);

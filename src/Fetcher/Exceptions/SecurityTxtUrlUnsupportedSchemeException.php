@@ -15,8 +15,8 @@ final class SecurityTxtUrlUnsupportedSchemeException extends SecurityTxtFetcherE
 	{
 		parent::__construct(
 			[$url, $redirects],
-			$redirects !== [] ? 'URL %s has an unsupported scheme (redirects: %s' . str_repeat(' → %s', count($redirects) - 1) . ')' : 'URL %s has an unsupported scheme',
-			$redirects !== [] ? [$url, ...$redirects] : [$url],
+			'URL %s has an unsupported scheme' . $this->getRedirectsFormat($redirects),
+			[$url, ...$redirects],
 			$url,
 			$redirects,
 			previous: $previous,
