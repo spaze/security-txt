@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Violations;
 
 use JsonSerializable;
 use Override;
+use Spaze\SecurityTxt\SecurityTxtPrintableAscii;
 use ValueError;
 
 abstract class SecurityTxtSpecViolation implements JsonSerializable
@@ -37,8 +38,8 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 		private readonly ?string $specUrl = null,
 	) {
 		// Rendered here and not in the getter so that a format and values that disagree fail where `SecurityTxtJson` guards a replay of serialized params
-		$this->message = vsprintf($this->messageFormat, $this->messageValues);
-		$this->howToFix = vsprintf($this->howToFixFormat, $this->howToFixValues);
+		$this->message = vsprintf($this->messageFormat, array_map(SecurityTxtPrintableAscii::encode(...), $this->messageValues));
+		$this->howToFix = vsprintf($this->howToFixFormat, array_map(SecurityTxtPrintableAscii::encode(...), $this->howToFixValues));
 	}
 
 

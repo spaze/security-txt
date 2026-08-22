@@ -5,8 +5,10 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Check;
 
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -143,6 +145,64 @@ final class ConsolePrinterTest extends TestCase
 		$output = ob_get_clean();
 		// Every byte there is, not the handful anyone thought to list
 		Assert::match('#^\\[Info\\] [\\x20-\\x7e]+$#', rtrim((string)$output, "\n"));
+	}
+
+
+	public function testPrinterPrintsAUrlValueAsItReads(): void
+	{
+		$printer = new ConsolePrinter();
+		ob_start();
+		// A Url exists only because it parsed, and parsing leaves nothing in it to encode
+		$printer->info('Using %s', new Url('https://example.com/a b/x?q=1'));
+		// An internationalised host reads as itself, with the ASCII host alongside because that is where a lookalike would hide
+		$printer->info('Using %s', new Url('https://例え.jp/'));
+		$printer->info('Using %s', new Url('https://аpple.com/'));
+		// The same host as a plain string has no such proof and is encoded
+		$printer->info('Using %s', 'https://例え.jp/');
+		$output = ob_get_clean();
+		$expected = "[Info] Using https://example.com/a%20b/x?q=1\n"
+			. "[Info] Using https://例え.jp/ (xn--r8jz45g.jp)\n"
+			. "[Info] Using https://аpple.com/ (xn--pple-43d.com)\n"
+			. "[Info] Using https://%E4%BE%8B%E3%81%88.jp/\n";
+		Assert::same($expected, $output);
+	}
+
+
+	public function testPrinterPrintsAHostValueAsItReads(): void
+	{
+		$printer = new ConsolePrinter();
+		ob_start();
+		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url("https://\u{4F8B}\u{3048}.jp/")));
+		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url('https://example.com/')));
+		$output = ob_get_clean();
+		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp (xn--r8jz45g.jp)\n"
+			. "[Info] Parsing security.txt for example.com\n";
+		Assert::same($expected, $output);
+	}
+
+
+	public function testPrinterDoesNotVouchForUrlsThisLibraryWouldNotFetch(): void
+	{
+		$printer = new ConsolePrinter();
+		ob_start();
+		// The host of a scheme this library would not fetch is never lowercased or run through IDNA, so its two forms differ by letter case alone and must not raise the lookalike signal
+		$printer->info('Using %s', new Url('foo://EXAMPLE.COM/'));
+		$printer->info('Using %s', new Url("https://\u{4F8B}\u{3048}.jp/"));
+		$output = ob_get_clean();
+		$expected = "[Info] Using foo://example.com/\n"
+			. "[Info] Using https://\u{4F8B}\u{3048}.jp/ (xn--r8jz45g.jp)\n";
+		Assert::same($expected, $output);
+	}
+
+
+	public function testPrinterPrintsApplicationTextAsWritten(): void
+	{
+		$printer = new ConsolePrinter();
+		ob_start();
+		// Written by whoever embeds this, so a `%` stays a `%` and a word keeps its accents
+		$printer->infoText("Usage: check <URL>\n\t--colors \u{2013} enable colours, 100% of them, \u{160}pa\u{10D}ek");
+		$output = ob_get_clean();
+		Assert::same("[Info] Usage: check <URL>\n[Info] \t--colors \u{2013} enable colours, 100% of them, \u{160}pa\u{10D}ek\n", $output);
 	}
 
 

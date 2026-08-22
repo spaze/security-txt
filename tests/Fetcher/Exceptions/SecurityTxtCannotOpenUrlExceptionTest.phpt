@@ -41,6 +41,11 @@ final class SecurityTxtCannotOpenUrlExceptionTest extends TestCase
 		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', $redirects, '2001:DB8::1', SecurityTxtIpAddressType::V6->value, 'Could not connect to server');
 		Assert::same("Can't open https://com.example/ (redirects: https://redir1.example/ → https://redir2.example/) using its IPv6 address 2001:DB8::1 (Could not connect to server)", $exception->getMessage());
 
+		// What a host sends is encoded in the message, and left alone in the values, which are for a caller that knows what it renders into
+		$exception = new SecurityTxtCannotOpenUrlException("https://evil.example/\x1b[2K", []);
+		Assert::same("Can't open https://evil.example/%1B[2K", $exception->getMessage());
+		Assert::same(["https://evil.example/\x1b[2K"], $exception->getMessageValues());
+
 		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', ['https://redir1.example/']);
 		Assert::same("Can't open https://com.example/ (redirects: https://redir1.example/)", $exception->getMessage());
 

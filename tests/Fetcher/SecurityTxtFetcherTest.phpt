@@ -147,7 +147,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$method = new ReflectionMethod($fetcher, 'getResponse');
-		$finalUrl = 'passed by ref';
+		$finalUrl = new Url('https://passed-by-ref.example/');
 		if ($expectedException !== null) {
 			Assert::throws(function () use ($method, $fetcher, $finalUrl): void {
 				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), []), 'example.com', new Url('https://example.com/foo'), &$finalUrl, true, null]);
@@ -185,8 +185,8 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, $wellKnownTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, $topLevelTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, $wellKnownTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, $topLevelTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
@@ -200,8 +200,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$lines = ["Contact: 123\n", "Hiring: 456\n"];
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false, '1.1.1.0', SecurityTxtIpAddressType::V4));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', SecurityTxtIpAddressType::V4, 200, null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
@@ -217,8 +217,8 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'well-known', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', 'bar2', '198.51.100.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'top-level', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'well-known', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'top-level', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel) {
 			$method->invoke($fetcher, $wellKnown, $topLevel, true);
@@ -239,6 +239,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			'different final URL, same response' => [$finalUrl1, $finalUrl2, $contents1, $contents1, null],
 			'different final URL, different response' => [$finalUrl1, $finalUrl2, $contents1, $contents2, new SecurityTxtTopLevelDiffers($contents1, $contents2)],
 			'same final URL, different response' => [$finalUrl1, $finalUrl1, $contents1, $contents2, null],
+			'final URLs differing only by fragment, different response' => [$finalUrl1 . '#one', $finalUrl1 . '#two', $contents1, $contents2, new SecurityTxtTopLevelDiffers($contents1, $contents2)],
 		];
 	}
 
@@ -250,8 +251,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$fetcherResponseWellKnown = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], $contentsWellKnown, false, '1.1.1.0', SecurityTxtIpAddressType::V4);
 		$fetcherResponseTopLevel = new SecurityTxtFetcherResponse(200, [], $contentsTopLevel, false, '1.1.1.0', SecurityTxtIpAddressType::V4);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('https://url1.example/', $finalUrlWellKnown, '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseWellKnown);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('https://url2.example/', $finalUrlTopLevel, '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseTopLevel);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('https://url1.example/', new Url($finalUrlWellKnown), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseWellKnown);
+		$topLevel = new SecurityTxtFetcherFetchHostResult('https://url2.example/', new Url($finalUrlTopLevel), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseTopLevel);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);

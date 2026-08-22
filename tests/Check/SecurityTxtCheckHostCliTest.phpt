@@ -237,6 +237,26 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	}
 
 
+	public function testCheckNotFoundIdnHostNoColors(): void
+	{
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$checkHostCli = $this->getCheckHostCli($httpClient);
+
+		ob_start();
+		$checkHostCli->check(new Url("https://\u{4F8B}\u{3048}.jp"), null, false, false, true, false, true, false, 'Help');
+		$output = ob_get_clean();
+		// The host and the URLs read as themselves, with the ASCII host alongside, the IP address and the code do not parse and stay as they are
+		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp (xn--r8jz45g.jp)\n"
+			. "[Error] Can't read security.txt: https://\u{4F8B}\u{3048}.jp/.well-known/security.txt (xn--r8jz45g.jp) (1.1.1.0) => 404,"
+			. " https://\u{4F8B}\u{3048}.jp/security.txt (xn--r8jz45g.jp) (1.1.1.0) => 404\n";
+		Assert::same($expected, $output);
+		Assert::same(CheckExitStatus::FileError->value, $this->exitStatus);
+	}
+
+
 	public function testCheckHelpNoColors(): void
 	{
 		$httpClient = $this->getHttpClient();
