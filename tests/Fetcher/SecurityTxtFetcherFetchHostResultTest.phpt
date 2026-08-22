@@ -7,6 +7,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -17,7 +18,7 @@ final class SecurityTxtFetcherFetchHostResultTest extends TestCase
 	public function testGetContentTypeHeader(): void
 	{
 		$response = new SecurityTxtFetcherResponse(200, ['content-type' => 'tExt/HtMl; charset=Win-1337'], 'contents', true, '1.1.1.0', SecurityTxtIpAddressType::V4);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', 'foo2', '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $response);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $response);
 		$contentType = $wellKnown->getContentType();
 		assert($contentType !== null);
 		Assert::same('text/html', $contentType->getLowercaseContentType());

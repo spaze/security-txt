@@ -3,6 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Uri\WhatWg\Url;
+
 /**
  * @internal
  */
@@ -20,7 +22,7 @@ final readonly class SecurityTxtFetcherFetchHostResult
 
 	public function __construct(
 		private string $url,
-		private string $finalUrl,
+		private Url $finalUrl,
 		private string $ipAddress,
 		private SecurityTxtIpAddressType $ipAddressType,
 		private int $httpCode,
@@ -48,7 +50,7 @@ final readonly class SecurityTxtFetcherFetchHostResult
 	}
 
 
-	public function getFinalUrl(): string
+	public function getFinalUrl(): Url
 	{
 		return $this->finalUrl;
 	}

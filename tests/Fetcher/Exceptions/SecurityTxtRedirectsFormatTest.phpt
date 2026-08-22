@@ -60,6 +60,8 @@ final class SecurityTxtRedirectsFormatTest extends TestCase
 		// Same redirect syntax as the others, plus the note that the last one was never fetched; an empty list used to make `vsprintf()` throw
 		Assert::same("Can't read https://1.example/, too many redirects, max allowed is 5", new SecurityTxtTooManyRedirectsException('https://1.example/', [], 5)->getMessage());
 		Assert::same("Can't read https://1.example/, too many redirects, max allowed is 5 (redirects: https://2.example/, the last one not loaded)", new SecurityTxtTooManyRedirectsException('https://1.example/', ['https://2.example/'], 5)->getMessage());
+		// The chain is in the message, so it belongs in the structured getter a consumer reads too
+		Assert::same(['https://2.example/'], new SecurityTxtTooManyRedirectsException('https://1.example/', ['https://2.example/'], 5)->getRedirects());
 		Assert::same("Can't read https://1.example/, too many redirects, max allowed is 5 (redirects: https://2.example/ → https://3.example/, the last one not loaded)", new SecurityTxtTooManyRedirectsException('https://1.example/', ['https://2.example/', 'https://3.example/'], 5)->getMessage());
 	}
 

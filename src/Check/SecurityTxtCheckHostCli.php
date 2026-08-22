@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Check;
 use Closure;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Uri\WhatWg\Url;
 
 final class SecurityTxtCheckHostCli
@@ -64,9 +65,30 @@ final class SecurityTxtCheckHostCli
 				$this->exit(CheckExitStatus::Ok);
 			}
 		} catch (SecurityTxtFetcherException $e) {
-			$this->consolePrinter->error($e->getMessageFormat(), ...$e->getMessageValues());
+			// The values are URLs, IP addresses, codes and a message from curl, and only the URLs parse, so only they get to print as they read
+			$this->consolePrinter->error($e->getMessageFormat(), ...array_map($this->url(...), $e->getMessageValues()));
 			$this->exit(CheckExitStatus::FileError);
 		}
+	}
+
+
+	/**
+	 * A string that parses is handed over as a `Url` so that it prints as it reads, one that does not, a `Location` header pointing somewhere relative or nowhere at all,
+	 * stays a string and gets encoded like anything else a host sends.
+	 */
+	private function url(string $url): string|Url
+	{
+		return Url::parse($url) ?? $url;
+	}
+
+
+	/**
+	 * The host arrives as a string, so it goes back through a parser to get the same thing behind it a `Url` has, and stays a string if it will not parse.
+	 */
+	private function host(string $host): string|SecurityTxtHost
+	{
+		$url = Url::parse("https://{$host}");
+		return $url !== null ? new SecurityTxtHost($url) : $host;
 	}
 
 
@@ -77,13 +99,11 @@ final class SecurityTxtCheckHostCli
 
 
 	/**
-	 * The text comes from whoever calls `check()`, so it goes in as a value, and a line at a time because a value cannot carry a newline.
+	 * The text is written by whoever calls `check()`, not by a checked host, so it is printed the way they wrote it.
 	 */
 	private function printUsageHelp(string $usageHelp): void
 	{
-		foreach (explode("\n", $usageHelp) as $line) {
-			$this->consolePrinter->info('%s', $line);
-		}
+		$this->consolePrinter->infoText($usageHelp);
 	}
 
 
@@ -113,27 +133,27 @@ final class SecurityTxtCheckHostCli
 		$this->checkHost->addOnUrl(
 			function (string $url): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Loading security.txt from <b>%s</b>', $url);
+					$this->consolePrinter->info('Loading security.txt from <b>%s</b>', $this->url($url));
 				}
 			},
 		);
 		$this->checkHost->addOnRedirect(
 			function (string $url, string $destination): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Redirected from <b>%s</b> to <b>%s</b>', $url, $destination);
+					$this->consolePrinter->info('Redirected from <b>%s</b> to <b>%s</b>', $this->url($url), $this->url($destination));
 				}
 			},
 		);
 		$this->checkHost->addOnUrlNotFound(
 			function (string $url): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Not found <b>%s</b>', $url);
+					$this->consolePrinter->info('Not found <b>%s</b>', $this->url($url));
 				}
 			},
 		);
 		$this->checkHost->addOnFinalUrl(
 			function (string $url): void {
-				$this->consolePrinter->info('Using <b>%s</b>', $url);
+				$this->consolePrinter->info('Using <b>%s</b>', $this->url($url));
 			},
 		);
 		$this->checkHost->addOnIsExpired(
@@ -156,7 +176,7 @@ final class SecurityTxtCheckHostCli
 		);
 		$this->checkHost->addOnHost(
 			function (string $host): void {
-				$this->consolePrinter->info('Parsing security.txt for <b>%s</b>', $host);
+				$this->consolePrinter->info('Parsing security.txt for <b>%s</b>', $this->host($host));
 			},
 		);
 		$this->checkHost->addOnValidSignature(

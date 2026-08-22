@@ -21,6 +21,7 @@ final class SecurityTxtTooManyRedirectsException extends SecurityTxtFetcherExcep
 			"Can't read %s, too many redirects, max allowed is %s" . $this->getRedirectsFormat($redirects, ', the last one not loaded'),
 			[$url, (string)$maxAllowed, ...$redirects],
 			$url,
+			$redirects,
 			previous: $previous,
 		);
 	}
