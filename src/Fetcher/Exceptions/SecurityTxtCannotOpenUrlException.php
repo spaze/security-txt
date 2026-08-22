@@ -16,7 +16,7 @@ final class SecurityTxtCannotOpenUrlException extends SecurityTxtFetcherExceptio
 	/**
 	 * @param list<string> $redirects
 	 * @param value-of<SecurityTxtIpAddressType>|null $ipAddressType
-	 * @param string|null $error Must not contain anything the checked host controls, the message ends up on a terminal where escape sequences are interpreted; `curl_strerror()` is safe, `curl_error()` is not because it quotes strings like the certificate subject name
+	 * @param string|null $error Must not contain anything the checked host controls; `curl_strerror()` is safe, `curl_error()` is not because it quotes strings like the certificate subject name. The console printer encodes values before printing them, so this is not about the terminal: the message also reaches `getMessage()`, the `message` key of the serialized JSON, and whatever a consumer logs, none of which encode anything
 	 * @throws ValueError
 	 */
 	public function __construct(
@@ -28,12 +28,8 @@ final class SecurityTxtCannotOpenUrlException extends SecurityTxtFetcherExceptio
 		?Throwable $previous = null,
 	) {
 		$this->ipAddressType = $ipAddressType !== null ? SecurityTxtIpAddressType::from($ipAddressType) : null;
-		$format = "Can't open %s";
-		$values = [$url];
-		if ($redirects !== []) {
-			$format .= ' (redirects: %s' . str_repeat(' → %s', count($redirects) - 1) . ')';
-			$values = array_merge($values, $redirects);
-		}
+		$format = "Can't open %s" . $this->getRedirectsFormat($redirects);
+		$values = [$url, ...$redirects];
 		if ($this->ipAddress !== null) {
 			$format .= match ($this->ipAddressType) {
 				SecurityTxtIpAddressType::V4 => ' using its IPv4 address %s',

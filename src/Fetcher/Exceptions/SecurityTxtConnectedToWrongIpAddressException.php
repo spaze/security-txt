@@ -15,8 +15,8 @@ final class SecurityTxtConnectedToWrongIpAddressException extends SecurityTxtFet
 	{
 		parent::__construct(
 			[$expectedIpAddress, $connectedToIpAddress, $url, $redirects],
-			$redirects !== [] ? "Can't open %s (redirects: %s" . str_repeat(' → %s', count($redirects) - 1) . '), connected to %s instead of %s as expected' : "Can't open %s, connected to %s instead of %s as expected",
-			$redirects !== [] ? [$url, ...$redirects, $connectedToIpAddress, $expectedIpAddress] : [$url, $connectedToIpAddress, $expectedIpAddress],
+			"Can't open %s" . $this->getRedirectsFormat($redirects) . ', connected to %s instead of %s as expected',
+			[$url, ...$redirects, $connectedToIpAddress, $expectedIpAddress],
 			$url,
 			$redirects,
 			previous: $previous,

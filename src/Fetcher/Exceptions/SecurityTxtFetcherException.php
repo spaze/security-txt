@@ -13,6 +13,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 	/**
 	 * @param list<scalar|null|array<array-key, scalar|array<array-key, scalar|list<string>>>> $constructorParams
+	 * @param literal-string $messageFormat Never build this from anything the checked host sends, it is used as a format and only the values are encoded when printed
 	 * @param list<string> $messageValues
 	 * @param list<string> $redirects
 	 * @throws Throwable
@@ -30,9 +31,32 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	}
 
 
+	/**
+	 * @return literal-string
+	 */
 	public function getMessageFormat(): string
 	{
 		return $this->messageFormat;
+	}
+
+
+	/**
+	 * The ` (redirects: %s → %s)` part of a message, with one placeholder per redirect, empty when there was none.
+	 *
+	 * @param list<string> $redirects
+	 * @param literal-string $suffix Added inside the brackets after the last redirect
+	 * @return literal-string
+	 */
+	protected function getRedirectsFormat(array $redirects, string $suffix = ''): string
+	{
+		if ($redirects === []) {
+			return '';
+		}
+		$format = ' (redirects: %s';
+		for ($i = 1; $i < count($redirects); $i++) {
+			$format .= ' → %s';
+		}
+		return $format . $suffix . ')';
 	}
 
 

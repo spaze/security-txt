@@ -502,7 +502,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 5);
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetch(new Url('https://example.com'), maxAllowedRedirects: 0);
-		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (https://redir.example/ [not loaded])");
+		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (redirects: https://redir.example/, the last one not loaded)");
 	}
 
 
