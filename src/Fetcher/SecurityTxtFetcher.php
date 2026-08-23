@@ -25,6 +25,7 @@ use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\SecurityTxtContentType;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
@@ -40,16 +41,16 @@ final class SecurityTxtFetcher
 	/** @var array<string, list<string>> */
 	private array $redirects = [];
 
-	/** @var list<callable(string): void> */
+	/** @var list<callable(Url): void> */
 	private array $onUrl = [];
 
-	/** @var list<callable(string): void> */
+	/** @var list<callable(Url): void> */
 	private array $onFinalUrl = [];
 
-	/** @var list<callable(string, string): void> */
+	/** @var list<callable(Url, Url): void> */
 	private array $onRedirect = [];
 
-	/** @var list<callable(string): void> */
+	/** @var list<callable(Url): void> */
 	private array $onUrlNotFound = [];
 
 
@@ -92,10 +93,7 @@ final class SecurityTxtFetcher
 		if ($maxAllowedRedirects !== null) {
 			$this->validateMaxAllowedRedirects($maxAllowedRedirects);
 		}
-		$host = $url->getUnicodeHost();
-		if ($host === null) {
-			throw new SecurityTxtCannotParseHostnameException($url->toUnicodeString());
-		}
+		$host = new SecurityTxtHost($url)->getUnicode();
 		try {
 			$baseUrl = $url
 				->withUsername(null)
@@ -135,13 +133,13 @@ final class SecurityTxtFetcher
 	private function fetchUrl(Url $url, string $host, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherFetchHostResult
 	{
 		$finalUrl = $url;
-		$this->callOnCallback($this->onUrl, $url->toUnicodeString());
+		$this->callOnCallback($this->onUrl, $url);
 		try {
 			$response = $this->getResponse(new SecurityTxtFetcherUrl($url, $this->getRedirects($url)), $host, $url, $finalUrl, $noIpv6, $maxAllowedRedirects);
 			$ipAddress = $response->getIpAddress();
 			$ipAddressType = $response->getIpAddressType();
 		} catch (SecurityTxtUrlNotFoundException $e) {
-			$this->callOnCallback($this->onUrlNotFound, $finalUrl->toUnicodeString());
+			$this->callOnCallback($this->onUrlNotFound, $finalUrl);
 			$response = null;
 			$ipAddress = $e->getIpAddress();
 			$ipAddressType = SecurityTxtIpAddressType::from($e->getIpAddressType());
@@ -271,7 +269,7 @@ final class SecurityTxtFetcher
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		}
-		$this->callOnCallback($this->onFinalUrl, $result->getFinalUrl()->toUnicodeString());
+		$this->callOnCallback($this->onFinalUrl, $result->getFinalUrl());
 
 		$contentTypeHeader = $result->getContentType();
 		if ($contentTypeHeader === null || $contentTypeHeader->getLowercaseContentType() !== SecurityTxtContentType::CONTENT_TYPE) {
@@ -295,7 +293,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param list<callable> $onCallbacks
 	 */
-	private function callOnCallback(array $onCallbacks, string ...$params): void
+	private function callOnCallback(array $onCallbacks, Url ...$params): void
 	{
 		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
@@ -304,7 +302,7 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @param callable(string): void $onUrl
+	 * @param callable(Url $url): void $onUrl
 	 */
 	public function addOnUrl(callable $onUrl): void
 	{
@@ -313,7 +311,7 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @param callable(string): void $onFinalUrl
+	 * @param callable(Url $url): void $onFinalUrl
 	 */
 	public function addOnFinalUrl(callable $onFinalUrl): void
 	{
@@ -322,7 +320,7 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @param callable(string, string): void $onRedirect
+	 * @param callable(Url $url, Url $destination): void $onRedirect
 	 */
 	public function addOnRedirect(callable $onRedirect): void
 	{
@@ -331,7 +329,7 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @param callable(string): void $onUrlNotFound
+	 * @param callable(Url $url): void $onUrlNotFound
 	 */
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
@@ -368,18 +366,14 @@ final class SecurityTxtFetcher
 			throw new SecurityTxtNoLocationHeaderException($url->toUnicodeString(), $response->getHttpCode());
 		} else {
 			$originalUrlString = $originalUrl->toUnicodeString();
-			$previousUrl = isset($this->redirects[$originalUrlString]) && $this->redirects[$originalUrlString] !== [] ? $this->redirects[$originalUrlString][array_key_last($this->redirects[$originalUrlString])] : $originalUrlString;
-			$this->callOnCallback($this->onRedirect, $previousUrl, $location);
-			$this->redirects[$originalUrlString][] = $location;
 			$locationUrl = $this->urlParser->getRedirectUrl($location, $url);
+			$this->callOnCallback($this->onRedirect, $url, $locationUrl);
+			$this->redirects[$originalUrlString][] = $location;
 			$finalUrl = $locationUrl;
 			if (count($this->redirects[$originalUrlString]) > $maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url->toUnicodeString(), $this->redirects[$originalUrlString], $maxAllowedRedirects);
 			}
-			$locationHost = $locationUrl->getUnicodeHost();
-			if ($locationHost === null) {
-				throw new SecurityTxtCannotParseHostnameException($locationUrl->toUnicodeString());
-			}
+			$locationHost = new SecurityTxtHost($locationUrl)->getUnicode();
 			return $this->getResponse(new SecurityTxtFetcherUrl($locationUrl, $this->getRedirects($originalUrl)), $locationHost, $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 	}
