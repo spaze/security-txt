@@ -31,6 +31,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
@@ -42,6 +43,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureMultipleCleartextHeaders;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 use Tester\Assert;
@@ -556,6 +558,122 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::count(0, $parseResult->getLineErrors());
 		Assert::count(1, $parseResult->getLineWarnings());
 		Assert::type(SecurityTxtSignatureExtensionNotLoaded::class, $parseResult->getLineWarnings()[1][0]);
+	}
+
+
+	public function testParseStringVerifiesTheSignatureOncePerFile(): void
+	{
+		// Every clearsign header used to verify the whole file again, so a file could choose how much work it costs to check
+		$provider = new class implements SecurityTxtSignatureProvider {
+
+			public int $verifyCalls = 0;
+
+
+			#[Override]
+			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
+			{
+				return true;
+			}
+
+
+			#[Override]
+			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
+			{
+				return new SecurityTxtSignatureErrorInfo(null, null, null, null);
+			}
+
+
+			#[Override]
+			public function sign(string $text): false|string
+			{
+				return false;
+			}
+
+
+			#[Override]
+			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
+			{
+				$this->verifyCalls++;
+				return new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_GREEN, 'fingerprint', 0);
+			}
+
+		};
+		$parser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($provider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n", 50) . "Contact: https://example.com/\n");
+		Assert::same(1, $provider->verifyCalls);
+	}
+
+
+	/**
+	 * @return array<string, array{0:string, 1:list<class-string>, 2:list<string>}>
+	 */
+	public function getSignedFiles(): array
+	{
+		$signed = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\nContact: mailto:real@example.com\n";
+		$armor = "-----BEGIN PGP SIGNATURE-----\n\nZmFrZQ==\n-----END PGP SIGNATURE-----\n";
+		return [
+			'nothing outside the signed part' => [$signed . $armor, [], ['mailto:real@example.com']],
+			'a field before the header' => ["Contact: mailto:before@evil.example\n" . $signed . $armor, [SecurityTxtFieldNotCoveredBySignature::class], ['mailto:before@evil.example', 'mailto:real@example.com']],
+			'a field after the armor' => [$signed . $armor . "Contact: mailto:after@evil.example\n", [SecurityTxtFieldNotCoveredBySignature::class], ['mailto:real@example.com', 'mailto:after@evil.example']],
+			'a second cleartext header' => [$signed . "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\nContact: mailto:second@evil.example\n", [SecurityTxtSignatureMultipleCleartextHeaders::class], ['mailto:real@example.com', 'mailto:second@evil.example']],
+		];
+	}
+
+
+	/**
+	 * A file that verifies says nothing about the parts of it the signature does not cover, so those parts have to be called out.
+	 *
+	 * @param list<class-string> $expectedErrors
+	 * @param list<string> $expectedContacts
+	 * @dataProvider getSignedFiles
+	 */
+	public function testParseStringFieldsOutsideTheSignedPart(string $contents, array $expectedErrors, array $expectedContacts): void
+	{
+		$provider = new class implements SecurityTxtSignatureProvider {
+
+			#[Override]
+			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
+			{
+				return true;
+			}
+
+
+			#[Override]
+			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
+			{
+				return new SecurityTxtSignatureErrorInfo(null, null, null, null);
+			}
+
+
+			#[Override]
+			public function sign(string $text): false|string
+			{
+				return false;
+			}
+
+
+			#[Override]
+			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
+			{
+				return new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_GREEN, 'fingerprint', 0);
+			}
+
+		};
+		$parser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($provider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parseResult = $parser->parseString($contents);
+		Assert::notNull($parseResult->getSecurityTxt()->getSignatureVerifyResult());
+		$contacts = [];
+		foreach ($parseResult->getSecurityTxt()->getContact() as $contact) {
+			$contacts[] = $contact->getUri();
+		}
+		Assert::same($expectedContacts, $contacts);
+		$errors = [];
+		foreach ($parseResult->getLineErrors() as $lineErrors) {
+			foreach ($lineErrors as $lineError) {
+				$errors[] = $lineError::class;
+			}
+		}
+		Assert::same($expectedErrors, $errors);
 	}
 
 

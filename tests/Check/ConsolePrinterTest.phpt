@@ -43,6 +43,37 @@ final class ConsolePrinterTest extends TestCase
 		Assert::same($expected . "\n", $output);
 	}
 
+
+	public function testPrinterRemovesWhatAHostCouldRedrawTheOutputWith(): void
+	{
+		$this->printer->enableColors();
+		ob_start();
+		// Erase line, then a colour, then a bidi override, C1 as UTF-8 and as a bare byte, and a zero width space hiding a letter of the name
+		$this->printer->info('Redirected to ' . $this->printer->colorBold("https://evi\u{200B}l.example/\x1b[2K\u{202E}x\u{9B}y\x9bz"));
+		$output = ob_get_clean();
+		Assert::same("\x1b[1;90m[Info]\x1b[0m Redirected to \x1b[1mhttps://evil.example/[2Kxyz\x1b[0m\n", $output);
+	}
+
+
+	public function testPrinterRemovesEvenItsOwnColorsWhenColorsAreOff(): void
+	{
+		$this->printer = new ConsolePrinter();
+		ob_start();
+		$this->printer->info("host sent \x1b[1;32mgreen\x1b[0m");
+		$output = ob_get_clean();
+		Assert::same("[Info] host sent [1;32mgreen[0m\n", $output);
+	}
+
+
+	public function testPrinterKeepsTheArrowItPrintsItself(): void
+	{
+		$this->printer = new ConsolePrinter();
+		ob_start();
+		$this->printer->error('a → b → c');
+		$output = ob_get_clean();
+		Assert::same("[Error] a → b → c\n", $output);
+	}
+
 }
 
 (new ConsolePrinterTest())->run();
