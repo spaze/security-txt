@@ -49,6 +49,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../bootstrap.php';
@@ -779,8 +780,8 @@ final class SecurityTxtParserTest extends TestCase
 	{
 		$lines = ["Contact: mailto:example@example.com\r\n", "Expires: 2020-12-31T23:59:59.000Z"];
 		$fetchResult = new SecurityTxtFetchResult(
-			'https://example.com/security.txt',
-			'https://www.example.com/security.txt',
+			new Url('https://example.com/security.txt'),
+			new Url('https://www.example.com/security.txt'),
 			[
 				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
 				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
@@ -811,8 +812,8 @@ final class SecurityTxtParserTest extends TestCase
 		$expires = new DateTimeImmutable('+7 days');
 		$lines = ["Contact: mailto:example@example.com\r\n", 'Expires: ' . $expires->format(SecurityTxtExpires::FORMAT) . "\r\n"];
 		$fetchResult = new SecurityTxtFetchResult(
-			'https://example.com/security.txt',
-			'https://www.example.com/security.txt',
+			new Url('https://example.com/security.txt'),
+			new Url('https://www.example.com/security.txt'),
 			[],
 			implode('', $lines),
 			false,
@@ -835,8 +836,8 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::false($parseResult->isValid());
 
 		$fetchResult = new SecurityTxtFetchResult(
-			'https://example.com/security.txt',
-			'https://www.example.com/security.txt',
+			new Url('https://example.com/security.txt'),
+			new Url('https://www.example.com/security.txt'),
 			[],
 			implode('', $lines),
 			false,
@@ -852,8 +853,8 @@ final class SecurityTxtParserTest extends TestCase
 		);
 
 		$fetchResult = new SecurityTxtFetchResult(
-			'https://example.com/security.txt',
-			'https://www.example.com/security.txt',
+			new Url('https://example.com/security.txt'),
+			new Url('https://www.example.com/security.txt'),
 			[],
 			implode('', $lines),
 			false,

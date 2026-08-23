@@ -22,6 +22,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
@@ -34,6 +35,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -61,7 +63,12 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 		$decoded = json_decode($encoded, true);
 		assert(is_array($decoded));
 		$actualResult = $this->securityTxtJson->createCheckHostResultFromJsonValues($decoded);
+		// Assert::equal() compares objects cast to arrays and a Uri\WhatWg\Url casts to an empty one, so the URL fields are pinned by the string comparisons and the byte comparison below
 		Assert::equal($expectedResult, $actualResult);
+		Assert::same($expectedResult->getHost()->getUnicode(), $actualResult->getHost()->getUnicode());
+		Assert::same($expectedResult->getConstructedUrl()->toUnicodeString(), $actualResult->getConstructedUrl()->toUnicodeString());
+		Assert::same($expectedResult->getFinalUrl()->toUnicodeString(), $actualResult->getFinalUrl()->toUnicodeString());
+		Assert::same($encoded, json_encode($actualResult));
 	}
 
 
@@ -85,8 +92,8 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 		$securityTxt = $securityTxt->withSignatureVerifyResult(new SecurityTxtSignatureVerifyResult('LeKeyFingerPrint', new DateTimeImmutable('-2 weeks noon +02:00')));
 		$lines = ["Hi-ring: https://example.com/hiring\n", "Bug-Bounty: True\n", 'Expires: ' . $dateTime->format(DATE_RFC2822)];
 		$fetchResult = new SecurityTxtFetchResult(
-			'http://www.example.com/.well-known/security.txt',
-			'https://www.example.com/.well-known/security.txt',
+			new Url('http://www.example.com/.well-known/security.txt'),
+			new Url('https://www.example.com/.well-known/security.txt'),
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
 			implode('', $lines),
 			true,
@@ -96,7 +103,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 		);
 
 		return new SecurityTxtCheckHostResult(
-			'www.example.com',
+			new SecurityTxtHost(new Url('https://www.example.com')),
 			$fetchResult,
 			$fetchResult->getErrors(),
 			$fetchResult->getWarnings(),
@@ -152,7 +159,21 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'not a hostname',
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createCheckHostResultFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: host is not a hostname');
+		$values = [
+			'class' => SecurityTxtCheckHostResult::class,
+			'host' => 'Example.COM',
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createCheckHostResultFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: host is not a hostname');
+		$values = [
+			'class' => SecurityTxtCheckHostResult::class,
+			'host' => 'host.example',
 		];
 		Assert::throws(function () use ($values): void {
 			$this->securityTxtJson->createCheckHostResultFromJsonValues($values);
@@ -160,7 +181,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => 'foo',
 		];
 		Assert::throws(function () use ($values): void {
@@ -169,7 +190,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 		];
 		Assert::throws(function () use ($values): void {
@@ -178,7 +199,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => 'foo',
 		];
@@ -188,7 +209,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 		];
@@ -198,7 +219,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => 'foo',
@@ -209,7 +230,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -220,7 +241,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -232,7 +253,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -246,7 +267,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -260,7 +281,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -274,7 +295,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -286,7 +307,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -299,7 +320,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -314,7 +335,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -329,7 +350,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -344,7 +365,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -357,7 +378,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -371,7 +392,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -385,7 +406,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -400,7 +421,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -415,7 +436,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -431,7 +452,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -448,7 +469,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -466,7 +487,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -484,7 +505,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -503,7 +524,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -522,7 +543,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],
@@ -542,7 +563,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
-			'host' => '808',
+			'host' => 'host.example',
 			'fetchResult' => [],
 			'fetchErrors' => [],
 			'fetchWarnings' => [],

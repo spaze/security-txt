@@ -38,6 +38,23 @@ final readonly class SecurityTxtHost
 	}
 
 
+	/**
+	 * The inverse of the serialized form, which is `getUnicode()`, and accepts exactly that, nothing else: a value that reads back as something other than itself, `808` becomes
+	 * the IP address `0.0.3.40` and the punycode spelling becomes the host as it reads, is refused rather than rewritten, so whatever is accepted replays byte identical. Parsed
+	 * under https, like the fetcher fetches, so `isInternationalized()` comes out the same whether the host lived through a check or through JSON.
+	 *
+	 * @throws SecurityTxtCannotParseHostnameException
+	 */
+	public static function fromString(string $host): self
+	{
+		$url = Url::parse("https://{$host}");
+		if ($url === null || $url->getUnicodeHost() !== $host) {
+			throw new SecurityTxtCannotParseHostnameException($host);
+		}
+		return new self($url);
+	}
+
+
 	public function getUnicode(): string
 	{
 		return $this->unicode;

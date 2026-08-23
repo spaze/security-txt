@@ -11,6 +11,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
@@ -19,6 +20,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -41,8 +43,8 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 	{
 		$result = $this->getResult();
 		Assert::same(['http://example.com' => ['https://example.com', 'https://www.example.com']], $result->getRedirects());
-		Assert::same('http://www.example.com/.well-known/security.txt', $result->getConstructedUrl());
-		Assert::same('https://www.example.com/.well-known/security.txt', $result->getFinalUrl());
+		Assert::same('http://www.example.com/.well-known/security.txt', $result->getConstructedUrl()->toUnicodeString());
+		Assert::same('https://www.example.com/.well-known/security.txt', $result->getFinalUrl()->toUnicodeString());
 	}
 
 
@@ -233,8 +235,8 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 		$securityTxt->setExpires($this->expiresFactory->create($this->expires));
 		$lines = ["Hi-ring: https://example.com/hiring\n", 'Expires: ' . $this->expires->format(SecurityTxtExpires::FORMAT)];
 		$fetchResult = new SecurityTxtFetchResult(
-			'http://www.example.com/.well-known/security.txt',
-			'https://www.example.com/.well-known/security.txt',
+			new Url('http://www.example.com/.well-known/security.txt'),
+			new Url('https://www.example.com/.well-known/security.txt'),
 			['http://example.com' => ['https://example.com', 'https://www.example.com']],
 			implode($lines),
 			true,
@@ -243,7 +245,7 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 			[new SecurityTxtWellKnownPathOnly()],
 		);
 		return new SecurityTxtCheckHostResult(
-			'www.example.com',
+			new SecurityTxtHost(new Url('https://www.example.com')),
 			$fetchResult,
 			$fetchResult->getErrors(),
 			$fetchResult->getWarnings(),

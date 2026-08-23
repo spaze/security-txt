@@ -9,6 +9,7 @@ use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
@@ -25,10 +26,12 @@ use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
 use Spaze\SecurityTxt\Fields\SecurityTxtUriField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Throwable;
+use Uri\WhatWg\Url;
 
 final readonly class SecurityTxtJson
 {
@@ -248,6 +251,11 @@ final readonly class SecurityTxtJson
 		if (!isset($values['host']) || !is_string($values['host'])) {
 			throw new SecurityTxtCannotParseJsonException('host is not set or not a string');
 		}
+		try {
+			$host = SecurityTxtHost::fromString($values['host']);
+		} catch (SecurityTxtCannotParseHostnameException $e) {
+			throw new SecurityTxtCannotParseJsonException('host is not a hostname', $e);
+		}
 		if (!isset($values['fetchResult']) || !is_array($values['fetchResult'])) {
 			throw new SecurityTxtCannotParseJsonException('fetchResult is not set or not an array');
 		}
@@ -323,7 +331,7 @@ final readonly class SecurityTxtJson
 			$expiresWarningThreshold = $values['expiresWarningThreshold'];
 		}
 		return new SecurityTxtCheckHostResult(
-			$values['host'],
+			$host,
 			$this->createFetchResultFromJsonValues($values['fetchResult']),
 			$this->createViolationsFromJsonValues(array_values($values['fetchErrors'])),
 			$this->createViolationsFromJsonValues(array_values($values['fetchWarnings'])),
@@ -356,9 +364,11 @@ final readonly class SecurityTxtJson
 		if (!isset($values['constructedUrl']) || !is_string($values['constructedUrl'])) {
 			throw new SecurityTxtCannotParseJsonException('constructedUrl is not a string');
 		}
+		$constructedUrl = $this->createUrlFromJsonValue($values['constructedUrl'], 'constructedUrl');
 		if (!isset($values['finalUrl']) || !is_string($values['finalUrl'])) {
 			throw new SecurityTxtCannotParseJsonException('finalUrl is not a string');
 		}
+		$finalUrl = $this->createUrlFromJsonValue($values['finalUrl'], 'finalUrl');
 		if (!isset($values['redirects']) || !is_array($values['redirects'])) {
 			throw new SecurityTxtCannotParseJsonException('redirects is not an array');
 		}
@@ -376,8 +386,8 @@ final readonly class SecurityTxtJson
 			throw new SecurityTxtCannotParseJsonException('warnings is not an array');
 		}
 		return new SecurityTxtFetchResult(
-			$values['constructedUrl'],
-			$values['finalUrl'],
+			$constructedUrl,
+			$finalUrl,
 			$redirects,
 			$values['contents'],
 			$values['isTruncated'],
@@ -385,6 +395,23 @@ final readonly class SecurityTxtJson
 			$this->createViolationsFromJsonValues(array_values($values['errors'])),
 			$this->createViolationsFromJsonValues(array_values($values['warnings'])),
 		);
+	}
+
+
+	/**
+	 * A URL is accepted only as this library serializes it, `toUnicodeString()` output, which always parses back to the exact same bytes: not because the parser could not make
+	 * sense of more, but because anything else would be silently rewritten into something the JSON never said, `HTTPS://` reads back lowercased and a punycode host reads back
+	 * as it reads, so whatever is accepted replays byte identical.
+	 *
+	 * @throws SecurityTxtCannotParseJsonException
+	 */
+	private function createUrlFromJsonValue(string $value, string $field): Url
+	{
+		$url = Url::parse($value);
+		if ($url === null || $url->toUnicodeString() !== $value) {
+			throw new SecurityTxtCannotParseJsonException("{$field} is not a URL");
+		}
+		return $url;
 	}
 
 

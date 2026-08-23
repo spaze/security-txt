@@ -39,6 +39,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 use ValueError;
 
 require __DIR__ . '/../bootstrap.php';
@@ -179,8 +180,8 @@ final class SecurityTxtJsonTest extends TestCase
 	{
 		$lines = ["Contact: mailto:example@example.com\r\n", "Expires: 2030-12-31T23:59:59.000Z\r\n", "Preferred-Languages: en; cs"];
 		$result = new SecurityTxtFetchResult(
-			'https://example.com/security.txt',
-			'https://www.example.com/security.txt',
+			new Url('https://example.com/security.txt'),
+			new Url('https://www.example.com/security.txt'),
 			[
 				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
 				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
@@ -195,7 +196,12 @@ final class SecurityTxtJsonTest extends TestCase
 		assert(is_string($encoded));
 		$decoded = json_decode($encoded, true);
 		assert(is_array($decoded));
-		Assert::equal($result, $this->securityTxtJson->createFetchResultFromJsonValues($decoded));
+		$actualResult = $this->securityTxtJson->createFetchResultFromJsonValues($decoded);
+		// Assert::equal() compares objects cast to arrays and a Uri\WhatWg\Url casts to an empty one, so the URL fields are pinned by the string comparisons and the byte comparison below
+		Assert::equal($result, $actualResult);
+		Assert::same($result->getConstructedUrl()->toUnicodeString(), $actualResult->getConstructedUrl()->toUnicodeString());
+		Assert::same($result->getFinalUrl()->toUnicodeString(), $actualResult->getFinalUrl()->toUnicodeString());
+		Assert::same($encoded, json_encode($actualResult));
 	}
 
 
@@ -218,41 +224,53 @@ final class SecurityTxtJsonTest extends TestCase
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a string');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a URL');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'HTTPS://url.example/']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a URL');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://xn--bcher-kva.example/']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a URL');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: finalUrl is not a string');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 808]);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 808]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: finalUrl is not a string');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2']);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'url2']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: finalUrl is not a URL');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: redirects is not an array');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => 'string']);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => 'string']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: redirects is not an array');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => []]);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => []]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: contents is not a string');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => 303]);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => 303]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: contents is not a string');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303']);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => '303']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: isTruncated is not a bool');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => 'maybe']);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => '303', 'isTruncated' => 'maybe']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: isTruncated is not a bool');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false]);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => '303', 'isTruncated' => false]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: errors is not an array');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => true]);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => true]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: errors is not an array');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => []]);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => []]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: warnings is not an array');
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => [], 'warnings' => 'none']);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => [], 'warnings' => 'none']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: warnings is not an array');
-		Assert::type(SecurityTxtFetchResult::class, $this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'url', 'finalUrl' => 'url2', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => [], 'warnings' => []]));
+		Assert::type(SecurityTxtFetchResult::class, $this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/', 'finalUrl' => 'https://url2.example/', 'redirects' => [], 'contents' => '303', 'isTruncated' => false, 'errors' => [], 'warnings' => []]));
 	}
 
 

@@ -21,7 +21,7 @@ final readonly class SecurityTxtFetcherFetchHostResult
 
 
 	public function __construct(
-		private string $url,
+		private Url $url,
 		private Url $finalUrl,
 		private string $ipAddress,
 		private SecurityTxtIpAddressType $ipAddressType,
@@ -44,7 +44,7 @@ final readonly class SecurityTxtFetcherFetchHostResult
 	}
 
 
-	public function getUrl(): string
+	public function getUrl(): Url
 	{
 		return $this->url;
 	}

@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Uri\WhatWg\Url;
 
 final readonly class SecurityTxtFetchResult implements JsonSerializable
 {
@@ -17,8 +18,8 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 	 * @param list<SecurityTxtSpecViolation> $warnings
 	 */
 	public function __construct(
-		private string $constructedUrl,
-		private string $finalUrl,
+		private Url $constructedUrl,
+		private Url $finalUrl,
 		private array $redirects,
 		private string $contents,
 		private bool $isTruncated,
@@ -54,13 +55,13 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 	}
 
 
-	public function getFinalUrl(): string
+	public function getFinalUrl(): Url
 	{
 		return $this->finalUrl;
 	}
 
 
-	public function getConstructedUrl(): string
+	public function getConstructedUrl(): Url
 	{
 		return $this->constructedUrl;
 	}
@@ -103,8 +104,8 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 	{
 		return [
 			'class' => $this::class,
-			'constructedUrl' => $this->getConstructedUrl(),
-			'finalUrl' => $this->getFinalUrl(),
+			'constructedUrl' => $this->getConstructedUrl()->toUnicodeString(),
+			'finalUrl' => $this->getFinalUrl()->toUnicodeString(),
 			'redirects' => $this->getRedirects(),
 			'contents' => $this->getContents(),
 			'isTruncated' => $this->isTruncated(),

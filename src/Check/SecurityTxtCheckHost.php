@@ -101,7 +101,8 @@ final class SecurityTxtCheckHost
 	 */
 	public function check(Url $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtCheckHostResult
 	{
-		$host = new SecurityTxtHost($url);
+		// The fetcher only ever fetches over https, so the host is judged under https too, or the scheme the caller typed would decide whether an IDN host gets the punycode shown next to it
+		$host = new SecurityTxtHost($url->withScheme('https'));
 		$this->callOnCallback($this->onHost, $host);
 		$fetchResult = $this->fetcher->fetch($url, $requireTopLevelLocation, $noIpv6, $maxAllowedRedirects);
 		$parseResult = $this->parser->parseFetchResult($fetchResult, $expiresWarningThreshold, $strictMode);
@@ -143,7 +144,7 @@ final class SecurityTxtCheckHost
 			$this->callOnCallback($this->onValidSignature, $signatureVerifyResult->getKeyFingerprint(), $signatureVerifyResult->getDate());
 		}
 
-		return $this->resultFactory->create($host->getUnicode(), $parseResult);
+		return $this->resultFactory->create($host, $parseResult);
 	}
 
 

@@ -145,7 +145,7 @@ final class SecurityTxtFetcher
 			$ipAddressType = SecurityTxtIpAddressType::from($e->getIpAddressType());
 		}
 		return new SecurityTxtFetcherFetchHostResult(
-			$url->toUnicodeString(),
+			$url,
 			$finalUrl,
 			$ipAddress,
 			$ipAddressType,
@@ -227,26 +227,28 @@ final class SecurityTxtFetcher
 		$wellKnownContents = $wellKnown->isRegularHtmlPage() || $wellKnown->isTruncated() ? null : $wellKnown->getContents();
 		$topLevelContents = $topLevel->isRegularHtmlPage() || $topLevel->isTruncated() ? null : $topLevel->getContents();
 		if ($wellKnownContents === null && $topLevelContents === null) {
+			$wellKnownUrl = $wellKnown->getUrl()->toUnicodeString();
+			$topLevelUrl = $topLevel->getUrl()->toUnicodeString();
 			throw new SecurityTxtNotFoundException(
 				[
-					$wellKnown->getUrl() => [
+					$wellKnownUrl => [
 						'ip' => $wellKnown->getIpAddress(),
 						'type' => $wellKnown->getIpAddressType()->value,
 						'code' => $wellKnown->getHttpCode(),
-						'redirects' => $this->redirects[$wellKnown->getUrl()] ?? [],
+						'redirects' => $this->redirects[$wellKnownUrl] ?? [],
 						'html' => $wellKnown->isRegularHtmlPage(),
 						'truncated' => $wellKnown->isTruncated(),
 					],
-					$topLevel->getUrl() => [
+					$topLevelUrl => [
 						'ip' => $topLevel->getIpAddress(),
 						'type' => $topLevel->getIpAddressType()->value,
 						'code' => $topLevel->getHttpCode(),
-						'redirects' => $this->redirects[$topLevel->getUrl()] ?? [],
+						'redirects' => $this->redirects[$topLevelUrl] ?? [],
 						'html' => $topLevel->isRegularHtmlPage(),
 						'truncated' => $topLevel->isTruncated(),
 					],
 				],
-				$wellKnown->getUrl(),
+				$wellKnownUrl,
 			);
 		} elseif ($wellKnownContents !== null && $topLevelContents === null) {
 			if ($requireTopLevelLocation) {
@@ -273,13 +275,13 @@ final class SecurityTxtFetcher
 
 		$contentTypeHeader = $result->getContentType();
 		if ($contentTypeHeader === null || $contentTypeHeader->getLowercaseContentType() !== SecurityTxtContentType::CONTENT_TYPE) {
-			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl(), $contentTypeHeader?->getContentType());
+			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl()->toUnicodeString(), $contentTypeHeader?->getContentType());
 		} elseif ($contentTypeHeader->getLowercaseCharsetParameter() !== SecurityTxtContentType::CHARSET_PARAMETER) {
-			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl(), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharsetParameter());
+			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl()->toUnicodeString(), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharsetParameter());
 		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),
-			$result->getFinalUrl()->toUnicodeString(),
+			$result->getFinalUrl(),
 			$this->redirects,
 			$contents,
 			$result->isTruncated(),

@@ -185,8 +185,8 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, $wellKnownTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, $topLevelTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult(new Url('https://foo.example/'), new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $wellKnownContents !== null ? new SecurityTxtFetcherResponse(200, [], $wellKnownContents, $wellKnownTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
+		$topLevel = new SecurityTxtFetcherFetchHostResult(new Url('https://bar.example/'), new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $topLevelContents !== null ? new SecurityTxtFetcherResponse(200, [], $topLevelContents, $topLevelTruncated, '1.1.1.0', SecurityTxtIpAddressType::V4) : null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$expected = $wellKnownWins ? $wellKnown->getContents() : $topLevel->getContents();
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
@@ -200,8 +200,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$lines = ["Contact: 123\n", "Hiring: 456\n"];
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false, '1.1.1.0', SecurityTxtIpAddressType::V4));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, null);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult(new Url('https://foo.example/'), new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], implode('', $lines), false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$topLevel = new SecurityTxtFetcherFetchHostResult(new Url('https://bar.example/'), new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, null);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
@@ -217,12 +217,12 @@ final class SecurityTxtFetcherTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(123, [], 'contents', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('foo', new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'well-known', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
-		$topLevel = new SecurityTxtFetcherFetchHostResult('bar', new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'top-level', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$wellKnown = new SecurityTxtFetcherFetchHostResult(new Url('https://foo.example/'), new Url('https://foo2.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'well-known', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$topLevel = new SecurityTxtFetcherFetchHostResult(new Url('https://bar.example/'), new Url('https://bar2.example/'), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, new SecurityTxtFetcherResponse(200, [], 'top-level', true, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		Assert::throws(function () use ($method, $fetcher, $wellKnown, $topLevel) {
 			$method->invoke($fetcher, $wellKnown, $topLevel, true);
-		}, SecurityTxtNotFoundException::class, "Can't read security.txt: foo (192.0.2.1) => response too long, bar (198.51.100.1) => response too long");
+		}, SecurityTxtNotFoundException::class, "Can't read security.txt: https://foo.example/ (192.0.2.1) => response too long, https://bar.example/ (198.51.100.1) => response too long");
 	}
 
 
@@ -251,8 +251,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$fetcherResponseWellKnown = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], $contentsWellKnown, false, '1.1.1.0', SecurityTxtIpAddressType::V4);
 		$fetcherResponseTopLevel = new SecurityTxtFetcherResponse(200, [], $contentsTopLevel, false, '1.1.1.0', SecurityTxtIpAddressType::V4);
-		$wellKnown = new SecurityTxtFetcherFetchHostResult('https://url1.example/', new Url($finalUrlWellKnown), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseWellKnown);
-		$topLevel = new SecurityTxtFetcherFetchHostResult('https://url2.example/', new Url($finalUrlTopLevel), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseTopLevel);
+		$wellKnown = new SecurityTxtFetcherFetchHostResult(new Url('https://url1.example/'), new Url($finalUrlWellKnown), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseWellKnown);
+		$topLevel = new SecurityTxtFetcherFetchHostResult(new Url('https://url2.example/'), new Url($finalUrlTopLevel), '198.51.100.1', SecurityTxtIpAddressType::V4, 200, $fetcherResponseTopLevel);
 		$method = new ReflectionMethod($fetcher, 'getResult');
 		$result = $method->invoke($fetcher, $wellKnown, $topLevel, true);
 		assert($result instanceof SecurityTxtFetchResult);
@@ -288,8 +288,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
-		Assert::same('https://example.net/.well-known/security.txt', $fetchResult->getFinalUrl());
-		Assert::same('https://example.net/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same('https://example.net/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::same('https://example.net/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
 	}
 
 
@@ -301,8 +301,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
-		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl());
-		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
 		Assert::same([], $fetchResult->getRedirects());
 	}
 
@@ -315,8 +315,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
-		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]/.well-known/security.txt', $fetchResult->getFinalUrl());
-		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
 		Assert::same([], $fetchResult->getRedirects());
 	}
 
@@ -329,8 +329,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
-		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getFinalUrl());
-		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
 		Assert::same([], $fetchResult->getRedirects());
 	}
 
@@ -343,8 +343,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
-		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getFinalUrl());
-		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
 		Assert::same([], $fetchResult->getRedirects());
 	}
 
@@ -370,8 +370,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same([], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random final', $fetchResult->getContents());
-		Assert::same('https://location1.example/.well-known/', $fetchResult->getFinalUrl());
-		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same('https://location1.example/.well-known/', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
 		$redirects = [
 			'https://com.example/.well-known/security.txt' => ['https://location1.example/.well-known/'],
 			'https://com.example/security.txt' => ['https://location1.example/'],
@@ -396,8 +396,8 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::equal([$expectedError], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());
-		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl());
-		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
 		Assert::same([], $fetchResult->getRedirects());
 	}
 
