@@ -19,7 +19,7 @@ final class ConsolePrinterTest extends TestCase
 		$printer = new ConsolePrinter();
 		$printer->enableColors();
 		ob_start();
-		$printer->ok('dancer');
+		$printer->ok("\u{1F57A}");
 		$printer->info('Never');
 		$printer->error('gonna');
 		$printer->warning('give');
@@ -27,7 +27,7 @@ final class ConsolePrinterTest extends TestCase
 		$printer->info($printer->colorBold('up'));
 		$output = ob_get_clean();
 		$expected = <<< EOT
-		[1;32m[OK][0m dancer
+		[1;32m[OK][0m %F0%9F%95%BA
 		[1;90m[Info][0m Never
 		[1;31m[Error][0m gonna
 		[1m[Warning][0m give
@@ -42,7 +42,7 @@ final class ConsolePrinterTest extends TestCase
 	{
 		$printer = new ConsolePrinter();
 		ob_start();
-		$printer->ok('dancer');
+		$printer->ok("\u{1F57A}");
 		$printer->info('Never');
 		$printer->error('gonna');
 		$printer->warning('give');
@@ -50,7 +50,7 @@ final class ConsolePrinterTest extends TestCase
 		$printer->info($printer->colorBold('up'));
 		$output = ob_get_clean();
 		$expected = <<< EOT
-		[OK] dancer
+		[OK] %F0%9F%95%BA
 		[Info] Never
 		[Error] gonna
 		[Warning] give
@@ -69,7 +69,8 @@ final class ConsolePrinterTest extends TestCase
 		// Erase line, then a colour, then a bidi override, C1 as UTF-8 and as a bare byte, and a zero width space that hides a letter
 		$printer->info('Redirected to ' . $printer->colorBold("https://evi\u{200B}l.example/\x1b[2K\u{202E}x\u{9B}y\x9bz"));
 		$output = ob_get_clean();
-		Assert::same("\x1b[1;90m[Info]\x1b[0m Redirected to \x1b[1mhttps://evil.example/[2Kxyz\x1b[0m\n", $output);
+		// Encoded rather than dropped, so the report still says what arrived: the zero width space hiding a letter of the name is visible as %E2%80%8B
+		Assert::same("\x1b[1;90m[Info]\x1b[0m Redirected to \x1b[1mhttps://evi%E2%80%8Bl.example/%1B[2K%E2%80%AEx%C2%9By%9Bz\x1b[0m\n", $output);
 	}
 
 

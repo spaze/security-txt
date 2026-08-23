@@ -63,7 +63,13 @@ final class ConsolePrinter
 	private function removeControlCharacters(string $message): string
 	{
 		$keep = $this->colors ? '\x1b\[(?:0|1|1;31|1;32|1;90)m|' : '';
-		$cleaned = preg_replace('~(?:' . $keep . '\xe2\x86\x92)(*SKIP)(*FAIL)|[^\x20-\x7e\n]~', '', $message);
+		$cleaned = preg_replace_callback(
+			'~(?:' . $keep . '\xe2\x86\x92)(*SKIP)(*FAIL)|[^\x20-\x7e\n]~',
+			function (array $matches): string {
+				return rawurlencode($matches[0]);
+			},
+			$message,
+		);
 		return $cleaned ?? '';
 	}
 
