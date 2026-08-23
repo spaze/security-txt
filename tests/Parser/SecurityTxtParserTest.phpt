@@ -559,6 +559,54 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringVerifiesTheSignatureOncePerFile(): void
+	{
+		// Every clearsign header used to verify the whole file again, so a file could choose how much work it costs to check
+		$counter = new class {
+			public int $verifyCalls = 0;
+		};
+		$provider = new readonly class ($counter) implements SecurityTxtSignatureProvider {
+
+			public function __construct(private object $counter)
+			{
+			}
+
+
+			#[Override]
+			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
+			{
+				return true;
+			}
+
+
+			#[Override]
+			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
+			{
+				return new SecurityTxtSignatureErrorInfo(null, null, null);
+			}
+
+
+			#[Override]
+			public function sign(string $text): false|string
+			{
+				return false;
+			}
+
+
+			#[Override]
+			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
+			{
+				$this->counter->verifyCalls++;
+				return new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_VALID, 'fingerprint', 0);
+			}
+
+		};
+		$parser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($provider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$parser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n", 50) . "Contact: https://example.com/\n");
+		Assert::same(1, $counter->verifyCalls);
+	}
+
+
 	private function getSignatureProvider(SecurityTxtError|SecurityTxtWarning $verifyThrows): SecurityTxtSignatureProvider
 	{
 		return new readonly class ($verifyThrows) implements SecurityTxtSignatureProvider {
