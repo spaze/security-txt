@@ -22,7 +22,7 @@ composer require spaze/security-txt
 | Version | Requirements                                                                                                                   | Notes                  |
 |---------|--------------------------------------------------------------------------------------------------------------------------------|------------------------|
 | 2.x     | PHP 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures           | Current stable release |
-| 1.x     | PHP 8.3, 8.4, 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures | Security fixes only    |
+| 1.x     | PHP 8.3, 8.4, 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures | End of life as of 1.0.1, no further releases |
 
 # As a validator
 
@@ -281,8 +281,8 @@ In general, you’ll need to follow these steps:
 2. Install this package using Composer.
 3. Run the `checksecuritytxt.php` script.
 
-GitHub Actions' `ubuntu-24.04` runner (also as `ubuntu-latest` at the time of writing) has PHP 8.3 preinstalled, so you can use `checksecuritytxt.php` without installing anything else, the version 1.x of this lib can be used with PHP 8.3.
-Version 2.x requires PHP 8.5 or newer, and would require `ubuntu-26.04` which comes with PHP 8.5. You can also use [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) to install the required PHP version.
+GitHub Actions' `ubuntu-24.04` runner (also as `ubuntu-latest` at the time of writing) has PHP 8.3 preinstalled, which is not enough: this needs PHP 8.5 or newer, so `ubuntu-26.04` which comes with PHP 8.5, or [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) to install the required PHP version.
+The 1.x line ran on PHP 8.3 but reached end of life with 1.0.1 and is no longer a way around that.
 
 But unfortunately the `gnupg` PHP extension is not available on GitHub runners by default so you won't be able to verify the file signatures with just the GitHub-provided PHP.
 If you want to verify signatures you'll need to use [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) which can also set up the extension.
