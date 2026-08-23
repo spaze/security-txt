@@ -22,7 +22,10 @@ composer require spaze/security-txt
 | Version | Requirements                                                                                                                   | Notes                  |
 |---------|--------------------------------------------------------------------------------------------------------------------------------|------------------------|
 | 2.x     | PHP 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures           | Current stable release |
-| 1.x     | PHP 8.3, 8.4, 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures | Security fixes only    |
+| 1.x     | PHP 8.3, 8.4, 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures | End of life as of 1.0.1, no further releases |
+
+1.x reached end of life with 1.0.1, which carries every security fix this library had published by then. There will be no further 1.x releases, security or otherwise.
+1.x existed so that PHP 8.3 and 8.4 could be used, so if you cannot upgrade PHP there is no supported version for you.
 
 # As a validator
 
