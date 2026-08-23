@@ -11,11 +11,13 @@ use Spaze\SecurityTxt\Parser\SecurityTxtParseHostResult;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../bootstrap.php';
@@ -43,7 +45,7 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 
 	public function testCreate(): void
 	{
-		$host = 'com.example';
+		$host = new SecurityTxtHost(new Url('https://com.example'));
 		$email = "mailto:foo@example.com";
 		$lines = [
 			"Contact: {$email}\n",
@@ -52,8 +54,8 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		$contents = implode('', $lines);
 		$parseStringResult = $this->parser->parseString($contents, null, 123, true);
 		$fetchResult = new SecurityTxtFetchResult(
-			'https://com.example/.well-known/security.txt',
-			'https://com.example/.well-known/security.txt',
+			new Url('https://com.example/.well-known/security.txt'),
+			new Url('https://com.example/.well-known/security.txt'),
 			[],
 			$contents,
 			true,

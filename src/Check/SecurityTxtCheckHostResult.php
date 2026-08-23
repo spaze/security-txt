@@ -7,7 +7,9 @@ use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Uri\WhatWg\Url;
 
 final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 {
@@ -21,7 +23,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	 * @param list<SecurityTxtSpecViolation> $fileWarnings
 	 */
 	public function __construct(
-		private string $host,
+		private SecurityTxtHost $host,
 		private SecurityTxtFetchResult $fetchResult,
 		private array $fetchErrors,
 		private array $fetchWarnings,
@@ -39,7 +41,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	}
 
 
-	public function getHost(): string
+	public function getHost(): SecurityTxtHost
 	{
 		return $this->host;
 	}
@@ -54,13 +56,13 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	}
 
 
-	public function getConstructedUrl(): string
+	public function getConstructedUrl(): Url
 	{
 		return $this->getFetchResult()->getConstructedUrl();
 	}
 
 
-	public function getFinalUrl(): string
+	public function getFinalUrl(): Url
 	{
 		return $this->getFetchResult()->getFinalUrl();
 	}
@@ -176,7 +178,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	{
 		return [
 			'class' => $this::class,
-			'host' => $this->getHost(),
+			'host' => $this->getHost()->getUnicode(),
 			'fetchResult' => $this->getFetchResult(),
 			'fetchErrors' => $this->getFetchErrors(),
 			'fetchWarnings' => $this->getFetchWarnings(),

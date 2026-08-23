@@ -258,6 +258,17 @@ final class SecurityTxtCheckHostTest extends TestCase
 	}
 
 
+	public function testCheckHostJudgedUnderHttpsWhateverSchemeCameIn(): void
+	{
+		foreach (['ftp://bücher.example', 'https://bücher.example'] as $url) {
+			$result = $this->getCheckHost(200, [], '')->check(new Url($url));
+			Assert::same('bücher.example', $result->getHost()->getUnicode(), $url);
+			Assert::same('xn--bcher-kva.example', $result->getHost()->getAscii(), $url);
+			Assert::true($result->getHost()->isInternationalized(), $url);
+		}
+	}
+
+
 	public function testCheckFileErrorWarning(): void
 	{
 		$canonical1 = "https://1.example/.well-known/security.txt";

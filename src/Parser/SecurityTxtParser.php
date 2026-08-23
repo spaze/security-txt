@@ -242,7 +242,7 @@ final class SecurityTxtParser
 
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
-		$parseResult = $this->parseString($fetchResult->getContents(), $fetchResult->getFinalUrl(), $expiresWarningThreshold, $strictMode);
+		$parseResult = $this->parseString($fetchResult->getContents(), $fetchResult->getFinalUrl()->toUnicodeString(), $expiresWarningThreshold, $strictMode);
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,
