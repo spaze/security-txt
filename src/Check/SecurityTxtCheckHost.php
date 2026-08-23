@@ -21,22 +21,23 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Uri\WhatWg\Url;
 
 final class SecurityTxtCheckHost
 {
 
-	/** @var list<callable(string): void> */
+	/** @var list<callable(Url): void> */
 	private array $onUrl = [];
 
-	/** @var list<callable(string): void> */
+	/** @var list<callable(Url): void> */
 	private array $onFinalUrl = [];
 
-	/** @var list<callable(string, string): void> */
+	/** @var list<callable(Url, Url): void> */
 	private array $onRedirect = [];
 
-	/** @var list<callable(string): void> */
+	/** @var list<callable(Url): void> */
 	private array $onUrlNotFound = [];
 
 	/** @var list<callable(positive-int, DateTimeImmutable): void> */
@@ -45,7 +46,7 @@ final class SecurityTxtCheckHost
 	/** @var list<callable(positive-int, DateTimeImmutable): void> */
 	private array $onExpires = [];
 
-	/** @var list<callable(string): void> */
+	/** @var list<callable(SecurityTxtHost): void> */
 	private array $onHost = [];
 
 	/** @var list<callable(string, DateTimeImmutable): void> */
@@ -100,10 +101,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function check(Url $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtCheckHostResult
 	{
-		$host = $url->getUnicodeHost();
-		if ($host === null) {
-			throw new SecurityTxtCannotParseHostnameException($url->toUnicodeString());
-		}
+		$host = new SecurityTxtHost($url);
 		$this->callOnCallback($this->onHost, $host);
 		$fetchResult = $this->fetcher->fetch($url, $requireTopLevelLocation, $noIpv6, $maxAllowedRedirects);
 		$parseResult = $this->parser->parseFetchResult($fetchResult, $expiresWarningThreshold, $strictMode);
@@ -145,29 +143,29 @@ final class SecurityTxtCheckHost
 			$this->callOnCallback($this->onValidSignature, $signatureVerifyResult->getKeyFingerprint(), $signatureVerifyResult->getDate());
 		}
 
-		return $this->resultFactory->create($host, $parseResult);
+		return $this->resultFactory->create($host->getUnicode(), $parseResult);
 	}
 
 
 	private function initFetcherCallbacks(): void
 	{
 		$this->fetcher->addOnUrl(
-			function (string $url): void {
+			function (Url $url): void {
 				$this->callOnCallback($this->onUrl, $url);
 			},
 		);
 		$this->fetcher->addOnFinalUrl(
-			function (string $url): void {
+			function (Url $url): void {
 				$this->callOnCallback($this->onFinalUrl, $url);
 			},
 		);
 		$this->fetcher->addOnRedirect(
-			function (string $url, string $destination): void {
+			function (Url $url, Url $destination): void {
 				$this->callOnCallback($this->onRedirect, $url, $destination);
 			},
 		);
 		$this->fetcher->addOnUrlNotFound(
-			function (string $url): void {
+			function (Url $url): void {
 				$this->callOnCallback($this->onUrlNotFound, $url);
 			},
 		);
@@ -195,7 +193,7 @@ final class SecurityTxtCheckHost
 	/**
 	 * @param list<callable> $onCallbacks
 	 */
-	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|null ...$params): void
+	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|Url|SecurityTxtHost|null ...$params): void
 	{
 		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
@@ -204,7 +202,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(string $url): void $onUrl
+	 * @param callable(Url $url): void $onUrl
 	 */
 	public function addOnUrl(callable $onUrl): void
 	{
@@ -213,7 +211,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(string $url): void $onFinalUrl
+	 * @param callable(Url $url): void $onFinalUrl
 	 */
 	public function addOnFinalUrl(callable $onFinalUrl): void
 	{
@@ -222,7 +220,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(string $url, string $destination): void $onRedirect
+	 * @param callable(Url $url, Url $destination): void $onRedirect
 	 */
 	public function addOnRedirect(callable $onRedirect): void
 	{
@@ -231,7 +229,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(string $url): void $onUrlNotFound
+	 * @param callable(Url $url): void $onUrlNotFound
 	 */
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
@@ -258,7 +256,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(string $host): void $onParse
+	 * @param callable(SecurityTxtHost $host): void $onParse
 	 */
 	public function addOnHost(callable $onParse): void
 	{

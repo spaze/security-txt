@@ -420,11 +420,11 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$onUrl = $onFinalUrl = null;
-		$fetcher->addOnUrl(function (string $url) use (&$onUrl): void {
-			$onUrl = $url;
+		$fetcher->addOnUrl(function (Url $url) use (&$onUrl): void {
+			$onUrl = $url->toUnicodeString();
 		});
-		$fetcher->addOnFinalUrl(function (string $url) use (&$onFinalUrl): void {
-			$onFinalUrl = $url;
+		$fetcher->addOnFinalUrl(function (Url $url) use (&$onFinalUrl): void {
+			$onFinalUrl = $url->toUnicodeString();
 		});
 		$fetcher->fetch(new Url('https://com.example/'));
 		Assert::same('https://com.example/security.txt', $onUrl);
@@ -433,9 +433,9 @@ final class SecurityTxtFetcherTest extends TestCase
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, ['location' => 'https://location.example/'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 0);
 		$onRedirectUrl = $onRedirectDestination = null;
-		$fetcher->addOnRedirect(function (string $url, string $destination) use (&$onRedirectUrl, &$onRedirectDestination): void {
-			$onRedirectUrl = $url;
-			$onRedirectDestination = $destination;
+		$fetcher->addOnRedirect(function (Url $url, Url $destination) use (&$onRedirectUrl, &$onRedirectDestination): void {
+			$onRedirectUrl = $url->toUnicodeString();
+			$onRedirectDestination = $destination->toUnicodeString();
 		});
 		Assert::throws(function () use (&$fetcher): void {
 			$fetcher->fetch(new Url('https://com.example/'));
@@ -443,11 +443,31 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same('https://com.example/.well-known/security.txt', $onRedirectUrl);
 		Assert::same('https://location.example/', $onRedirectDestination);
 
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(301, ['location' => '/one/security.txt'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(301, ['location' => '/two/security.txt'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 1);
+		$onRedirects = [];
+		$fetcher->addOnRedirect(function (Url $url, Url $destination) use (&$onRedirects): void {
+			$onRedirects[] = "{$url->toUnicodeString()} -> {$destination->toUnicodeString()}";
+		});
+		$exception = Assert::throws(function () use (&$fetcher): void {
+			$fetcher->fetch(new Url('https://com.example/'));
+		}, SecurityTxtTooManyRedirectsException::class);
+		assert($exception instanceof SecurityTxtTooManyRedirectsException);
+		// The callback gets where the fetcher went, the wire keeps what the host sent
+		Assert::same([
+			'https://com.example/.well-known/security.txt -> https://com.example/one/security.txt',
+			'https://com.example/one/security.txt -> https://com.example/two/security.txt',
+		], $onRedirects);
+		Assert::same(['/one/security.txt', '/two/security.txt'], $exception->getRedirects());
+
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 0);
 		$onUrlNotFound = null;
-		$fetcher->addOnUrlNotFound(function (string $url) use (&$onUrlNotFound): void {
-			$onUrlNotFound = $url;
+		$fetcher->addOnUrlNotFound(function (Url $url) use (&$onUrlNotFound): void {
+			$onUrlNotFound = $url->toUnicodeString();
 		});
 		Assert::throws(function () use (&$fetcher): void {
 			$fetcher->fetch(new Url('https://com.example/'));

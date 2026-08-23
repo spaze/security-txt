@@ -73,22 +73,11 @@ final class SecurityTxtCheckHostCli
 
 
 	/**
-	 * A string that parses is handed over as a `Url` so that it prints as it reads, one that does not, a `Location` header pointing somewhere relative or nowhere at all,
-	 * stays a string and gets encoded like anything else a host sends.
+	 * An exception carries its values as strings to survive a JSON round trip, so a URL is parsed back here to print as it reads; one that will not parse stays a string and gets encoded.
 	 */
 	private function url(string $url): string|Url
 	{
 		return Url::parse($url) ?? $url;
-	}
-
-
-	/**
-	 * The host arrives as a string, so it goes back through a parser to get the same thing behind it a `Url` has, and stays a string if it will not parse.
-	 */
-	private function host(string $host): string|SecurityTxtHost
-	{
-		$url = Url::parse("https://{$host}");
-		return $url !== null ? new SecurityTxtHost($url) : $host;
 	}
 
 
@@ -131,29 +120,29 @@ final class SecurityTxtCheckHostCli
 	private function initCheckHostCallbacks(): void
 	{
 		$this->checkHost->addOnUrl(
-			function (string $url): void {
+			function (Url $url): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Loading security.txt from <b>%s</b>', $this->url($url));
+					$this->consolePrinter->info('Loading security.txt from <b>%s</b>', $url);
 				}
 			},
 		);
 		$this->checkHost->addOnRedirect(
-			function (string $url, string $destination): void {
+			function (Url $url, Url $destination): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Redirected from <b>%s</b> to <b>%s</b>', $this->url($url), $this->url($destination));
+					$this->consolePrinter->info('Redirected from <b>%s</b> to <b>%s</b>', $url, $destination);
 				}
 			},
 		);
 		$this->checkHost->addOnUrlNotFound(
-			function (string $url): void {
+			function (Url $url): void {
 				if ($this->verbose) {
-					$this->consolePrinter->info('Not found <b>%s</b>', $this->url($url));
+					$this->consolePrinter->info('Not found <b>%s</b>', $url);
 				}
 			},
 		);
 		$this->checkHost->addOnFinalUrl(
-			function (string $url): void {
-				$this->consolePrinter->info('Using <b>%s</b>', $this->url($url));
+			function (Url $url): void {
+				$this->consolePrinter->info('Using <b>%s</b>', $url);
 			},
 		);
 		$this->checkHost->addOnIsExpired(
@@ -175,8 +164,8 @@ final class SecurityTxtCheckHostCli
 			},
 		);
 		$this->checkHost->addOnHost(
-			function (string $host): void {
-				$this->consolePrinter->info('Parsing security.txt for <b>%s</b>', $this->host($host));
+			function (SecurityTxtHost $host): void {
+				$this->consolePrinter->info('Parsing security.txt for <b>%s</b>', $host);
 			},
 		);
 		$this->checkHost->addOnValidSignature(

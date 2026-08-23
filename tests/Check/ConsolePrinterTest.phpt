@@ -174,9 +174,12 @@ final class ConsolePrinterTest extends TestCase
 		ob_start();
 		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url("https://\u{4F8B}\u{3048}.jp/")));
 		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url('https://example.com/')));
+		// An opaque host skips IDNA and keeps its case, so the two forms differing by case alone is no lookalike signal
+		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url('foo://Plain.Example/x')));
 		$output = ob_get_clean();
 		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp (xn--r8jz45g.jp)\n"
-			. "[Info] Parsing security.txt for example.com\n";
+			. "[Info] Parsing security.txt for example.com\n"
+			. "[Info] Parsing security.txt for plain.example\n";
 		Assert::same($expected, $output);
 	}
 

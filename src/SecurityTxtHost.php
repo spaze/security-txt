@@ -19,6 +19,8 @@ final readonly class SecurityTxtHost
 
 	private string $ascii;
 
+	private bool $internationalized;
+
 
 	/**
 	 * @throws SecurityTxtCannotParseHostnameException
@@ -32,6 +34,7 @@ final readonly class SecurityTxtHost
 		}
 		$this->unicode = $unicode;
 		$this->ascii = $ascii;
+		$this->internationalized = in_array($url->getScheme(), ['http', 'https'], true) && $unicode !== $ascii;
 	}
 
 
@@ -49,11 +52,12 @@ final readonly class SecurityTxtHost
 
 	/**
 	 * The two forms differ, which is where a host that reads like another one would hide: a letter from another script or a joiner that survives IDNA forces punycode, while
-	 * what IDNA deletes, a zero width space or a soft hyphen, leaves a host that really is what it reads as.
+	 * what IDNA deletes, a zero width space or a soft hyphen, leaves a host that really is what it reads as. Judged only for http and https, the schemes this library fetches:
+	 * an opaque host skips IDNA and keeps its case, so a difference there is no signal.
 	 */
 	public function isInternationalized(): bool
 	{
-		return $this->unicode !== $this->ascii;
+		return $this->internationalized;
 	}
 
 }
