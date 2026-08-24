@@ -296,7 +296,7 @@ You can use my own checks as a template or for inspiration; see [the `securitytx
 The messages in the exceptions as thrown by this library do not contain any sensitive information and are safe to display to the user using the `getMessage()` method.
 The same goes for the messages of the violations in `SecurityTxtCheckHostResult`, whose `getMessage()` and `getHowToFix()` behave the same way.
 The server-supplied values quoted in them are encoded down to printable ASCII first, so a server can't move a terminal's cursor, colour its own text to read like a result, or reverse what follows it with a bidirectional override.
-That covers what a checked host sends. A result rebuilt from serialized JSON is only as trustworthy as that JSON is, because a violation's message format is replayed from it and formats are not encoded.
+That covers what a checked host sends, and a result rebuilt from serialized JSON too: the message formats exist only in code, selected by the class name and, for the one violation with a variable reason, by an enum case value, so the JSON can pick a format but cannot supply one, and the values it does supply are encoded the same way.
 But please be aware that the messages still contain server-supplied information, so please do not display the messages as HTML and do not feed them into a Markdown parser or similar.
 If you'd do that, a malicious server could inject content that would result in Cross-Site Scripting attack for example.
 
