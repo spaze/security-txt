@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Json;
 
 use ArgumentCountError;
+use BackedEnum;
 use DateInterval;
 use DateTimeImmutable;
 use LogicException;
@@ -35,6 +36,8 @@ use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistakeReason;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
@@ -89,6 +92,49 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	public function testCreateViolationsFromJsonValuesCannotForgeAFormat(): void
+	{
+		// The reason is an enum case on the wire, so JSON that carries format text instead of a case value fails from() inside the guard and never reaches vsprintf()
+		$e = Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([[
+				'class' => SecurityTxtPreferredLanguagesCommonMistake::class,
+				'params' => [1, 'cz', 'cs', "forged, \033[2J wiped your terminal because %s"],
+			]]);
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: Cannot create an object of class %s', SecurityTxtPreferredLanguagesCommonMistake::class));
+		Assert::type(ValueError::class, $e?->getPrevious());
+		// A format and values that disagree fail in vsprintf() with a ValueError wrapped the same way, so pin the one that means the reason gate refused the value
+		Assert::contains('not a valid backing value', $e?->getPrevious()?->getMessage() ?? '');
+		// A forged format with no placeholders would construct fine if the gate ever went away, because no argument count mismatch would catch it
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([[
+				'class' => SecurityTxtPreferredLanguagesCommonMistake::class,
+				'params' => [1, 'cz', 'cs', 'forged with no placeholders at all'],
+			]]);
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: Cannot create an object of class %s', SecurityTxtPreferredLanguagesCommonMistake::class));
+		$violations = $this->securityTxtJson->createViolationsFromJsonValues([[
+			'class' => SecurityTxtPreferredLanguagesCommonMistake::class,
+			'params' => [1, 'cz', 'cs', SecurityTxtPreferredLanguagesCommonMistakeReason::CzechUsesCsNotCz->value],
+		]]);
+		Assert::same('The language tag #1 cz in the Preferred-Languages field is not correct, the code for Czech language is cs, not cz', $violations[0]->getMessage());
+	}
+
+
+	public function testSerializePreferredLanguagesCommonMistakeThenCreateFromJsonValues(): void
+	{
+		$violation = new SecurityTxtPreferredLanguagesCommonMistake(2, 'cz-CZ', 'cs-CZ', SecurityTxtPreferredLanguagesCommonMistakeReason::CzechUsesCsNotCz);
+		$json = json_encode([$violation]);
+		assert(is_string($json));
+		$decoded = json_decode($json, true);
+		assert(is_array($decoded));
+		assert(is_array($decoded[0]));
+		// The params are all that a replay reads, and they carry the case value, not the format the case maps to; the rendered message is serialized too, but only read by people
+		Assert::same([2, 'cz-CZ', 'cs-CZ', 'czech-uses-cs-not-cz'], $decoded[0]['params']);
+		$violations = $this->securityTxtJson->createViolationsFromJsonValues(array_values($decoded));
+		Assert::same($violation->getMessage(), $violations[0]->getMessage());
+		Assert::same(json_encode([$violations[0]]), $json);
+	}
+
+
 	public function testSerializeViolationsThenCreateFromJsonValues(): void
 	{
 		$json = json_encode([
@@ -129,7 +175,8 @@ final class SecurityTxtJsonTest extends TestCase
 			$class = $namespace . '\\' . basename($file, '.php');
 			assert(class_exists($class));
 			$reflection = new ReflectionClass($class);
-			if ($reflection->isAbstract()) {
+			// The directory also holds support types like the reason enum, and only violations can be instantiated and replayed
+			if ($reflection->isAbstract() || !$reflection->isSubclassOf(SecurityTxtSpecViolation::class)) {
 				continue;
 			}
 			$params = [];
@@ -137,7 +184,6 @@ final class SecurityTxtJsonTest extends TestCase
 				$params[] = $this->getConstructorParamValue($class, $parameter);
 			}
 			$violation = $reflection->newInstanceArgs($params);
-			assert($violation instanceof SecurityTxtSpecViolation);
 			$violations[$violation::class] = [$violation];
 		}
 		assert($violations !== []); // Would be empty and the test would pass without testing anything if the path above was wrong
@@ -153,6 +199,14 @@ final class SecurityTxtJsonTest extends TestCase
 		// A field name is used for all strings because some violations read the value as a field name, and the constructor doesn't say which ones
 		$string = SecurityTxtField::Contact->value;
 		$type = (string)$parameter->getType();
+		// An enum param goes on the wire as its backing value, so any case proves the round trip, and the first one is used
+		foreach (explode('|', $type) as $part) {
+			if (is_subclass_of($part, BackedEnum::class)) {
+				$cases = $part::cases();
+				assert($cases !== []);
+				return $cases[0]->value;
+			}
+		}
 		return match ($type) {
 			'string', '?string' => $string,
 			'int' => 303,
