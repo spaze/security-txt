@@ -21,10 +21,9 @@ final class SecurityTxtHostTest extends TestCase
 		$host = SecurityTxtHost::fromString('bücher.example');
 		Assert::same('bücher.example', $host->getUnicode());
 		Assert::same('xn--bcher-kva.example', $host->getAscii());
-		Assert::true($host->isInternationalized());
 		$host = SecurityTxtHost::fromString('example.com');
 		Assert::same('example.com', $host->getUnicode());
-		Assert::false($host->isInternationalized());
+		Assert::same('example.com', $host->getAscii());
 	}
 
 
@@ -52,13 +51,19 @@ final class SecurityTxtHostTest extends TestCase
 	}
 
 
-	public function testSchemeDoesNotChangeWhatFromStringRebuilds(): void
+	public function testAnOpaqueHostIsKeptAsWhateverParsingMadeOfIt(): void
 	{
-		// The scheme decides whether IDNA ran, so a host built from an ftp URL judged under ftp would flip once it lived through getUnicode() and fromString()
-		$fromFtp = new SecurityTxtHost(new Url('ftp://bücher.example')->withScheme('https'));
-		$roundTripped = SecurityTxtHost::fromString($fromFtp->getUnicode());
-		Assert::same($fromFtp->isInternationalized(), $roundTripped->isInternationalized());
-		Assert::same($fromFtp->getAscii(), $roundTripped->getAscii());
+		// A scheme WhatWG calls special, ftp among them, runs IDNA like https does, so those hosts round trip; one it calls opaque does not run IDNA and keeps its case,
+		// which is why such a host cannot be rebuilt from what `getUnicode()` writes and `fromString()` refuses it rather than quietly returning a different host
+		$fromFtp = new SecurityTxtHost(new Url('ftp://bücher.example'));
+		Assert::same('bücher.example', $fromFtp->getUnicode());
+		Assert::same('xn--bcher-kva.example', $fromFtp->getAscii());
+		$opaque = new SecurityTxtHost(new Url('foo://Plain.Example/x'));
+		Assert::same('plain.example', $opaque->getUnicode());
+		Assert::same('Plain.Example', $opaque->getAscii());
+		Assert::throws(function () use ($opaque): void {
+			SecurityTxtHost::fromString($opaque->getAscii());
+		}, SecurityTxtCannotParseHostnameException::class);
 	}
 
 }

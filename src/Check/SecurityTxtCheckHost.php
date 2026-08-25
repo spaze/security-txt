@@ -52,22 +52,22 @@ final class SecurityTxtCheckHost
 	/** @var list<callable(string, DateTimeImmutable): void> */
 	private array $onValidSignature = [];
 
-	/** @var list<callable(?int, string, string, ?string): void> */
+	/** @var list<callable(?int, SecurityTxtSpecViolation): void> */
 	private array $onFetchError = [];
 
-	/** @var list<callable(?int, string, string, ?string): void> */
+	/** @var list<callable(?int, SecurityTxtSpecViolation): void> */
 	private array $onLineError = [];
 
-	/** @var list<callable(?int, string, string, ?string): void> */
+	/** @var list<callable(?int, SecurityTxtSpecViolation): void> */
 	private array $onFileError = [];
 
-	/** @var list<callable(?int, string, string, ?string): void> */
+	/** @var list<callable(?int, SecurityTxtSpecViolation): void> */
 	private array $onFetchWarning = [];
 
-	/** @var list<callable(?int, string, string, ?string): void> */
+	/** @var list<callable(?int, SecurityTxtSpecViolation): void> */
 	private array $onLineWarning = [];
 
-	/** @var list<callable(?int, string, string, ?string): void> */
+	/** @var list<callable(?int, SecurityTxtSpecViolation): void> */
 	private array $onFileWarning = [];
 
 
@@ -108,26 +108,26 @@ final class SecurityTxtCheckHost
 		$parseResult = $this->parser->parseFetchResult($fetchResult, $expiresWarningThreshold, $strictMode);
 
 		foreach ($parseResult->getFetchErrors() as $error) {
-			$this->error($this->onFetchError, $error);
+			$this->violation($this->onFetchError, $error);
 		}
 		foreach ($parseResult->getLineErrors() as $line => $errors) {
 			foreach ($errors as $error) {
-				$this->error($this->onLineError, $error, $line);
+				$this->violation($this->onLineError, $error, $line);
 			}
 		}
 		foreach ($parseResult->getFileErrors() as $error) {
-			$this->error($this->onFileError, $error);
+			$this->violation($this->onFileError, $error);
 		}
 		foreach ($parseResult->getFetchWarnings() as $warning) {
-			$this->warning($this->onFetchWarning, $warning);
+			$this->violation($this->onFetchWarning, $warning);
 		}
 		foreach ($parseResult->getLineWarnings() as $line => $warnings) {
 			foreach ($warnings as $warning) {
-				$this->warning($this->onLineWarning, $warning, $line);
+				$this->violation($this->onLineWarning, $warning, $line);
 			}
 		}
 		foreach ($parseResult->getFileWarnings() as $warning) {
-			$this->warning($this->onFileWarning, $warning);
+			$this->violation($this->onFileWarning, $warning);
 		}
 
 		$expires = $parseResult->getSecurityTxt()->getExpires();
@@ -174,27 +174,18 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param list<callable(?int, string, string, ?string): void> $handlers
+	 * @param list<callable(?int, SecurityTxtSpecViolation): void> $handlers
 	 */
-	private function error(array $handlers, SecurityTxtSpecViolation $error, ?int $line = null): void
+	private function violation(array $handlers, SecurityTxtSpecViolation $violation, ?int $line = null): void
 	{
-		$this->callOnCallback($handlers, $line, $error->getMessage(), $error->getHowToFix(), $error->getCorrectValue());
-	}
-
-
-	/**
-	 * @param list<callable(?int, string, string, ?string): void> $handlers
-	 */
-	private function warning(array $handlers, SecurityTxtSpecViolation $warning, ?int $line = null): void
-	{
-		$this->callOnCallback($handlers, $line, $warning->getMessage(), $warning->getHowToFix(), $warning->getCorrectValue());
+		$this->callOnCallback($handlers, $line, $violation);
 	}
 
 
 	/**
 	 * @param list<callable> $onCallbacks
 	 */
-	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|Url|SecurityTxtHost|null ...$params): void
+	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|Url|SecurityTxtHost|SecurityTxtSpecViolation|null ...$params): void
 	{
 		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
@@ -275,7 +266,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onFetchError
+	 * @param callable(?int $line, SecurityTxtSpecViolation $violation): void $onFetchError
 	 */
 	public function addOnFetchError(callable $onFetchError): void
 	{
@@ -284,7 +275,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onLineError
+	 * @param callable(?int $line, SecurityTxtSpecViolation $violation): void $onLineError
 	 */
 	public function addOnLineError(callable $onLineError): void
 	{
@@ -293,7 +284,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onFileError
+	 * @param callable(?int $line, SecurityTxtSpecViolation $violation): void $onFileError
 	 */
 	public function addOnFileError(callable $onFileError): void
 	{
@@ -302,7 +293,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onFetchWarning
+	 * @param callable(?int $line, SecurityTxtSpecViolation $violation): void $onFetchWarning
 	 */
 	public function addOnFetchWarning(callable $onFetchWarning): void
 	{
@@ -311,7 +302,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onLineWarning
+	 * @param callable(?int $line, SecurityTxtSpecViolation $violation): void $onLineWarning
 	 */
 	public function addOnLineWarning(callable $onLineWarning): void
 	{
@@ -320,7 +311,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(?int, string, string, ?string): void $onFileWarning
+	 * @param callable(?int $line, SecurityTxtSpecViolation $violation): void $onFileWarning
 	 */
 	public function addOnFileWarning(callable $onFileWarning): void
 	{

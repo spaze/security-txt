@@ -5,7 +5,8 @@ namespace Spaze\SecurityTxt\Violations;
 
 use JsonSerializable;
 use Override;
-use Spaze\SecurityTxt\SecurityTxtPrintableAscii;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
+use Uri\WhatWg\Url;
 use ValueError;
 
 abstract class SecurityTxtSpecViolation implements JsonSerializable
@@ -15,37 +16,76 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 
 	private readonly string $howToFix;
 
+	/** @var list<string|Url> */
+	private readonly array $messageValues;
+
+	/** @var list<string|Url> */
+	private readonly array $howToFixValues;
+
 
 	/**
 	 * @param list<mixed> $constructorParams
 	 * @param literal-string $messageFormat Never build this from a field value or anything else read from the file, only the values are encoded when the message is printed. The analysers check this where the violation is constructed in code, they cannot check `SecurityTxtJson`, which replays whatever the serialized params hold
-	 * @param list<string> $messageValues
+	 * @param array<array-key, string|Url> $messageValues A value the library knows to be a URL is passed as one, so it reads as itself instead of percent encoded. Stored as a list, see the constructor
 	 * @param literal-string $howToFixFormat Never build this from a field value or anything else read from the file, only the values are encoded when the message is printed
-	 * @param list<string> $howToFixValues
+	 * @param array<array-key, string|Url> $howToFixValues Stored as a list, see the constructor
 	 * @param list<string> $seeAlsoSections
 	 * @throws ValueError
 	 */
 	public function __construct(
 		private readonly array $constructorParams,
 		private readonly string $messageFormat,
-		private readonly array $messageValues,
+		array $messageValues,
 		private readonly ?string $since,
-		private readonly ?string $correctValue,
+		private readonly string|Url|null $correctValue,
 		private readonly string $howToFixFormat,
-		private readonly array $howToFixValues,
+		array $howToFixValues,
 		private readonly ?string $specSection,
 		private readonly array $seeAlsoSections = [],
 		private readonly ?string $specUrl = null,
 	) {
+		// Code always passes a list, but `SecurityTxtJson` replays whatever the serialized params hold, and a string key there would be read as a named argument by anything
+		// spreading the values into a call, so the getters can promise a list only if it is made one here
+		$this->messageValues = array_values($messageValues);
+		$this->howToFixValues = array_values($howToFixValues);
 		// Rendered here and not in the getter so that a format and values that disagree fail where `SecurityTxtJson` guards a replay of serialized params
-		$this->message = vsprintf($this->messageFormat, array_map(SecurityTxtPrintableAscii::encode(...), $this->messageValues));
-		$this->howToFix = vsprintf($this->howToFixFormat, array_map(SecurityTxtPrintableAscii::encode(...), $this->howToFixValues));
+		// `vsprintf()` refuses too few values but ignores surplus ones, which would silently shift every value after them once two formats are composed for printing
+		assert(substr_count($this->messageFormat, '%s') === count($this->messageValues));
+		assert(substr_count($this->howToFixFormat, '%s') === count($this->howToFixValues));
+		$this->message = vsprintf($this->messageFormat, array_map(SecurityTxtPrintableValue::render(...), $this->messageValues));
+		$this->howToFix = vsprintf($this->howToFixFormat, array_map(SecurityTxtPrintableValue::render(...), $this->howToFixValues));
 	}
 
 
 	public function getMessage(): string
 	{
 		return $this->message;
+	}
+
+
+	/**
+	 * A value the violation knows to be a URL, handed over as one so that it reads as itself rather than percent encoded. Stays a string when it will not parse, which is what a
+	 * violation about a malformed URI carries, and keeps whatever a host wrote when parsing would rewrite it, because the rewrite is often the very thing being reported.
+	 *
+	 * @return ($value is null ? null : string|Url)
+	 */
+	final protected static function asUrl(?string $value): string|Url|null
+	{
+		if ($value === null) {
+			return null;
+		}
+		$url = Url::parse($value);
+		return $url !== null && $url->toUnicodeString() === $value ? $url : $value;
+	}
+
+
+	/**
+	 * A value as it goes on the wire: what it was, not how it prints. Serializing the rendered form instead would encode some values and not others, and a reader seeing the
+	 * encoded ones would take the whole object for something it is safe to print, which is the opposite of what this library tells them about these values.
+	 */
+	private static function valueToString(string|Url $value): string
+	{
+		return $value instanceof Url ? $value->toUnicodeString() : $value;
 	}
 
 
@@ -76,7 +116,7 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 
 
 	/**
-	 * @return list<string>
+	 * @return list<string|Url>
 	 */
 	public function getMessageValues(): array
 	{
@@ -90,7 +130,7 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 	}
 
 
-	public function getCorrectValue(): ?string
+	public function getCorrectValue(): string|Url|null
 	{
 		return $this->correctValue;
 	}
@@ -112,7 +152,7 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 
 
 	/**
-	 * @return list<string>
+	 * @return list<string|Url>
 	 */
 	public function getHowToFixValues(): array
 	{
@@ -152,12 +192,12 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 			'params' => $this->constructorParams,
 			'message' => $this->getMessage(),
 			'messageFormat' => $this->getMessageFormat(),
-			'messageValues' => $this->getMessageValues(),
+			'messageValues' => array_map(self::valueToString(...), $this->getMessageValues()),
 			'since' => $this->getSince(),
-			'correctValue' => $this->getCorrectValue(),
+			'correctValue' => $this->correctValue !== null ? self::valueToString($this->correctValue) : null,
 			'howToFix' => $this->getHowToFix(),
 			'howToFixFormat' => $this->getHowToFixFormat(),
-			'howToFixValues' => $this->getHowToFixValues(),
+			'howToFixValues' => array_map(self::valueToString(...), $this->getHowToFixValues()),
 			'specSection' => $this->getSpecSection(),
 			'seeAlsoSections' => $this->getSeeAlsoSections(),
 			'specUrl' => $this->getSpecUrl(),

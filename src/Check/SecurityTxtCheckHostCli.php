@@ -7,6 +7,7 @@ use Closure;
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\SecurityTxtHost;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Uri\WhatWg\Url;
 
 final class SecurityTxtCheckHostCli
@@ -65,7 +66,7 @@ final class SecurityTxtCheckHostCli
 				$this->exit(CheckExitStatus::Ok);
 			}
 		} catch (SecurityTxtFetcherException $e) {
-			// The values are URLs, IP addresses, codes and a message from curl, and only the URLs parse, so only they get to print as they read
+			// The values are URLs, IP addresses, codes and a message from curl, and only a URL written the way this library writes one prints as it reads
 			$this->consolePrinter->error($e->getMessageFormat(), ...array_map($this->url(...), $e->getMessageValues()));
 			$this->exit(CheckExitStatus::FileError);
 		}
@@ -73,11 +74,14 @@ final class SecurityTxtCheckHostCli
 
 
 	/**
-	 * An exception carries its values as strings to survive a JSON round trip, so a URL is parsed back here to print as it reads; one that will not parse stays a string and gets encoded.
+	 * Exceptions and violations carry their values as strings to survive a JSON round trip, so a value that is the canonical serialization of a URL is parsed back here to print
+	 * as it reads. Anything else stays a string and gets encoded, whether it does not parse at all or parses as something other than itself: a violation often quotes the value
+	 * it is about, `HTTP://` or a missing slash may be the finding, and printing it normalized would hide the evidence.
 	 */
-	private function url(string $url): string|Url
+	private function url(string $value): string|Url
 	{
-		return Url::parse($url) ?? $url;
+		$url = Url::parse($value);
+		return $url !== null && $url->toUnicodeString() === $value ? $url : $value;
 	}
 
 
@@ -97,18 +101,27 @@ final class SecurityTxtCheckHostCli
 
 
 	/**
-	 * Format and values are built together because they have to agree on how many placeholders there are, and nothing checks that they do: a format with one too many kills the run with a `ValueError`, one too few drops a value from the message without saying so.
+	 * The violation's own formats and values are composed, not its rendered strings, so what the console prints and what `getMessage()` returns are the same values put through
+	 * the same rule. Which values are URLs is the violation's to say, it was handed them, so nothing is guessed here.
 	 *
-	 * @return array{0:literal-string, 1:list<string>}
+	 * Two things the types cannot say. A violation format must not use positional specifiers, `%1$s`, because the line number is put in front of it, which would renumber the
+	 * rest, and must not contain the printer's color markup, because a format is where markup is read. Both hold for every violation and neither is checked, `literal-string`
+	 * says where a string was written, not what is in it.
+	 *
+	 * `vsprintf()` only refuses too few values, so composing the two formats relies on each violation bringing exactly as many values as its own format takes. All of them do,
+	 * and a surplus would shift the values of the second half.
+	 *
+	 * @return array{0:literal-string, 1:list<string|Url>}
 	 */
-	private function getViolationMessage(?int $line, string $message, string $howToFix, ?string $correctValue): array
+	private function getViolationMessage(?int $line, SecurityTxtSpecViolation $violation): array
 	{
-		$format = '%s (How to fix: %s';
-		$values = [$message, $howToFix];
+		$format = $violation->getMessageFormat() . ' (How to fix: ' . $violation->getHowToFixFormat();
+		$values = [...$violation->getMessageValues(), ...$violation->getHowToFixValues()];
 		if ($line !== null) {
 			$format = 'on line <b>%s</b>: ' . $format;
 			array_unshift($values, (string)$line);
 		}
+		$correctValue = $violation->getCorrectValue();
 		if ($correctValue !== null) {
 			$format .= ', e.g. %s';
 			$values[] = $correctValue;
@@ -177,12 +190,12 @@ final class SecurityTxtCheckHostCli
 				);
 			},
 		);
-		$onError = function (?int $line, string $message, string $howToFix, ?string $correctValue): void {
-			[$format, $values] = $this->getViolationMessage($line, $message, $howToFix, $correctValue);
+		$onError = function (?int $line, SecurityTxtSpecViolation $violation): void {
+			[$format, $values] = $this->getViolationMessage($line, $violation);
 			$this->consolePrinter->error($format, ...$values);
 		};
-		$onWarning = function (?int $line, string $message, string $howToFix, ?string $correctValue): void {
-			[$format, $values] = $this->getViolationMessage($line, $message, $howToFix, $correctValue);
+		$onWarning = function (?int $line, SecurityTxtSpecViolation $violation): void {
+			[$format, $values] = $this->getViolationMessage($line, $violation);
 			$this->consolePrinter->warning($format, ...$values);
 		};
 		$this->checkHost->addOnFetchError($onError);

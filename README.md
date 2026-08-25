@@ -104,6 +104,7 @@ Returns `list<SecurityTxtSpecViolation>`, the list contains file-level warnings 
 
 ## Callbacks
 `SecurityTxtCheckHost::check()` supports callbacks that can be set with `SecurityTxtCheckHost::addOn*()` methods. You can use them to get the parsing information in "real time", and are used for example by the `bin/checksecuritytxt.php` script via the `\Spaze\SecurityTxt\Check\SecurityTxtCheckHostCli` class to print information as soon as it is available.
+What a callback is handed is part of the API and each `addOn*()` method documents it: URLs arrive as `Uri\WhatWg\Url`, the host as `Spaze\SecurityTxt\SecurityTxtHost`, and an error or warning callback is handed the `SecurityTxtSpecViolation` itself rather than its message, how to fix and correct value as three separate strings.
 
 ## User agent
 When fetching the `security.txt` file, the library uses a default `User-Agent` HTTP header. The default value contains a link back to the GitHub repository, but it is recommended you use a custom `User-Agent` header.
@@ -296,7 +297,11 @@ You can use my own checks as a template or for inspiration; see [the `securitytx
 The messages in the exceptions as thrown by this library do not contain any sensitive information and are safe to display to the user using the `getMessage()` method.
 The same goes for the messages of the violations in `SecurityTxtCheckHostResult`, whose `getMessage()` and `getHowToFix()` behave the same way.
 The server-supplied values quoted in them are encoded down to printable ASCII first, so a server can't move a terminal's cursor, colour its own text to read like a result, or reverse what follows it with a bidirectional override.
+A value the library knows to be a URL is the exception: it exists only because it parsed, and parsing refuses a host with a control character in it and percent encodes everything after the host, so it is quoted as it reads, internationalized domains included.
+Reading as it is written is the point of that exception, so such a URL keeps whatever script its host is written in: a right-to-left host reorders neutral text around it the way any right-to-left text does, and a host that reads like another one reads like it here too, which no certificate covers for a URL the library never fetches, such as one from a `Canonical` or `Contact` field.
 That covers what a checked host sends, and a result rebuilt from serialized JSON too: the message formats exist only in code, selected by the class name and, for the one violation with a variable reason, by an enum case value, so the JSON can pick a format but cannot supply one, and the values it does supply are encoded the same way.
+`checksecuritytxt.php` prints a violation's values through the very same rule, so what it shows and what a violation's `getMessage()` returns agree.
+An exception is different: its values survive a JSON round trip as strings, so `getMessage()` encodes them while the script parses the ones that are URLs back and prints those as they read.
 But please be aware that the messages still contain server-supplied information, so please do not display the messages as HTML and do not feed them into a Markdown parser or similar.
 If you'd do that, a malicious server could inject content that would result in Cross-Site Scripting attack for example.
 
@@ -307,5 +312,7 @@ Those are not encoded, and neither are the values from `getMessageValues()` belo
 If you'd like to format some of the values contained in the messages, you can use the exception's `getMessageFormat()` and `getMessageValues()` methods.
 The `getMessageFormat()` method will return an error message with `%s` placeholders, while `getMessageValues()` will return the values, including the server-supplied ones,
 which you can, **after a proper sanitization and/or escaping**, wrap in `<code>` tags for example, and use them to replace the placeholders.
+A violation's values are `string|Uri\WhatWg\Url`, the URL ones being the values it knows to be URLs, and a `Url` has no string form of its own: call `toUnicodeString()` on it,
+or hand the value to `Spaze\SecurityTxt\SecurityTxtPrintableValue::render()`, which is what this library prints with. An exception's values are always strings.
 
 The same goes for formatting `SecurityTxtSpecViolation` object messages: you can use `getMessageFormat()` and `getMessageValues()`, and also `getHowToFixFormat()` and `getHowToFixValues()`.

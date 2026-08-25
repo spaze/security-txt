@@ -19,8 +19,6 @@ final readonly class SecurityTxtHost
 
 	private string $ascii;
 
-	private bool $internationalized;
-
 
 	/**
 	 * @throws SecurityTxtCannotParseHostnameException
@@ -34,14 +32,13 @@ final readonly class SecurityTxtHost
 		}
 		$this->unicode = $unicode;
 		$this->ascii = $ascii;
-		$this->internationalized = in_array($url->getScheme(), ['http', 'https'], true) && $unicode !== $ascii;
 	}
 
 
 	/**
 	 * The inverse of the serialized form, which is `getUnicode()`, and accepts exactly that, nothing else: a value that reads back as something other than itself, `808` becomes
 	 * the IP address `0.0.3.40` and the punycode spelling becomes the host as it reads, is refused rather than rewritten, so whatever is accepted replays byte identical. Parsed
-	 * under https, like the fetcher fetches, so `isInternationalized()` comes out the same whether the host lived through a check or through JSON.
+	 * under https, like the fetcher fetches, so the two forms come out the same whether the host lived through a check or through JSON.
 	 *
 	 * @throws SecurityTxtCannotParseHostnameException
 	 */
@@ -64,17 +61,6 @@ final readonly class SecurityTxtHost
 	public function getAscii(): string
 	{
 		return $this->ascii;
-	}
-
-
-	/**
-	 * The two forms differ, which is where a host that reads like another one would hide: a letter from another script or a joiner that survives IDNA forces punycode, while
-	 * what IDNA deletes, a zero width space or a soft hyphen, leaves a host that really is what it reads as. Judged only for http and https, the schemes this library fetches:
-	 * an opaque host skips IDNA and keeps its case, so a difference there is no signal.
-	 */
-	public function isInternationalized(): bool
-	{
-		return $this->internationalized;
 	}
 
 }
