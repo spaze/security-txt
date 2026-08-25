@@ -6,7 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 use Exception;
 use JsonSerializable;
 use Override;
-use Spaze\SecurityTxt\SecurityTxtPrintableAscii;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Throwable;
 
 abstract class SecurityTxtFetcherException extends Exception implements JsonSerializable
@@ -37,7 +37,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 		$this->messageValues = array_values($messageValues);
 		// `Exception::getMessage()` is final, so this is the only place the message can be made safe to display anywhere, terminal, log or page alike; `getMessageValues()`
 		// still hands over what the host sent, for a caller that knows what it is rendering into
-		parent::__construct(vsprintf($this->messageFormat, array_map(SecurityTxtPrintableAscii::encode(...), $this->messageValues)), $code, $previous);
+		parent::__construct(vsprintf($this->messageFormat, array_map(SecurityTxtPrintableValue::render(...), $this->messageValues)), $code, $previous);
 	}
 
 
