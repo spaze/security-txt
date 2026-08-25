@@ -9,6 +9,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUriMismatch;
@@ -53,6 +54,104 @@ final class SecurityTxtValidatorTest extends TestCase
 		$securityTxt->addContact(new SecurityTxtContact('mailto:foo@example.com'));
 		$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('+1 month')));
 		$this->assertNoViolation($securityTxt);
+	}
+
+
+	/**
+	 * @dataProvider getSameUriDifferentlyWritten
+	 */
+	public function testValidateCanonicalUriMatchHoweverItIsWritten(string $canonical): void
+	{
+		$securityTxt = new SecurityTxt();
+		$securityTxt->setFileLocation('https://example.com/.well-known/security.txt');
+		$securityTxt->addCanonical(new SecurityTxtCanonical($canonical));
+		$securityTxt->addContact(new SecurityTxtContact('mailto:foo@example.com'));
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('+1 month')));
+		$this->assertNoViolation($securityTxt);
+	}
+
+
+	/**
+	 * @return array<string, array{0:string}>
+	 */
+	public function getSameUriDifferentlyWritten(): array
+	{
+		// The field says where the file is, and these all say the same place, so none of them is a mismatch
+		return [
+			'as written' => ['https://example.com/.well-known/security.txt'],
+			'scheme in a different case' => ['HTTPS://example.com/.well-known/security.txt'],
+			'host in a different case' => ['https://EXAMPLE.COM/.well-known/security.txt'],
+			'default port spelled out' => ['https://example.com:443/.well-known/security.txt'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getDifferentUri
+	 */
+	public function testValidateCanonicalUriMismatchStillReported(string $canonical): void
+	{
+		$securityTxt = new SecurityTxt();
+		$securityTxt->setFileLocation('https://example.com/.well-known/security.txt');
+		$securityTxt->addCanonical(new SecurityTxtCanonical($canonical));
+		$securityTxt->addContact(new SecurityTxtContact('mailto:foo@example.com'));
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('+1 month')));
+		$this->assertViolation($securityTxt, SecurityTxtCanonicalUriMismatch::class);
+	}
+
+
+	/**
+	 * @return array<string, array{0:string}>
+	 */
+	public function getDifferentUri(): array
+	{
+		// A fragment counts, like it does when the fetcher compares two final URLs, and a value that will not parse can only be compared as written
+		return [
+			'another path' => ['https://example.com/security.txt'],
+			'another host' => ['https://other.example/.well-known/security.txt'],
+			'another port' => ['https://example.com:8443/.well-known/security.txt'],
+			'a fragment' => ['https://example.com/.well-known/security.txt#fragment'],
+		];
+	}
+
+
+	public function testValidateCanonicalThatWillNotParseIsAMismatch(): void
+	{
+		// The parser keeps a value that is not a URI, reporting it separately, so the comparison still has to cope with one, and one that names nothing lists nothing
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
+		$securityTxt->setFileLocation('https://example.com/.well-known/security.txt');
+		$securityTxt->addCanonical(new SecurityTxtCanonical('not a uri at all'));
+		$securityTxt->addContact(new SecurityTxtContact('mailto:foo@example.com'));
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('+1 month')));
+		$this->assertViolation($securityTxt, SecurityTxtCanonicalUriMismatch::class);
+	}
+
+
+	/**
+	 * @dataProvider getFileLocationsWorthNoComparison
+	 */
+	public function testValidateNoCanonicalComparisonWhenTheLocationItselfIsWrong(string $fileLocation): void
+	{
+		// The location has a violation of its own saying the real thing; comparing against it would add a second complaint telling a correct Canonical field it is wrong
+		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
+		$securityTxt->setFileLocation($fileLocation);
+		$securityTxt->addCanonical(new SecurityTxtCanonical('https://example.com/.well-known/security.txt'));
+		$securityTxt->addContact(new SecurityTxtContact('mailto:foo@example.com'));
+		$securityTxt->setExpires($this->securityTxtExpiresFactory->create(new DateTimeImmutable('+1 month')));
+		$this->assertNoViolation($securityTxt);
+	}
+
+
+	/**
+	 * @return array<string, array{0:string}>
+	 */
+	public function getFileLocationsWorthNoComparison(): array
+	{
+		return [
+			'fetched over http' => ['http://example.com/.well-known/security.txt'],
+			'not a URI' => ['not a uri at all'],
+			'the same nothing the Canonical field could name' => ['foo'],
+		];
 	}
 
 
