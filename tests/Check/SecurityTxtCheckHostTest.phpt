@@ -267,7 +267,6 @@ final class SecurityTxtCheckHostTest extends TestCase
 			$result = $this->getCheckHost(200, [], '')->check(new Url($url));
 			Assert::same('bücher.example', $result->getHost()->getUnicode(), $url);
 			Assert::same('xn--bcher-kva.example', $result->getHost()->getAscii(), $url);
-			Assert::true($result->getHost()->isInternationalized(), $url);
 		}
 	}
 

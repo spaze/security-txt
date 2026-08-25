@@ -15,13 +15,12 @@ final class SecurityTxtPrintableValue
 
 	/**
 	 * A `Url` and a `SecurityTxtHost` exist only because they parsed, and parsing rejects a host with a control character in it and percent encodes everything after the host, so
-	 * there is nothing left in one to encode. Printed as it reads, with the ASCII host alongside when the two differ, which is when the readable form has something in it that
-	 * could pass for another host. Anything else is a string this library cannot vouch for, and is encoded down to printable ASCII.
+	 * there is nothing left in one to encode and it is printed as it reads. Anything else is a string this library cannot vouch for, and is encoded down to printable ASCII.
 	 */
 	public static function render(string|Url|SecurityTxtHost $value): string
 	{
 		if ($value instanceof SecurityTxtHost) {
-			return $value->isInternationalized() ? sprintf('%s (%s)', $value->getUnicode(), $value->getAscii()) : $value->getUnicode();
+			return $value->getUnicode();
 		}
 		if ($value instanceof Url) {
 			return self::renderUrl($value);
@@ -32,18 +31,13 @@ final class SecurityTxtPrintableValue
 
 	/**
 	 * Only a URL with a scheme this library would fetch is printed as it reads. Any other scheme has an opaque path, serialised with a far smaller set of characters escaped, so
-	 * a space or a bracket in it arrives the way a host wrote it, and a host that IDNA never touched, so the two forms of it differ by letter case alone and would raise the
-	 * lookalike signal for a plain ASCII name.
+	 * what is safe in one is not established by what is safe in the other, and this library has no reason to vouch for a scheme it would never fetch.
 	 */
 	private static function renderUrl(Url $url): string
 	{
-		if (!in_array($url->getScheme(), ['http', 'https'], true)) {
-			return SecurityTxtPrintableAscii::encode($url->toUnicodeString());
-		}
-		$asciiHost = $url->getAsciiHost();
-		return $asciiHost !== null && $asciiHost !== $url->getUnicodeHost()
-			? sprintf('%s (%s)', $url->toUnicodeString(), $asciiHost)
-			: $url->toUnicodeString();
+		return in_array($url->getScheme(), ['http', 'https'], true)
+			? $url->toUnicodeString()
+			: SecurityTxtPrintableAscii::encode($url->toUnicodeString());
 	}
 
 }

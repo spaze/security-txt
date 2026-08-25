@@ -154,15 +154,15 @@ final class ConsolePrinterTest extends TestCase
 		ob_start();
 		// A Url exists only because it parsed, and parsing leaves nothing in it to encode
 		$printer->info('Using %s', new Url('https://example.com/a b/x?q=1'));
-		// An internationalised host reads as itself, with the ASCII host alongside because that is where a lookalike would hide
+		// An internationalised host reads as itself
 		$printer->info('Using %s', new Url('https://例え.jp/'));
 		$printer->info('Using %s', new Url('https://аpple.com/'));
 		// The same host as a plain string has no such proof and is encoded
 		$printer->info('Using %s', 'https://例え.jp/');
 		$output = ob_get_clean();
 		$expected = "[Info] Using https://example.com/a%20b/x?q=1\n"
-			. "[Info] Using https://例え.jp/ (xn--r8jz45g.jp)\n"
-			. "[Info] Using https://аpple.com/ (xn--pple-43d.com)\n"
+			. "[Info] Using https://例え.jp/\n"
+			. "[Info] Using https://аpple.com/\n"
 			. "[Info] Using https://%E4%BE%8B%E3%81%88.jp/\n";
 		Assert::same($expected, $output);
 	}
@@ -174,12 +174,9 @@ final class ConsolePrinterTest extends TestCase
 		ob_start();
 		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url("https://\u{4F8B}\u{3048}.jp/")));
 		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url('https://example.com/')));
-		// An opaque host skips IDNA and keeps its case, so the two forms differing by case alone is no lookalike signal
-		$printer->info('Parsing security.txt for %s', new SecurityTxtHost(new Url('foo://Plain.Example/x')));
 		$output = ob_get_clean();
-		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp (xn--r8jz45g.jp)\n"
-			. "[Info] Parsing security.txt for example.com\n"
-			. "[Info] Parsing security.txt for plain.example\n";
+		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp\n"
+			. "[Info] Parsing security.txt for example.com\n";
 		Assert::same($expected, $output);
 	}
 
@@ -188,12 +185,12 @@ final class ConsolePrinterTest extends TestCase
 	{
 		$printer = new ConsolePrinter();
 		ob_start();
-		// The host of a scheme this library would not fetch is never lowercased or run through IDNA, so its two forms differ by letter case alone and must not raise the lookalike signal
-		$printer->info('Using %s', new Url('foo://EXAMPLE.COM/'));
+		// A scheme this library would not fetch has an opaque path escaped by different rules, so it is encoded rather than vouched for
+		$printer->info('Using %s', new Url('foo://EXAMPLE.COM/a b'));
 		$printer->info('Using %s', new Url("https://\u{4F8B}\u{3048}.jp/"));
 		$output = ob_get_clean();
-		$expected = "[Info] Using foo://example.com/\n"
-			. "[Info] Using https://\u{4F8B}\u{3048}.jp/ (xn--r8jz45g.jp)\n";
+		$expected = "[Info] Using foo://example.com/a%20b\n"
+			. "[Info] Using https://\u{4F8B}\u{3048}.jp/\n";
 		Assert::same($expected, $output);
 	}
 
