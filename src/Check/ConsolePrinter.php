@@ -4,7 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\SecurityTxtHost;
-use Spaze\SecurityTxt\SecurityTxtPrintableAscii;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Uri\WhatWg\Url;
 
 /**
@@ -91,7 +91,7 @@ final class ConsolePrinter
 	 */
 	private function print(string $level, string $format, array $values): void
 	{
-		$this->printText($this->addColors($level), vsprintf($this->addColors($format), array_map($this->renderValue(...), $values)));
+		$this->printText($this->addColors($level), vsprintf($this->addColors($format), array_map(SecurityTxtPrintableValue::render(...), $values)));
 	}
 
 
@@ -106,40 +106,6 @@ final class ConsolePrinter
 	{
 		$replacements = $this->colors ? array_values(self::COLORS) : array_fill(0, count(self::COLORS), '');
 		return str_replace(array_keys(self::COLORS), $replacements, $format);
-	}
-
-
-	/**
-	 * A `Url` exists only because it parsed, and parsing rejects a host with a control character in it and percent encodes everything after the host, so there is nothing left
-	 * in one to encode. Printed as it reads, with the ASCII host alongside when the two differ, which is when the readable form has something in it that could pass for another
-	 * host: an invisible character or a letter from another script forces punycode, while one that IDNA simply deletes leaves a host that really is what it reads as.
-	 */
-	private function renderValue(string|Url|SecurityTxtHost $value): string
-	{
-		if ($value instanceof SecurityTxtHost) {
-			return $value->isInternationalized() ? sprintf('%s (%s)', $value->getUnicode(), $value->getAscii()) : $value->getUnicode();
-		}
-		if ($value instanceof Url) {
-			return $this->renderUrl($value);
-		}
-		return SecurityTxtPrintableAscii::encode($value);
-	}
-
-
-	/**
-	 * Only a URL with a scheme this library would fetch is printed as it reads. Any other scheme has an opaque path, serialised with a far smaller set of characters escaped,
-	 * so a space or a bracket in it arrives the way a host wrote it, and a host that IDNA never touched, so the two forms of it differ by letter case alone and would raise
-	 * the lookalike signal for a plain ASCII name.
-	 */
-	private function renderUrl(Url $url): string
-	{
-		if (!in_array($url->getScheme(), ['http', 'https'], true)) {
-			return SecurityTxtPrintableAscii::encode($url->toUnicodeString());
-		}
-		$asciiHost = $url->getAsciiHost();
-		return $asciiHost !== null && $asciiHost !== $url->getUnicodeHost()
-			? sprintf('%s (%s)', $url->toUnicodeString(), $asciiHost)
-			: $url->toUnicodeString();
 	}
 
 }

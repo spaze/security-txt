@@ -16,7 +16,7 @@ final class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 		parent::__construct(
 			func_get_args(),
 			$format,
-			$charsetParameter !== null ? [$uri, 'Content-Type', $contentType, $charsetParameter, SecurityTxtContentType::CHARSET_PARAMETER] : [$uri, 'Content-Type', $contentType, SecurityTxtContentType::CHARSET_PARAMETER],
+			$charsetParameter !== null ? [self::asUrl($uri), 'Content-Type', $contentType, $charsetParameter, SecurityTxtContentType::CHARSET_PARAMETER] : [self::asUrl($uri), 'Content-Type', $contentType, SecurityTxtContentType::CHARSET_PARAMETER],
 			'draft-foudil-securitytxt-03',
 			SecurityTxtContentType::MEDIA_TYPE,
 			$charsetParameter !== null ? 'Change the parameter to %s' : 'Add a %s parameter',

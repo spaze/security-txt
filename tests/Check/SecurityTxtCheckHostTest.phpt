@@ -31,6 +31,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
 use Tester\TestCase;
@@ -164,18 +165,19 @@ final class SecurityTxtCheckHostTest extends TestCase
 	{
 		$contents = "Contact: foo@example.com\nExpires: " . $this->validExpires->modify('+10 years')->format(DATE_RFC3339) . "\n";
 		$checkHost = $this->getCheckHost(200, [], $contents);
-		$onLineErrorCalled = $onLineWarningCalled = false;
-		$checkHost->addOnLineError(function () use (&$onLineErrorCalled): void {
-			$onLineErrorCalled = true;
+		$onLineError = $onLineWarning = null;
+		$checkHost->addOnLineError(function (?int $line, SecurityTxtSpecViolation $violation) use (&$onLineError): void {
+			$onLineError = [$line, $violation];
 		});
-		$checkHost->addOnLineWarning(function () use (&$onLineWarningCalled): void {
-			$onLineWarningCalled = true;
+		$checkHost->addOnLineWarning(function (?int $line, SecurityTxtSpecViolation $violation) use (&$onLineWarning): void {
+			$onLineWarning = [$line, $violation];
 		});
 		$result = $checkHost->check(new Url('https://example.com'));
 		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com')]], $result->getLineErrors());
 		Assert::equal([2 => [new SecurityTxtExpiresTooLong()]], $result->getLineWarnings());
-		Assert::true($onLineErrorCalled);
-		Assert::true($onLineWarningCalled);
+		// The callbacks get the violation itself, on the line it was found
+		Assert::equal([1, new SecurityTxtContactNotUri('foo@example.com')], $onLineError);
+		Assert::equal([2, new SecurityTxtExpiresTooLong()], $onLineWarning);
 	}
 
 
@@ -243,18 +245,19 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator, 1);
 		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
 
-		$onFetchErrorCalled = $onFetchWarningCalled = false;
-		$checkHost->addOnFetchError(function () use (&$onFetchErrorCalled): void {
-			$onFetchErrorCalled = true;
+		$onFetchError = $onFetchWarning = null;
+		$checkHost->addOnFetchError(function (?int $line, SecurityTxtSpecViolation $violation) use (&$onFetchError): void {
+			$onFetchError = [$line, $violation];
 		});
-		$checkHost->addOnFetchWarning(function () use (&$onFetchWarningCalled): void {
-			$onFetchWarningCalled = true;
+		$checkHost->addOnFetchWarning(function (?int $line, SecurityTxtSpecViolation $violation) use (&$onFetchWarning): void {
+			$onFetchWarning = [$line, $violation];
 		});
 		$result = $checkHost->check(new Url($url));
 		Assert::equal([new SecurityTxtContentTypeInvalid($url, $contentType)], $result->getFetchErrors());
 		Assert::equal([new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents)], $result->getFetchWarnings());
-		Assert::true($onFetchErrorCalled);
-		Assert::true($onFetchWarningCalled);
+		// A fetch violation belongs to no line
+		Assert::equal([null, new SecurityTxtContentTypeInvalid($url, $contentType)], $onFetchError);
+		Assert::equal([null, new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents)], $onFetchWarning);
 	}
 
 
@@ -276,19 +279,20 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$contents = "{$this->validExpiresLine}\nCanonical: {$canonical1}\nCanonical: {$canonical2}\n";
 		$checkHost = $this->getCheckHost(200, [], $contents);
 
-		$onFileErrorCalled = $onFileWarningCalled = false;
-		$checkHost->addOnFileError(function () use (&$onFileErrorCalled): void {
-			$onFileErrorCalled = true;
+		$onFileError = $onFileWarning = null;
+		$checkHost->addOnFileError(function (?int $line, SecurityTxtSpecViolation $violation) use (&$onFileError): void {
+			$onFileError = [$line, $violation];
 		});
-		$checkHost->addOnFileWarning(function () use (&$onFileWarningCalled): void {
-			$onFileWarningCalled = true;
+		$checkHost->addOnFileWarning(function (?int $line, SecurityTxtSpecViolation $violation) use (&$onFileWarning): void {
+			$onFileWarning = [$line, $violation];
 		});
 		$url = 'https://example.com/.well-known/security.txt';
 		$result = $checkHost->check(new Url($url));
 		Assert::equal([new SecurityTxtNoContact()], $result->getFileErrors());
 		Assert::equal([new SecurityTxtCanonicalUriMismatch($url, [$canonical1, $canonical2])], $result->getFileWarnings());
-		Assert::true($onFileErrorCalled);
-		Assert::true($onFileWarningCalled);
+		// A file violation belongs to no line either
+		Assert::equal([null, new SecurityTxtNoContact()], $onFileError);
+		Assert::equal([null, new SecurityTxtCanonicalUriMismatch($url, [$canonical1, $canonical2])], $onFileWarning);
 	}
 
 

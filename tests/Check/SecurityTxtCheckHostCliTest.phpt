@@ -76,6 +76,39 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	}
 
 
+	public function testCheckViolationValuesPrintAsTheyRead(): void
+	{
+		// Colors off and no ESC bytes, so what is asserted here is the values, not the markup
+		// The ten minutes are a buffer: formatting truncates sub-seconds, so a bare '+42 days' diffs back to 41 as soon as any time passes, which fails only on a loaded runner
+		$expires = (new DateTimeImmutable('+42 days 10 minutes'))->format(DATE_RFC3339);
+		$contents = "Contact: HTTP://\u{4F8B}\u{3048}.jp/contact\nCanonical: https://other.example/\nExpires: {$expires}\n";
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-8'], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'not found', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$checkHostCli = $this->getCheckHostCli($httpClient);
+		$this->exitStatus = null;
+
+		ob_start();
+		$checkHostCli->check(new Url("https://\u{4F8B}\u{3048}.jp"), null, false, false, false, false, true, false, 'Help');
+		$output = ob_get_clean();
+		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp (xn--r8jz45g.jp)\n"
+			. "[Info] Using https://\u{4F8B}\u{3048}.jp/.well-known/security.txt (xn--r8jz45g.jp)\n"
+			// The correct value is there to be copied into a file, so it has to read as a URL, percent encoded it would be neither readable nor usable
+			. "[Error] on line 1: If the Contact field indicates a web URI, then it must begin with \"https://\""
+			. " (How to fix: Make sure the Contact field points to an https:// URI, e.g. https://\u{4F8B}\u{3048}.jp/contact (xn--r8jz45g.jp))\n"
+			// A URL among the message values reads as itself with the ASCII host alongside, which is what composing the formats is for
+			. "[Warning] The file was fetched from https://\u{4F8B}\u{3048}.jp/.well-known/security.txt (xn--r8jz45g.jp)"
+			. " but the Canonical field (https://other.example/) does not list this URI"
+			. " (How to fix: Add a new Canonical field with the URI https://\u{4F8B}\u{3048}.jp/.well-known/security.txt (xn--r8jz45g.jp),"
+			. " or ensure the file is fetched from the listed canonical URI)\n"
+			. "[OK] The file will expire in 42 days ({$expires})\n"
+			. "[Error] The file is invalid\n";
+		Assert::same($expected, $output);
+		Assert::same(CheckExitStatus::Error->value, $this->exitStatus);
+	}
+
+
 	public function testCheckErrorWarningVerboseThenNonVerbose(): void
 	{
 		$httpClient = $this->getHttpClient(

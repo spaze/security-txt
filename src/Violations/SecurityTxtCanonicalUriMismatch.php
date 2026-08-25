@@ -27,11 +27,11 @@ final class SecurityTxtCanonicalUriMismatch extends SecurityTxtSpecViolation
 		parent::__construct(
 			func_get_args(),
 			$messageFormat,
-			[$uri, SecurityTxtField::Canonical->value, ...$canonicalUris],
+			[self::asUrl($uri), SecurityTxtField::Canonical->value, ...array_map(self::asUrl(...), $canonicalUris)],
 			'draft-foudil-securitytxt-05',
 			null,
 			$howToFixFormat,
-			[SecurityTxtField::Canonical->value, $uri],
+			[SecurityTxtField::Canonical->value, self::asUrl($uri)],
 			'2.5.2',
 		);
 	}

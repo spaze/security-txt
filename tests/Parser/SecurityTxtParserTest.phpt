@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
@@ -443,7 +444,10 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::false($parseResult->hasWarnings());
 		Assert::same(SecurityTxtCsafNotHttps::class, $parseResult->getLineErrors()[1][0]::class);
 		Assert::same('If the CSAF field indicates a web URI, then it must begin with "https://"', $parseResult->getLineErrors()[1][0]->getMessage());
-		Assert::same('https://example.net/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+		// A correct value the violation knows to be a URL is handed over as one, so it reads as itself wherever it is printed
+		$correctValue = $parseResult->getLineErrors()[1][0]->getCorrectValue();
+		Assert::equal(new Url('https://example.net/'), $correctValue);
+		Assert::same('https://example.net/', SecurityTxtPrintableValue::render($correctValue ?? ''));
 
 		$uri = 'https://example.net/data/provider-metadata.json';
 		$parseResult = $this->securityTxtParser->parseString("CSAF: {$uri}\n");
@@ -772,6 +776,7 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::false($parseResult->hasWarnings());
 		Assert::same(SecurityTxtContactNotHttps::class, $parseResult->getLineErrors()[1][0]::class);
 		Assert::same('If the Contact field indicates a web URI, then it must begin with "https://"', $parseResult->getLineErrors()[1][0]->getMessage());
+		// Parsing would lowercase the host, and the case is what this is about, so it stays the string that was written
 		Assert::same('https://EXAMPLE.COM/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
 	}
 

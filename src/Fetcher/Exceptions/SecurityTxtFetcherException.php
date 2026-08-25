@@ -12,22 +12,29 @@ use Throwable;
 abstract class SecurityTxtFetcherException extends Exception implements JsonSerializable
 {
 
+	/** @var list<string> */
+	private readonly array $messageValues;
+
+
 	/**
 	 * @param list<scalar|null|array<array-key, scalar|array<array-key, scalar|list<string>>>> $constructorParams
 	 * @param literal-string $messageFormat Never build this from anything the checked host sends, it is used as a format and only the values are encoded when printed
-	 * @param list<string> $messageValues
+	 * @param array<array-key, string> $messageValues Stored as a list, see the constructor
 	 * @param list<string> $redirects
 	 * @throws Throwable
 	 */
 	public function __construct(
 		private readonly array $constructorParams,
 		private readonly string $messageFormat,
-		private readonly array $messageValues,
+		array $messageValues,
 		private readonly string $url,
 		private readonly array $redirects = [],
 		int $code = 0,
 		?Throwable $previous = null,
 	) {
+		// Code always passes a list, but `SecurityTxtJson` replays whatever the serialized params hold, and a string key there is read as a named argument by the CLI, which
+		// spreads these into a call
+		$this->messageValues = array_values($messageValues);
 		// `Exception::getMessage()` is final, so this is the only place the message can be made safe to display anywhere, terminal, log or page alike; `getMessageValues()`
 		// still hands over what the host sent, for a caller that knows what it is rendering into
 		parent::__construct(vsprintf($this->messageFormat, array_map(SecurityTxtPrintableAscii::encode(...), $this->messageValues)), $code, $previous);
