@@ -6,20 +6,21 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 use Exception;
 use JsonSerializable;
 use Override;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Throwable;
 
 abstract class SecurityTxtFetcherException extends Exception implements JsonSerializable
 {
 
-	/** @var list<string> */
+	/** @var list<string|SecurityTxtHost> */
 	private readonly array $messageValues;
 
 
 	/**
 	 * @param list<scalar|null|array<array-key, scalar|array<array-key, scalar|list<string>>>> $constructorParams
 	 * @param literal-string $messageFormat Never build this from anything the checked host sends, it is used as a format and only the values are encoded when printed
-	 * @param array<array-key, string> $messageValues Stored as a list, see the constructor
+	 * @param array<array-key, string|SecurityTxtHost> $messageValues A host is passed as one so it prints as it reads, like everywhere else. Stored as a list, see the constructor
 	 * @param list<string> $redirects
 	 * @throws Throwable
 	 */
@@ -38,6 +39,15 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 		// `Exception::getMessage()` is final, so this is the only place the message can be made safe to display anywhere, terminal, log or page alike; `getMessageValues()`
 		// still hands over what the host sent, for a caller that knows what it is rendering into
 		parent::__construct(vsprintf($this->messageFormat, array_map(SecurityTxtPrintableValue::render(...), $this->messageValues)), $code, $previous);
+	}
+
+
+	/**
+	 * A host as a constructor param has to be a scalar, because that is what a replay of stored JSON hands back.
+	 */
+	final protected static function hostToString(string|SecurityTxtHost $host): string
+	{
+		return $host instanceof SecurityTxtHost ? $host->getUnicode() : $host;
 	}
 
 
@@ -71,7 +81,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
-	 * @return list<string>
+	 * @return list<string|SecurityTxtHost>
 	 */
 	public function getMessageValues(): array
 	{
@@ -105,7 +115,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 			'params' => $this->constructorParams,
 			'message' => $this->getMessage(),
 			'messageFormat' => $this->getMessageFormat(),
-			'messageValues' => $this->getMessageValues(),
+			'messageValues' => array_map(fn(string|SecurityTxtHost $value): string => $value instanceof SecurityTxtHost ? $value->getUnicode() : $value, $this->getMessageValues()),
 			'url' => $this->getUrl(),
 			'redirects' => $this->getRedirects(),
 		];

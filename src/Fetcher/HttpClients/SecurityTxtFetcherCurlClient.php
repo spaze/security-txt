@@ -14,6 +14,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\SecurityTxtHost;
 
 final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherHttpClient
 {
@@ -39,7 +40,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
 	#[Override]
-	public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+	public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
 	{
 		if (!extension_loaded('curl')) {
 			throw new SecurityTxtCannotOpenUrlExtensionNotLoadedException($url->getUrl()->toUnicodeString());
@@ -47,7 +48,9 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 		if (preg_match('/[\x00-\x1F\x7F]/', $this->userAgent) === 1) {
 			throw new SecurityTxtCannotOpenUrlUserAgentInvalidException($url->getUrl()->toUnicodeString());
 		}
-		$ch = curl_init($url->getUrl()->toUnicodeString());
+		// The ASCII serialization, so the host curl parses out of it is the one `CURLOPT_RESOLVE` below is keyed by and the one that goes into SNI. A curl built with libidn would
+		// convert a readable host itself and arrive at the same place, but not every curl is, and this does not depend on which one is
+		$ch = curl_init($url->getUrl()->toAsciiString());
 		if ($ch === false) {
 			throw new SecurityTxtCannotOpenUrlException($url->getUrl()->toUnicodeString(), $url->getRedirects());
 		}
@@ -70,10 +73,10 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			CURLOPT_ENCODING => '', // '' means that the Accept-Encoding: header containing all supported encoding types is sent
 			CURLOPT_FORBID_REUSE => true,
 			CURLOPT_FRESH_CONNECT => true,
-			CURLOPT_HTTPHEADER => ["Host: {$host}" . ($port !== null ? ":{$port}" : '')],
+			CURLOPT_HTTPHEADER => ["Host: {$host->getAscii()}" . ($port !== null ? ":{$port}" : '')],
 			CURLOPT_USERAGENT => $this->userAgent,
 			CURLOPT_HEADER => false,
-			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host, $port ?? $defaultPort, $ipAddressType === SecurityTxtIpAddressType::V6 ? "[{$ipAddress}]" : $ipAddress)],
+			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host->getAscii(), $port ?? $defaultPort, $ipAddressType === SecurityTxtIpAddressType::V6 ? "[{$ipAddress}]" : $ipAddress)],
 			CURLOPT_HEADERFUNCTION => function (CurlHandle $ch, string $header) use (&$rawHeaders): int {
 				$rawHeaders[] = trim($header);
 				return strlen($header);

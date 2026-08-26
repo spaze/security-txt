@@ -93,7 +93,7 @@ final class SecurityTxtFetcher
 		if ($maxAllowedRedirects !== null) {
 			$this->validateMaxAllowedRedirects($maxAllowedRedirects);
 		}
-		$host = new SecurityTxtHost($url)->getUnicode();
+		$host = new SecurityTxtHost($url);
 		try {
 			$baseUrl = $url
 				->withUsername(null)
@@ -130,7 +130,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	private function fetchUrl(Url $url, string $host, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherFetchHostResult
+	private function fetchUrl(Url $url, SecurityTxtHost $host, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherFetchHostResult
 	{
 		$finalUrl = $url;
 		$this->callOnCallback($this->onUrl, $url);
@@ -174,13 +174,13 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	private function getResponse(SecurityTxtFetcherUrl $url, string $host, Url $originalUrl, Url &$finalUrl, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherResponse
+	private function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, Url $originalUrl, Url &$finalUrl, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherResponse
 	{
 		$ipRecord = $ipv6Record = null;
-		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
-			$ipRecord = $host;
+		if (filter_var($host->getUnicode(), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+			$ipRecord = $host->getUnicode();
 		} else {
-			if (preg_match('/^\[(.*)]$/', $host, $matches) === 1) {
+			if (preg_match('/^\[(.*)]$/', $host->getUnicode(), $matches) === 1) {
 				$hostIpv6 = $matches[1];
 				if (filter_var($hostIpv6, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
 					$ipv6Record = $hostIpv6;
@@ -205,7 +205,7 @@ final class SecurityTxtFetcher
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
 			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl()->toUnicodeString(), $host);
 		}
-		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl()->toUnicodeString());
+		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host->getUnicode(), $url->getUrl()->toUnicodeString());
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
@@ -375,8 +375,10 @@ final class SecurityTxtFetcher
 			if (count($this->redirects[$originalUrlString]) > $maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url->toUnicodeString(), $this->redirects[$originalUrlString], $maxAllowedRedirects);
 			}
-			$locationHost = new SecurityTxtHost($locationUrl)->getUnicode();
-			return $this->getResponse(new SecurityTxtFetcherUrl($locationUrl, $this->getRedirects($originalUrl)), $locationHost, $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
+			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as a
+			// hostname that will not parse, losing the redirect chain that says where the host sent us
+			$fetcherUrl = new SecurityTxtFetcherUrl($locationUrl, $this->getRedirects($originalUrl));
+			return $this->getResponse($fetcherUrl, new SecurityTxtHost($locationUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 	}
 

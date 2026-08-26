@@ -21,6 +21,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
@@ -358,7 +359,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 
 
 			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, string $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
 			{
 				return $this->fetcherResponse[$this->position++];
 			}
@@ -377,7 +378,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 
 
 			#[Override]
-			public function getRecords(Url $url, string $host): SecurityTxtDnsRecords
+			public function getRecords(Url $url, SecurityTxtHost $host): SecurityTxtDnsRecords
 			{
 				return $this->dnsRecords;
 			}

@@ -51,6 +51,17 @@ final class SecurityTxtHostTest extends TestCase
 	}
 
 
+	public function testBothSpellingsOfAHostAskForTheSameName(): void
+	{
+		// Whichever way a host was written, the ASCII form is what goes to the resolver and onto the wire, so both spellings have to arrive at the same one
+		$readable = new SecurityTxtHost(new Url("https://h\u{E1}\u{10D}ky\u{10D}\u{E1}rky.cz/"));
+		$punycode = new SecurityTxtHost(new Url('https://xn--hkyrky-ptac70bc.cz/'));
+		Assert::same('xn--hkyrky-ptac70bc.cz', $readable->getAscii());
+		Assert::same($readable->getAscii(), $punycode->getAscii());
+		Assert::same($readable->getUnicode(), $punycode->getUnicode());
+	}
+
+
 	public function testAnOpaqueHostIsKeptAsWhateverParsingMadeOfIt(): void
 	{
 		// A scheme WhatWG calls special, ftp among them, runs IDNA like https does, so those hosts round trip; one it calls opaque does not run IDNA and keeps its case,

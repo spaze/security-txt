@@ -7,6 +7,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherCurlClient;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
@@ -23,7 +24,7 @@ final class SecurityTxtFetcherCurlClientNoExtensionTest extends TestCase
 		skipIfExtensionLoaded('curl');
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client) {
-			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://example.com/'), []), 'example.com', '192.0.2.1', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://example.com/'), []), SecurityTxtHost::fromString('example.com'), '192.0.2.1', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlExtensionNotLoadedException::class);
 	}
 
