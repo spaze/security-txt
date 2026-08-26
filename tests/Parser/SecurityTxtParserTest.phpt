@@ -34,6 +34,8 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
@@ -46,6 +48,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureMultipleCleartextHeaders;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 use Tester\Assert;
@@ -432,6 +435,76 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::same($uri, $parseResult->getSecurityTxt()->getEncryption()[0]->getUri());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	/**
+	 * @param class-string<SecurityTxtSpecViolation> $violationClass
+	 * @dataProvider getInvalidFileLocations
+	 */
+	public function testParseStringInvalidFileLocationIsReportedNotThrown(string $fileLocation, string $violationClass, ?string $correctValue): void
+	{
+		$parseResult = $this->securityTxtParser->parseString($this->getValidContents(), $fileLocation);
+		Assert::count(1, $parseResult->getFileErrors());
+		Assert::type($violationClass, $parseResult->getFileErrors()[0]);
+		// The value offered as the fix has to differ from the one just rejected, whatever case the scheme was written in
+		$actualCorrectValue = $parseResult->getFileErrors()[0]->getCorrectValue();
+		Assert::same($correctValue, $actualCorrectValue !== null ? SecurityTxtPrintableValue::render($actualCorrectValue) : null);
+		Assert::same([], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::false($parseResult->isValid());
+	}
+
+
+	/**
+	 * @return array<string, array{0:string, 1:class-string<SecurityTxtSpecViolation>, 2:?string}>
+	 */
+	public function getInvalidFileLocations(): array
+	{
+		return [
+			'http' => ['http://example.com/.well-known/security.txt', SecurityTxtFileLocationNotHttps::class, 'https://example.com/.well-known/security.txt'],
+			'HTTP uppercase' => ['HTTP://example.com/.well-known/security.txt', SecurityTxtFileLocationNotHttps::class, 'https://example.com/.well-known/security.txt'],
+			'not a URI' => ['example.com/.well-known/security.txt', SecurityTxtFileLocationNotUri::class, null],
+		];
+	}
+
+
+	public function testParseStringInvalidFileLocationIsReportedWithContentThatIsNotUtf8(): void
+	{
+		// Both are wrong at once and the early return for the contents must still carry the location, which is the other line this reaches
+		$parseResult = $this->securityTxtParser->parseString("\xFF\xFE", 'http://example.com/.well-known/security.txt');
+		Assert::count(2, $parseResult->getFileErrors());
+		Assert::type(SecurityTxtFileLocationNotHttps::class, $parseResult->getFileErrors()[0]);
+		Assert::type(SecurityTxtContentNotUtf8::class, $parseResult->getFileErrors()[1]);
+		Assert::false($parseResult->isValid());
+	}
+
+
+	public function testParseFetchResultHttpFinalUrlIsReportedNotThrown(): void
+	{
+		// The way the bug was actually reached: the fetcher allows http, so a host redirecting its security.txt to one leaves an http final URL for the parser
+		$contents = $this->getValidContents();
+		$fetchResult = new SecurityTxtFetchResult(
+			new Url('https://example.com/.well-known/security.txt'),
+			new Url('http://example.com/security.txt'),
+			[],
+			$contents,
+			false,
+			$this->securityTxtSplitLines->splitLines($contents),
+			[],
+			[],
+		);
+		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
+		Assert::count(1, $parseResult->getFileErrors());
+		Assert::type(SecurityTxtFileLocationNotHttps::class, $parseResult->getFileErrors()[0]);
+		Assert::same('http://example.com/security.txt', $parseResult->getSecurityTxt()->getFileLocation());
+		Assert::false($parseResult->isValid());
+	}
+
+
+	private function getValidContents(): string
+	{
+		return "Contact: mailto:foo@example.com\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n";
 	}
 
 
