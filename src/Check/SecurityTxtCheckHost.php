@@ -101,7 +101,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function check(Url $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtCheckHostResult
 	{
-		// The fetcher only ever fetches over https, so the host is judged under https too, or the scheme the caller typed would decide whether an IDN host gets the punycode shown next to it
+		// The fetcher starts every check over https, whatever scheme the caller typed, so the host is judged under https too rather than under a scheme that decides nothing
 		$host = new SecurityTxtHost($url->withScheme('https'));
 		$this->callOnCallback($this->onHost, $host);
 		$fetchResult = $this->fetcher->fetch($url, $requireTopLevelLocation, $noIpv6, $maxAllowedRedirects);

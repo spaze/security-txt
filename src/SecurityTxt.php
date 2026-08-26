@@ -105,6 +105,9 @@ final class SecurityTxt implements JsonSerializable
 	}
 
 
+	/**
+	 * @throws SecurityTxtError
+	 */
 	public function setFileLocation(string $fileLocation): void
 	{
 		$this->setValue(
