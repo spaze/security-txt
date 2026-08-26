@@ -31,9 +31,12 @@ final class SecurityTxtPhpDnsProviderTest extends TestCase
 		Assert::null($records->getIpRecord());
 		Assert::null($records->getIpv6Record());
 
-		Assert::throws(function () use ($provider) {
-			$provider->getRecords(new Url('https://nah/'), SecurityTxtHost::fromString('nah'));
-		}, SecurityTxtHostNotFoundException::class, "Can't open https://nah/, can't resolve nah");
+		// A label longer than the 63 characters DNS allows, so the lookup is refused before a packet is sent and `dns_get_record()` returns `false` wherever this runs.
+		// A resolver answering NXDOMAIN for a shorter host may give an empty set, not an error.
+		$tooLong = str_repeat('a', 64) . '.example.com';
+		Assert::throws(function () use ($provider, $tooLong) {
+			$provider->getRecords(new Url("https://{$tooLong}/"), SecurityTxtHost::fromString($tooLong));
+		}, SecurityTxtHostNotFoundException::class, "Can't open https://{$tooLong}/, can't resolve {$tooLong}");
 	}
 
 
