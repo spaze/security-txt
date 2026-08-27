@@ -138,18 +138,20 @@ final class SecurityTxtFetcher
 			$response = $this->getResponse(new SecurityTxtFetcherUrl($url, $this->getRedirects($url)), $host, $url, $finalUrl, $noIpv6, $maxAllowedRedirects);
 			$ipAddress = $response->getIpAddress();
 			$ipAddressType = $response->getIpAddressType();
+			$httpCode = $response->getHttpCode();
 		} catch (SecurityTxtUrlNotFoundException $e) {
 			$this->callOnCallback($this->onUrlNotFound, $finalUrl);
 			$response = null;
 			$ipAddress = $e->getIpAddress();
 			$ipAddressType = $e->getIpAddressType();
+			$httpCode = $e->getCode();
 		}
 		return new SecurityTxtFetcherFetchHostResult(
 			$url,
 			$finalUrl,
 			$ipAddress,
 			$ipAddressType,
-			isset($e) ? $e->getCode() : 200,
+			$httpCode,
 			$response,
 		);
 	}

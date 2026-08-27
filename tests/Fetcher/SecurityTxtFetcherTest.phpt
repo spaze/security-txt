@@ -433,6 +433,54 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
+	/**
+	 * @return array<string, array{0:int}>
+	 */
+	public function getSuccessfulCodes(): array
+	{
+		// Everything `getResponse()` lets through: it throws above 400 and follows a redirect above 300, so any other 2xx arrives here as an ordinary success
+		return [
+			'200 OK' => [200],
+			'203 Non-Authoritative Information' => [203],
+			'206 Partial Content' => [206],
+		];
+	}
+
+
+	/**
+	 * The code recorded for a host is the one it answered with. It used to be a hardcoded `200` on the success path, so a 203 or a 206 was reported as a 200 in
+	 * `getIpAddresses()` and in the serialized params, and `isRegularHtmlPage` keyed on `httpCode === 200`, which that hardcode made permanently true.
+	 *
+	 * @dataProvider getSuccessfulCodes
+	 */
+	public function testFetchRecordsTheCodeItWasServed(int $code): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($code, ['content-type' => 'text/html'], '<html><body>nope</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$exception = Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://com.example/'));
+		}, SecurityTxtNotFoundException::class);
+		assert($exception instanceof SecurityTxtNotFoundException);
+		Assert::same(['1.1.1.0' => [SecurityTxtIpAddressType::V4, $code]], $exception->getIpAddresses());
+		// An HTML page is one whichever 2xx carried it, so the code moving does not change what the bytes are taken for
+		Assert::contains('regular HTML page', $exception->getMessage());
+	}
+
+
+	/**
+	 * The other half: a body that is not an HTML page is parsed whatever 2xx carried it, so keying the HTML test on the code cannot be replaced by keying the parse on it.
+	 *
+	 * @dataProvider getSuccessfulCodes
+	 */
+	public function testFetchParsesANonHtmlBodyWhateverTheCode(int $code): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($code, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/contact', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$fetchResult = $fetcher->fetch(new Url('https://com.example/'));
+		Assert::same('Contact: https://example.com/contact', $fetchResult->getContents());
+	}
+
+
 	public function testFetchCallbacks(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
