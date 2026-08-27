@@ -303,7 +303,8 @@ A value the library knows to be a URL is the exception: it exists only because i
 Reading as it is written is the point of that exception, so such a URL keeps whatever script its host is written in: a right-to-left host reorders neutral text around it the way any right-to-left text does, and a host that reads like another one reads like it here too, which no certificate covers for a URL the library never fetches, such as one from a `Canonical` or `Contact` field.
 That covers what a checked host sends, and a result rebuilt from serialized JSON too: the message formats exist only in code, selected by the class name and, for the one violation with a variable reason, by an enum case value, so the JSON can pick a format but cannot supply one, and the values it does supply are encoded the same way.
 `checksecuritytxt.php` prints a violation's values through the very same rule, so what it shows and what a violation's `getMessage()` returns agree.
-An exception is different: its values survive a JSON round trip as strings, so `getMessage()` encodes them while the script parses the ones that are URLs back and prints those as they read.
+An exception is nearly the same: it carries a host as a `SecurityTxtHost`, which like a URL exists only because it parsed and so is quoted as it reads, and everything else
+as a string that `getMessage()` encodes. Its constructor params stay scalar so a stored result can be rebuilt, and the script parses the ones that are URLs back and prints those as they read.
 But please be aware that the messages still contain server-supplied information, so please do not display the messages as HTML and do not feed them into a Markdown parser or similar.
 If you'd do that, a malicious server could inject content that would result in Cross-Site Scripting attack for example.
 
@@ -314,7 +315,9 @@ Those are not encoded, and neither are the values from `getMessageValues()` belo
 If you'd like to format some of the values contained in the messages, you can use the exception's `getMessageFormat()` and `getMessageValues()` methods.
 The `getMessageFormat()` method will return an error message with `%s` placeholders, while `getMessageValues()` will return the values, including the server-supplied ones,
 which you can, **after a proper sanitization and/or escaping**, wrap in `<code>` tags for example, and use them to replace the placeholders.
-A violation's values are `string|Uri\WhatWg\Url`, the URL ones being the values it knows to be URLs, and a `Url` has no string form of its own: call `toUnicodeString()` on it,
-or hand the value to `Spaze\SecurityTxt\SecurityTxtPrintableValue::render()`, which is what this library prints with. An exception's values are always strings.
+A violation's values are `string|Uri\WhatWg\Url` and an exception's are `string|Spaze\SecurityTxt\SecurityTxtHost`, the non-string ones being the values each knows to be a
+URL or a host. Neither has a string form of its own, so do not pass one straight to `implode()`, `htmlspecialchars()` or anything else expecting a string: call
+`toUnicodeString()` on a `Url` and `getUnicode()` on a `SecurityTxtHost`, or hand either to `Spaze\SecurityTxt\SecurityTxtPrintableValue::render()`, which takes all three
+and is what this library prints with.
 
 The same goes for formatting `SecurityTxtSpecViolation` object messages: you can use `getMessageFormat()` and `getMessageValues()`, and also `getHowToFixFormat()` and `getHowToFixValues()`.

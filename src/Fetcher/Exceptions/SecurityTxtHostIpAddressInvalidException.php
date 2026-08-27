@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Throwable;
 use ValueError;
 
@@ -15,8 +16,10 @@ final class SecurityTxtHostIpAddressInvalidException extends SecurityTxtFetcherE
 	 *     other one is refused
 	 * @throws ValueError
 	 */
-	public function __construct(string $host, string $ip, SecurityTxtIpAddressType|int $ipAddressType, string $url, ?Throwable $previous = null)
+	public function __construct(string|SecurityTxtHost $host, string $ip, SecurityTxtIpAddressType|int $ipAddressType, string $url, ?Throwable $previous = null)
 	{
+		// The params stay scalar so a replay can rebuild this from JSON, the values carry the host itself so it prints as it reads
+		$host = self::toHost($host);
 		$ipAddressType = is_int($ipAddressType) ? SecurityTxtIpAddressType::from($ipAddressType) : $ipAddressType;
 		// A `match` rather than an `if`, so a case added later has to be given a name here instead of quietly being called IPv6
 		$type = match ($ipAddressType) {
@@ -24,7 +27,7 @@ final class SecurityTxtHostIpAddressInvalidException extends SecurityTxtFetcherE
 			SecurityTxtIpAddressType::V6 => 'IPv6',
 		};
 		parent::__construct(
-			[$host, $ip, $ipAddressType->value, $url],
+			[self::hostToString($host), $ip, $ipAddressType->value, $url],
 			"Host %s resolves to an invalid %s address %s",
 			[$host, $type, $ip],
 			$url,

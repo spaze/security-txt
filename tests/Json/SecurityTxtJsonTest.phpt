@@ -15,7 +15,9 @@ use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureException;
@@ -350,6 +352,12 @@ final class SecurityTxtJsonTest extends TestCase
 			],
 			SecurityTxtOnlyIpv6HostButIpv6DisabledException::class => [
 				new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, '2001:DB8::1', 'https://example.com/.well-known/security.txt'),
+			],
+			SecurityTxtHostIpAddressInvalidException::class => [
+				new SecurityTxtHostIpAddressInvalidException($host, '1.1.1.0', SecurityTxtIpAddressType::V6, 'https://example.com/.well-known/security.txt'),
+			],
+			SecurityTxtHostIpAddressNotPublicException::class => [
+				new SecurityTxtHostIpAddressNotPublicException($host, '127.0.0.1', 'https://example.com/.well-known/security.txt'),
 			],
 			SecurityTxtTooManyRedirectsException::class => [
 				new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1),
