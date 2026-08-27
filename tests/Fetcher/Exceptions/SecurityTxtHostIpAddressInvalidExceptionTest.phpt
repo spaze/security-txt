@@ -55,6 +55,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 	{
 		$fromCase = new SecurityTxtHostIpAddressInvalidException("h\u{E1}\u{10D}ky.example", $ip, $type, 'https://com.example/');
 		Assert::contains("resolves to an invalid {$label} address", $fromCase->getMessage());
+		Assert::same($type, $fromCase->getIpAddressType());
 
 		$encoded = json_encode(['error' => $fromCase]);
 		assert(is_string($encoded));
@@ -62,6 +63,8 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 		assert(is_array($decoded));
 		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
 		Assert::type(SecurityTxtHostIpAddressInvalidException::class, $replayed);
+		assert($replayed instanceof SecurityTxtHostIpAddressInvalidException);
+		Assert::same($type, $replayed->getIpAddressType());
 		Assert::same($fromCase->getMessage(), $replayed->getMessage());
 		Assert::same($fromCase->jsonSerialize()['params'], $replayed->jsonSerialize()['params']);
 	}
