@@ -12,6 +12,7 @@ use LogicException;
 use ReflectionClass;
 use ReflectionParameter;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
+use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
@@ -411,6 +412,29 @@ final class SecurityTxtJsonTest extends TestCase
 			assert($exceptionFromJson instanceof SecurityTxtNotFoundException);
 			Assert::same($exception->getIpAddresses(), $exceptionFromJson->getIpAddresses());
 		}
+	}
+
+
+	/**
+	 * A blob from a shape this decoder does not know says so, rather than failing on whichever field happened to move. Only ever a refusal: what a reader that could partly
+	 * understand a newer blob ought to do is issue #107.
+	 */
+	public function testCreateFromJsonValuesRefusesAShapeFromTheFuture(): void
+	{
+		$newer = SecurityTxtJson::FORMAT_VERSION + 1;
+		Assert::throws(function () use ($newer): void {
+			$this->securityTxtJson->createCheckHostResultFromJsonValues(['class' => SecurityTxtCheckHostResult::class, 'formatVersion' => $newer]);
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: formatVersion is %s, this version reads up to %s', $newer, SecurityTxtJson::FORMAT_VERSION));
+		Assert::throws(function () use ($newer): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'formatVersion' => $newer]);
+		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: formatVersion is %s, this version reads up to %s', $newer, SecurityTxtJson::FORMAT_VERSION));
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createCheckHostResultFromJsonValues(['class' => SecurityTxtCheckHostResult::class, 'formatVersion' => '1']);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: formatVersion is not an int');
+		// The version this release writes is read back without complaint, and the check happens before any field is looked at
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createCheckHostResultFromJsonValues(['class' => SecurityTxtCheckHostResult::class, 'formatVersion' => SecurityTxtJson::FORMAT_VERSION]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: host is not set or not a string');
 	}
 
 

@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Check;
 use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
@@ -178,6 +179,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 	{
 		return [
 			'class' => $this::class,
+			'formatVersion' => SecurityTxtJson::FORMAT_VERSION,
 			'host' => $this->getHost()->getUnicode(),
 			'fetchResult' => $this->getFetchResult(),
 			'fetchErrors' => $this->getFetchErrors(),

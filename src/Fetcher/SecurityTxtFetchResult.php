@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use JsonSerializable;
 use Override;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Uri\WhatWg\Url;
 
@@ -104,6 +105,7 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 	{
 		return [
 			'class' => $this::class,
+			'formatVersion' => SecurityTxtJson::FORMAT_VERSION,
 			'constructedUrl' => $this->getConstructedUrl()->toUnicodeString(),
 			'finalUrl' => $this->getFinalUrl()->toUnicodeString(),
 			'redirects' => $this->getRedirects(),

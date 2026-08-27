@@ -36,6 +36,19 @@ use Uri\WhatWg\Url;
 final readonly class SecurityTxtJson
 {
 
+	/**
+	 * The shape of what `jsonSerialize()` writes, bumped when a stored result stops being readable by the code that read the previous one. Not the library version: this says
+	 * nothing about which release wrote the blob, only whether this decoder understands its shape. A consumer wanting to know which release wrote it should carry that itself,
+	 * the way the michalspacek.cz Lambda payload carries `libVersion` alongside, because the two answer different questions.
+	 *
+	 * Bump it only when a stored blob genuinely stops being readable by the previous decoder, never to track a release. A reader already fails on a break it cannot handle,
+	 * so the number costs nothing and turns `fetchResult is not set or not an array` into a sentence naming both versions; bumping it for a change an older reader could have
+	 * tolerated is what would turn a benign upgrade into a forced deploy order. What a bump should mean for a decoder that could partly understand a newer blob is issue #107,
+	 * and nothing here decides it.
+	 */
+	public const int FORMAT_VERSION = 1;
+
+
 	public function __construct(private SecurityTxtSplitLines $splitLines)
 	{
 	}
@@ -248,6 +261,7 @@ final readonly class SecurityTxtJson
 		if ($values['class'] !== SecurityTxtCheckHostResult::class) {
 			throw new SecurityTxtCannotParseJsonException('class is not ' . SecurityTxtCheckHostResult::class);
 		}
+		$this->checkFormatVersion($values);
 		if (!isset($values['host']) || !is_string($values['host'])) {
 			throw new SecurityTxtCannotParseJsonException('host is not set or not a string');
 		}
@@ -361,6 +375,7 @@ final readonly class SecurityTxtJson
 		if ($values['class'] !== SecurityTxtFetchResult::class) {
 			throw new SecurityTxtCannotParseJsonException('class is not ' . SecurityTxtFetchResult::class);
 		}
+		$this->checkFormatVersion($values);
 		if (!isset($values['constructedUrl']) || !is_string($values['constructedUrl'])) {
 			throw new SecurityTxtCannotParseJsonException('constructedUrl is not a string');
 		}
@@ -405,6 +420,26 @@ final readonly class SecurityTxtJson
 	 *
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
+
+
+	/**
+	 * @param array<array-key, mixed> $values
+	 * @throws SecurityTxtCannotParseJsonException
+	 */
+	private function checkFormatVersion(array $values): void
+	{
+		if (!isset($values['formatVersion'])) {
+			return;
+		}
+		if (!is_int($values['formatVersion'])) {
+			throw new SecurityTxtCannotParseJsonException('formatVersion is not an int');
+		}
+		if ($values['formatVersion'] > self::FORMAT_VERSION) {
+			throw new SecurityTxtCannotParseJsonException(sprintf('formatVersion is %s, this version reads up to %s', $values['formatVersion'], self::FORMAT_VERSION));
+		}
+	}
+
+
 	private function createUrlFromJsonValue(string $value, string $field): Url
 	{
 		$url = Url::parse($value);
