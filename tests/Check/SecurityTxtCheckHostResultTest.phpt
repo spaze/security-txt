@@ -52,9 +52,11 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 	{
 		$expected = [
 			'class' => 'Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult',
+			'formatVersion' => 1,
 			'host' => 'www.example.com',
 			'fetchResult' => [
 				'class' => 'Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult',
+				'formatVersion' => 1,
 				'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
 				'finalUrl' => 'https://www.example.com/.well-known/security.txt',
 				'redirects' => [
