@@ -28,7 +28,8 @@ final class SecurityTxtCannotOpenUrlExceptionTest extends TestCase
 		Assert::same("Can't open https://com.example/ (redirects: https://redir1.example/ → https://redir2.example/)", $exception->getMessage());
 		Assert::same($redirects, $exception->getRedirects());
 
-		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', [], '192.0.2.1', SecurityTxtIpAddressType::V4->value);
+		// The case itself, not its value, which is what the library passes and what nothing else here covers
+		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', [], '192.0.2.1', SecurityTxtIpAddressType::V4);
 		Assert::same("Can't open https://com.example/ using its IPv4 address 192.0.2.1", $exception->getMessage());
 		Assert::same('192.0.2.1', $exception->getIpAddress());
 		Assert::same(SecurityTxtIpAddressType::V4, $exception->getIpAddressType());

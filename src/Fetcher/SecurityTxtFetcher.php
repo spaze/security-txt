@@ -142,7 +142,7 @@ final class SecurityTxtFetcher
 			$this->callOnCallback($this->onUrlNotFound, $finalUrl);
 			$response = null;
 			$ipAddress = $e->getIpAddress();
-			$ipAddressType = SecurityTxtIpAddressType::from($e->getIpAddressType());
+			$ipAddressType = $e->getIpAddressType();
 		}
 		return new SecurityTxtFetcherFetchHostResult(
 			$url,
@@ -209,7 +209,7 @@ final class SecurityTxtFetcher
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
-			throw new SecurityTxtUrlNotFoundException($url->getUrl()->toUnicodeString(), $response->getHttpCode(), $ipAddress, $ipAddressType->value);
+			throw new SecurityTxtUrlNotFoundException($url->getUrl()->toUnicodeString(), $response->getHttpCode(), $ipAddress, $ipAddressType);
 		}
 		if ($response->getHttpCode() >= 300) {
 			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6, $maxAllowedRedirects);
@@ -229,6 +229,8 @@ final class SecurityTxtFetcher
 		if ($wellKnownContents === null && $topLevelContents === null) {
 			$wellKnownUrl = $wellKnown->getUrl()->toUnicodeString();
 			$topLevelUrl = $topLevel->getUrl()->toUnicodeString();
+			// The two `'type' => ...->value` below are scalar on purpose: unlike the three exceptions that take the case itself, `SecurityTxtNotFoundException` reads this
+			// array back with `is_int()`, so a case here becomes `type is not set or not an int`. Nothing catches that, the shape is `mixed` to the analysers
 			throw new SecurityTxtNotFoundException(
 				[
 					$wellKnownUrl => [
