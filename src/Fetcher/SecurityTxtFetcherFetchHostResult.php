@@ -37,8 +37,7 @@ final readonly class SecurityTxtFetcherFetchHostResult
 		}
 		$this->contents = $response?->getContents();
 		$this->isTruncated = $response !== null && $response->isTruncated();
-		$this->isRegularHtmlPage = $this->httpCode === 200
-			&& $this->contentType?->getLowercaseContentType() === 'text/html'
+		$this->isRegularHtmlPage = $this->contentType?->getLowercaseContentType() === 'text/html'
 			&& $this->contents !== null
 			&& str_contains(strtolower($this->contents), '<body');
 	}
