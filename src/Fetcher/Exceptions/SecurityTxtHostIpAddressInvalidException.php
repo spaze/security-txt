@@ -11,6 +11,9 @@ use ValueError;
 final class SecurityTxtHostIpAddressInvalidException extends SecurityTxtFetcherException
 {
 
+	private readonly SecurityTxtIpAddressType $ipAddressType;
+
+
 	/**
 	 * @param SecurityTxtIpAddressType|value-of<SecurityTxtIpAddressType> $ipAddressType An `int` only when rebuilt from JSON, where the wire carries the case value, and any
 	 *     other one is refused
@@ -20,19 +23,25 @@ final class SecurityTxtHostIpAddressInvalidException extends SecurityTxtFetcherE
 	{
 		// The params stay scalar so a replay can rebuild this from JSON, the values carry the host itself so it prints as it reads
 		$host = self::toHost($host);
-		$ipAddressType = is_int($ipAddressType) ? SecurityTxtIpAddressType::from($ipAddressType) : $ipAddressType;
+		$this->ipAddressType = is_int($ipAddressType) ? SecurityTxtIpAddressType::from($ipAddressType) : $ipAddressType;
 		// A `match` rather than an `if`, so a case added later has to be given a name here instead of quietly being called IPv6
-		$type = match ($ipAddressType) {
+		$type = match ($this->ipAddressType) {
 			SecurityTxtIpAddressType::V4 => 'IPv4',
 			SecurityTxtIpAddressType::V6 => 'IPv6',
 		};
 		parent::__construct(
-			[self::hostToString($host), $ip, $ipAddressType->value, $url],
+			[self::hostToString($host), $ip, $this->ipAddressType->value, $url],
 			"Host %s resolves to an invalid %s address %s",
 			[$host, $type, $ip],
 			$url,
 			previous: $previous,
 		);
+	}
+
+
+	public function getIpAddressType(): SecurityTxtIpAddressType
+	{
+		return $this->ipAddressType;
 	}
 
 }
