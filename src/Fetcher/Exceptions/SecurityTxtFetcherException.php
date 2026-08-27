@@ -139,7 +139,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 			'params' => $this->constructorParams,
 			'message' => $this->getMessage(),
 			'messageFormat' => $this->getMessageFormat(),
-			'messageValues' => array_map(fn(string|SecurityTxtHost $value): string => $value instanceof SecurityTxtHost ? $value->getUnicode() : $value, $this->getMessageValues()),
+			'messageValues' => array_map(self::hostToString(...), $this->getMessageValues()),
 			'url' => $this->getUrl(),
 			'redirects' => $this->getRedirects(),
 		];

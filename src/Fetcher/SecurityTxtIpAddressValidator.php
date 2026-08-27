@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
+use Spaze\SecurityTxt\SecurityTxtHost;
 
 final class SecurityTxtIpAddressValidator
 {
@@ -24,7 +25,7 @@ final class SecurityTxtIpAddressValidator
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 */
-	public function validate(string $ipAddress, SecurityTxtIpAddressType $type, string $host, string $url): void
+	public function validate(string $ipAddress, SecurityTxtIpAddressType $type, SecurityTxtHost $host, string $url): void
 	{
 		// A `match` for the same reason `SecurityTxtHostIpAddressInvalidException` uses one, and with more riding on it: a case added later would fall through a ternary to
 		// `FILTER_FLAG_IPV6` while the `V6` test below stayed false, so it would be filtered as IPv6 and skip the NAT64 check that keeps a mapped address off the metadata endpoint
@@ -54,7 +55,7 @@ final class SecurityTxtIpAddressValidator
 	 *
 	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 */
-	private function validateNat64IpAddress(string $ipAddress, string $host, string $url): void
+	private function validateNat64IpAddress(string $ipAddress, SecurityTxtHost $host, string $url): void
 	{
 		$binary = inet_pton($ipAddress);
 		if ($binary === false) {

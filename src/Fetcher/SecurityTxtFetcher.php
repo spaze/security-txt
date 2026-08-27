@@ -205,7 +205,7 @@ final class SecurityTxtFetcher
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
 			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl()->toUnicodeString(), $host);
 		}
-		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host->getUnicode(), $url->getUrl()->toUnicodeString());
+		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl()->toUnicodeString());
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {

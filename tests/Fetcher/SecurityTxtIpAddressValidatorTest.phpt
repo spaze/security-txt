@@ -4,8 +4,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -21,6 +24,18 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 	public function __construct()
 	{
 		$this->validator = new SecurityTxtIpAddressValidator();
+	}
+
+
+	/**
+	 * `fromString()` rather than a bare `new`, so a fixture spelled a way production would refuse is refused here too: `808` parses to the host `0.0.3.40` and `Example.COM`
+	 * to `example.com`, and a data row written against the spelling typed here would otherwise assert a message that can never be produced.
+	 *
+	 * @throws SecurityTxtCannotParseHostnameException
+	 */
+	private function host(string $host): SecurityTxtHost
+	{
+		return SecurityTxtHost::fromString($host);
 	}
 
 
@@ -61,11 +76,11 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 	{
 		if ($isValid) {
 			Assert::noError(function () use ($ipAddress, $type): void {
-				$this->validator->validate($ipAddress, $type, 'example.com', 'https://example.com/');
+				$this->validator->validate($ipAddress, $type, $this->host('example.com'), 'https://example.com/');
 			});
 		} else {
 			Assert::throws(function () use ($ipAddress, $type): void {
-				$this->validator->validate($ipAddress, $type, 'example.com', 'https://example.com/');
+				$this->validator->validate($ipAddress, $type, $this->host('example.com'), 'https://example.com/');
 			}, SecurityTxtHostIpAddressNotPublicException::class, "Host example.com resolves to a non-public IP address {$ipAddress}");
 		}
 	}
@@ -90,8 +105,38 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 	public function testValidateInvalidIpAddress(string $ipAddress, SecurityTxtIpAddressType $type, string $typeLabel): void
 	{
 		Assert::throws(function () use ($ipAddress, $type): void {
-			$this->validator->validate($ipAddress, $type, 'example.com', 'https://example.com/');
+			$this->validator->validate($ipAddress, $type, $this->host('example.com'), 'https://example.com/');
 		}, SecurityTxtHostIpAddressInvalidException::class, "Host example.com resolves to an invalid {$typeLabel} address {$ipAddress}");
+	}
+
+
+	/**
+	 * @return array<string, array{0:string, 1:SecurityTxtIpAddressType, 2:class-string<SecurityTxtFetcherException>, 3:string}>
+	 */
+	public function getNonPublicAndInvalid(): array
+	{
+		return [
+			'not public' => ['127.0.0.1', SecurityTxtIpAddressType::V4, SecurityTxtHostIpAddressNotPublicException::class, 'resolves to a non-public IP address 127.0.0.1'],
+			'invalid' => ['1.1.1.0', SecurityTxtIpAddressType::V6, SecurityTxtHostIpAddressInvalidException::class, 'resolves to an invalid IPv6 address 1.1.1.0'],
+		];
+	}
+
+
+	/**
+	 * Both of these name the host, and both took it as a string until now, so an internationalized one was percent encoded here while the same host read as itself in every
+	 * other fetch failure. The address is what these are about, but the host is what a reader recognises.
+	 *
+	 * @param class-string<SecurityTxtFetcherException> $class
+	 * @dataProvider getNonPublicAndInvalid
+	 */
+	public function testAnInternationalizedHostReadsAsItself(string $ipAddress, SecurityTxtIpAddressType $type, string $class, string $expected): void
+	{
+		$host = "h\u{E1}\u{10D}ky.example";
+		// Built out here rather than inside the closure: `host()` throws, and a throw in there would be weighed against the expected class instead of failing outright
+		$securityTxtHost = $this->host($host);
+		Assert::throws(function () use ($ipAddress, $type, $securityTxtHost, $host): void {
+			$this->validator->validate($ipAddress, $type, $securityTxtHost, "https://{$host}/");
+		}, $class, "Host {$host} {$expected}");
 	}
 
 }

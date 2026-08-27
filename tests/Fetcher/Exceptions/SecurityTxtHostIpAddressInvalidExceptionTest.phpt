@@ -53,7 +53,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 	 */
 	public function testTheCaseAndItsWireValueNameTheSameFamily(SecurityTxtIpAddressType $type, string $ip, string $label): void
 	{
-		$fromCase = new SecurityTxtHostIpAddressInvalidException('com.example', $ip, $type, 'https://com.example/');
+		$fromCase = new SecurityTxtHostIpAddressInvalidException("h\u{E1}\u{10D}ky.example", $ip, $type, 'https://com.example/');
 		Assert::contains("resolves to an invalid {$label} address", $fromCase->getMessage());
 
 		$encoded = json_encode(['error' => $fromCase]);
@@ -69,7 +69,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 
 	public function testTheWireCarriesTheCaseValueNotTheCase(): void
 	{
-		$exception = new SecurityTxtHostIpAddressInvalidException('com.example', '2001:DB8::1', SecurityTxtIpAddressType::V6, 'https://com.example/');
+		$exception = new SecurityTxtHostIpAddressInvalidException("h\u{E1}\u{10D}ky.example", '2001:DB8::1', SecurityTxtIpAddressType::V6, 'https://com.example/');
 		$params = $exception->jsonSerialize()['params'];
 		assert(is_array($params));
 		Assert::same(SecurityTxtIpAddressType::V6->value, $params[2]);
@@ -83,7 +83,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 	public function testTheWireCannotForgeATypeOutsideTheEnum(): void
 	{
 		$e = Assert::throws(function (): void {
-			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtHostIpAddressInvalidException::class, 'params' => ['com.example', '192.0.2.1', 1337, 'https://com.example/']]]);
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtHostIpAddressInvalidException::class, 'params' => ["h\u{E1}\u{10D}ky.example", '192.0.2.1', 1337, 'https://com.example/']]]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtHostIpAddressInvalidException::class);
 		Assert::type(ValueError::class, $e?->getPrevious());
 		Assert::same('1337 is not a valid backing value for enum ' . SecurityTxtIpAddressType::class, $e?->getPrevious()?->getMessage());

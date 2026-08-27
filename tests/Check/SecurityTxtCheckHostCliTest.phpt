@@ -291,6 +291,26 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	}
 
 
+	/**
+	 * The host is what the reader recognises in an SSRF block, and it reaches the printer inside a fetcher exception rather than through the `onHost` callback, so it exercises
+	 * the arm of `SecurityTxtCheckHostCli::url()` that hands a `SecurityTxtHost` straight through. Without that arm the host is re-encoded to `%E4%BE%8B%E3%81%88.jp` here
+	 * while the line above it, which comes from the callback, still reads as itself.
+	 */
+	public function testCheckNonPublicAddressNamesTheIdnHostAsItReads(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, [], '', false, '127.0.0.1', SecurityTxtIpAddressType::V4));
+		$checkHostCli = $this->getCheckHostCli($httpClient, new SecurityTxtDnsRecords('127.0.0.1', null));
+
+		ob_start();
+		$checkHostCli->check(new Url("https://\u{4F8B}\u{3048}.jp"), null, false, false, true, false, true, false, 'Help');
+		$output = ob_get_clean();
+		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp\n"
+			. "[Error] Host \u{4F8B}\u{3048}.jp resolves to a non-public IP address 127.0.0.1\n";
+		Assert::same($expected, $output);
+		Assert::same(CheckExitStatus::FileError->value, $this->exitStatus);
+	}
+
+
 	public function testCheckHelpNoColors(): void
 	{
 		$httpClient = $this->getHttpClient();
@@ -317,7 +337,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	}
 
 
-	private function getCheckHostCli(SecurityTxtFetcherHttpClient $httpClient): SecurityTxtCheckHostCli
+	private function getCheckHostCli(SecurityTxtFetcherHttpClient $httpClient, ?SecurityTxtDnsRecords $dnsRecords = null): SecurityTxtCheckHostCli
 	{
 		$urlParser = new SecurityTxtUrlParser();
 		$validator = new SecurityTxtValidator();
@@ -328,7 +348,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$splitLines = new SecurityTxtSplitLines($pregSplitProvider);
 		$ipAddressValidator = new SecurityTxtIpAddressValidator();
 		$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
-		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $ipAddressValidator, 1);
+		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $splitLines, $this->getDnsProvider($dnsRecords ?? new SecurityTxtDnsRecords('1.1.1.0', null)), $ipAddressValidator, 1);
 		$checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 		$checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory);
 		return new SecurityTxtCheckHostCli(
