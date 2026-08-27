@@ -20,7 +20,7 @@ final class SecurityTxtPhpDnsProvider implements SecurityTxtDnsProvider
 		// `dns_get_record()` does no IDNA of its own, so it is asked for the ASCII form; the readable one would simply not resolve
 		$records = @dns_get_record($host->getAscii(), DNS_A | DNS_AAAA); // intentionally silenced, converted to exception
 		if ($records === false) {
-			throw new SecurityTxtHostNotFoundException($url->toUnicodeString(), $host->getUnicode());
+			throw new SecurityTxtHostNotFoundException($url->toUnicodeString(), $host);
 		}
 		$ipRecord = $ipv6Record = null;
 		foreach ($records as $record) {

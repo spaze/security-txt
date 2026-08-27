@@ -43,7 +43,31 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
-	 * A host as a constructor param has to be a scalar, because that is what a replay of stored JSON hands back.
+	 * A host as a constructor param has to be a scalar, because that is what a replay of stored JSON hands back, and this is the way back from one. Without it a host arrived
+	 * as an object on a live check and as a string on a replay, and a string is encoded where a host reads as itself, so the same failure said `háčky.example` once and
+	 * `h%C3%A1%C4%8Dky.example` the next time.
+	 *
+	 * The wire carries what `getUnicode()` writes, and `fromString()` takes exactly that and nothing else, but the two are not quite inverses: a punycode label whose payload
+	 * decodes to characters that are not in normalization order, `xn--wuao` decodes to U+0352 U+0359 and NFC orders them the other way, comes back out of `getUnicode()` as a
+	 * spelling that reparses to a different host, and `fromString()` refuses it. That host is unusual but a redirect can name one, so this keeps the string rather than throwing:
+	 * a failure that reads encoded is what happened before any of this, while a replay that dies takes the whole stored result with it. The exceptions carrying a host accept
+	 * both, so the string arm is a value they can hold.
+	 */
+	final protected static function toHost(string|SecurityTxtHost $host): string|SecurityTxtHost
+	{
+		if ($host instanceof SecurityTxtHost) {
+			return $host;
+		}
+		try {
+			return SecurityTxtHost::fromString($host);
+		} catch (SecurityTxtCannotParseHostnameException) {
+			return $host;
+		}
+	}
+
+
+	/**
+	 * The scalar a constructor param has to be, whichever arm `toHost()` returned.
 	 */
 	final protected static function hostToString(string|SecurityTxtHost $host): string
 	{
