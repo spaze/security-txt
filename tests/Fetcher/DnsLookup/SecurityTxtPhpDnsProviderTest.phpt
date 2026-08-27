@@ -19,6 +19,26 @@ require __DIR__ . '/../../bootstrap.php';
 final class SecurityTxtPhpDnsProviderTest extends TestCase
 {
 
+	/**
+	 * The failure this provider raises names the host as it reads rather than percent encoded, which only a host outside ASCII can show. The over-long label makes the lookup
+	 * fail before a packet is sent, so unlike the assertion in `testGetRecords()` this one needs no resolver and runs in the ordinary suite, which is the only place this throw
+	 * is exercised at all.
+	 *
+	 * It does not distinguish handing the exception the host object from handing it `getUnicode()`: `toHost()` turns the string back into a host, so both spell the message the
+	 * same way. Nothing can distinguish them, which is why that line carries no test of its own.
+	 *
+	 * Kept first on purpose: `Tester\Environment::skip()` exits the process, so a method below a `needsInternet()` one never runs in the default suite.
+	 */
+	public function testHostNotFoundNamesTheHostAsItReads(): void
+	{
+		$host = str_repeat('a', 64) . ".h\u{E1}\u{10D}ky.example";
+		$url = new Url("https://{$host}/");
+		Assert::throws(function () use ($url): void {
+			(new SecurityTxtPhpDnsProvider())->getRecords($url, new SecurityTxtHost($url));
+		}, SecurityTxtHostNotFoundException::class, "%a%, can't resolve {$host}");
+	}
+
+
 	public function testGetRecords(): void
 	{
 		needsInternet();

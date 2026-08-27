@@ -13,9 +13,13 @@ use ReflectionClass;
 use ReflectionParameter;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
@@ -24,6 +28,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
@@ -333,7 +338,19 @@ final class SecurityTxtJsonTest extends TestCase
 	 */
 	public function getExceptions(): array
 	{
+		// A host outside ASCII, because a host reads as itself where a string is encoded, so these are the rows that notice if a replay stops turning the wire's string back
+		// into a host and the same failure starts saying `h%C3%A1%C4%8Dky.example` from a cache and `háčky.example` live
+		$host = SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example");
 		return [
+			SecurityTxtHostNotFoundException::class => [
+				new SecurityTxtHostNotFoundException('https://example.com/.well-known/security.txt', $host),
+			],
+			SecurityTxtHostIpAddressNotFoundException::class => [
+				new SecurityTxtHostIpAddressNotFoundException('https://example.com/.well-known/security.txt', $host),
+			],
+			SecurityTxtOnlyIpv6HostButIpv6DisabledException::class => [
+				new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, '2001:DB8::1', 'https://example.com/.well-known/security.txt'),
+			],
 			SecurityTxtTooManyRedirectsException::class => [
 				new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1),
 			],
@@ -426,6 +443,31 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::type(ValueError::class, $e?->getPrevious());
 		Assert::same('1337 is not a valid backing value for enum Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType', $e?->getPrevious()?->getMessage());
 		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['url', 303, '1.1.1.0', SecurityTxtIpAddressType::V4->value]]]));
+	}
+
+
+	/**
+	 * A host string the wire can genuinely carry but `SecurityTxtHost::fromString()` refuses still has to replay. `getUnicode()` and `fromString()` are not quite inverses: a
+	 * punycode label whose payload decodes out of normalization order comes back as a spelling that reparses to a different host. Such a host reads encoded, which is what it
+	 * did before any of this, rather than taking the whole stored result down with it.
+	 *
+	 * Built from the live object rather than pinned to a literal, because which labels do this is ICU's decision and moves with its version.
+	 */
+	public function testCreateFetcherExceptionFromJsonValuesKeepsAHostItCannotParseBack(): void
+	{
+		$host = new SecurityTxtHost(new Url('https://xn--wuao.example/'));
+		Assert::throws(function () use ($host): void {
+			SecurityTxtHost::fromString($host->getUnicode());
+		}, SecurityTxtCannotParseHostnameException::class);
+
+		$live = new SecurityTxtHostNotFoundException('https://example.com/', $host);
+		$encoded = json_encode(['error' => $live]);
+		assert(is_string($encoded));
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
+		Assert::type(SecurityTxtHostNotFoundException::class, $replayed);
+		Assert::contains(rawurlencode($host->getUnicode()), $replayed->getMessage());
 	}
 
 
