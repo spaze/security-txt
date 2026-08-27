@@ -108,7 +108,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 					$url->getUrl()->toUnicodeString(),
 					$url->getRedirects(),
 					$ipAddress,
-					$ipAddressType->value,
+					$ipAddressType,
 					curl_strerror($error),
 				);
 			}

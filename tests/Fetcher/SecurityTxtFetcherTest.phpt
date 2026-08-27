@@ -416,6 +416,23 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
+	/**
+	 * The same shape over IPv6, because the V4 one cannot tell the address family being carried from `SecurityTxtUrlNotFoundException` through to here from a constant: with
+	 * only that test, replacing the carry with a hardcoded `V4` left the suite green, so every 404'd IPv6 host could be reported as IPv4.
+	 */
+	public function testFetchNotFoundIpv6(): void
+	{
+		$ipAddress = '2001:1337:42:ec00:2468:7ea:cafe:d00d';
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, ['content-type' => 'text/plain; charset=utf-42'], 'random', false, $ipAddress, SecurityTxtIpAddressType::V6));
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$exception = Assert::throws(function () use ($fetcher, $ipAddress): void {
+			$fetcher->fetch(new Url("https://[{$ipAddress}]/"), false, false);
+		}, SecurityTxtNotFoundException::class, "Can't read security.txt: https://[{$ipAddress}]/.well-known/security.txt ({$ipAddress}) => 404, https://[{$ipAddress}]/security.txt ({$ipAddress}) => 404");
+		assert($exception instanceof SecurityTxtNotFoundException);
+		Assert::same([$ipAddress => [SecurityTxtIpAddressType::V6, 404]], $exception->getIpAddresses());
+	}
+
+
 	public function testFetchCallbacks(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));

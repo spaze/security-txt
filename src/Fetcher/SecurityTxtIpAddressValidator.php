@@ -26,9 +26,14 @@ final class SecurityTxtIpAddressValidator
 	 */
 	public function validate(string $ipAddress, SecurityTxtIpAddressType $type, string $host, string $url): void
 	{
-		$flag = $type === SecurityTxtIpAddressType::V4 ? FILTER_FLAG_IPV4 : FILTER_FLAG_IPV6;
+		// A `match` for the same reason `SecurityTxtHostIpAddressInvalidException` uses one, and with more riding on it: a case added later would fall through a ternary to
+		// `FILTER_FLAG_IPV6` while the `V6` test below stayed false, so it would be filtered as IPv6 and skip the NAT64 check that keeps a mapped address off the metadata endpoint
+		$flag = match ($type) {
+			SecurityTxtIpAddressType::V4 => FILTER_FLAG_IPV4,
+			SecurityTxtIpAddressType::V6 => FILTER_FLAG_IPV6,
+		};
 		if (filter_var($ipAddress, FILTER_VALIDATE_IP, $flag) === false) {
-			throw new SecurityTxtHostIpAddressInvalidException($host, $ipAddress, $type->value, $url);
+			throw new SecurityTxtHostIpAddressInvalidException($host, $ipAddress, $type, $url);
 		}
 		if (filter_var($ipAddress, FILTER_VALIDATE_IP, $flag | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_GLOBAL_RANGE) === false) {
 			throw new SecurityTxtHostIpAddressNotPublicException($host, $ipAddress, $url);
