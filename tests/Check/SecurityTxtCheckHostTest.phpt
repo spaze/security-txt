@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use Override;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
@@ -190,7 +191,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			new SecurityTxtFetcherResponse(200, [], $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator, 1);
-		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
+		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory, $this->urlParser);
 
 		$onRedirectCalled = false;
 		$checkHost->addOnRedirect(function () use (&$onRedirectCalled): void {
@@ -244,7 +245,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], $topLevelContents, false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator, 1);
-		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
+		$checkHost = new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory, $this->urlParser);
 
 		$onFetchError = $onFetchWarning = null;
 		$checkHost->addOnFetchError(function (?int $line, SecurityTxtSpecViolation $violation) use (&$onFetchError): void {
@@ -303,7 +304,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, $contents, false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator, 1);
-		return new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory);
+		return new SecurityTxtCheckHost($this->parser, $fetcher, $this->checkHostResultFactory, $this->urlParser);
 	}
 
 
@@ -352,6 +353,44 @@ final class SecurityTxtCheckHostTest extends TestCase
 			}
 
 		};
+	}
+
+
+	/**
+	 * The host a check reports has to be the host it fetched. It is built here and again inside the fetcher, from the same URL but by different routes, so this pins that the
+	 * reported one is settled too: without it a check of `https://ex%41mple.com/` fetches `example.com` and reports `exAmple.com`.
+	 */
+	public function testTheReportedHostIsTheOneFetched(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'nope', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$checkHost = new SecurityTxtCheckHost($this->parser, new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator), $this->checkHostResultFactory, $this->urlParser);
+		$reported = null;
+		$checkHost->addOnHost(function (SecurityTxtHost $host) use (&$reported): void {
+			$reported = $host->getAscii();
+		});
+		Assert::exception(function () use ($checkHost): void {
+			$checkHost->check(new Url('https://ex%41mple.com/'));
+		}, SecurityTxtNotFoundException::class);
+		Assert::same('example.com', $reported);
+	}
+
+
+	/**
+	 * A password or a token in the URL must not reach a message, a callback or a stored result. The fetcher strips them before deriving anything; this derives a host too, so
+	 * it strips them as well.
+	 */
+	public function testCredentialsNeverReachAMessage(): void
+	{
+		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'nope', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+		$checkHost = new SecurityTxtCheckHost($this->parser, new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator), $this->checkHostResultFactory, $this->urlParser);
+		$e = Assert::throws(function () use ($checkHost): void {
+			$checkHost->check(new Url('https://user:hunter2@%78n--a.example/?token=s3cr3t#frag'));
+		}, SecurityTxtFetcherException::class);
+		assert($e instanceof SecurityTxtFetcherException);
+		foreach (['hunter2', 's3cr3t', 'user:'] as $secret) {
+			Assert::notContains($secret, $e->getMessage());
+			Assert::notContains($secret, $e->getUrl());
+		}
 	}
 
 }

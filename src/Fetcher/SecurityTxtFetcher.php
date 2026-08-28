@@ -93,14 +93,16 @@ final class SecurityTxtFetcher
 		if ($maxAllowedRedirects !== null) {
 			$this->validateMaxAllowedRedirects($maxAllowedRedirects);
 		}
-		$host = new SecurityTxtHost($url);
 		try {
-			$baseUrl = $url
-				->withUsername(null)
-				->withPassword(null)
-				->withScheme('https')
-				->withQuery(null)
-				->withFragment(null);
+			$baseUrl = $this->urlParser->normalize(
+				$url
+					->withUsername(null)
+					->withPassword(null)
+					->withScheme('https')
+					->withQuery(null)
+					->withFragment(null),
+			);
+			$host = new SecurityTxtHost($baseUrl);
 			$wellKnownUrl = $baseUrl->withPath('/.well-known/security.txt');
 			$topLevelUrl = $baseUrl->withPath('/security.txt');
 		} catch (InvalidUrlException $e) {
@@ -379,10 +381,11 @@ final class SecurityTxtFetcher
 			if (count($this->redirects[$originalUrlString]) > $maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url->toUnicodeString(), $this->redirects[$originalUrlString], $maxAllowedRedirects);
 			}
-			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as a
-			// hostname that will not parse, losing the redirect chain that says where the host sent us
+			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as
+			// a hostname that will not parse, losing the redirect chain that says where the host sent us. Settling comes after it for the same reason
 			$fetcherUrl = new SecurityTxtFetcherUrl($locationUrl, $this->getRedirects($originalUrl));
-			return $this->getResponse($fetcherUrl, new SecurityTxtHost($locationUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
+			$settledUrl = $this->urlParser->normalize($fetcherUrl->getUrl());
+			return $this->getResponse(new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl)), new SecurityTxtHost($settledUrl), $originalUrl, $settledUrl, $noIpv6, $maxAllowedRedirects);
 		}
 	}
 

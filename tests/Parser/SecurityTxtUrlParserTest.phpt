@@ -168,6 +168,49 @@ final class SecurityTxtUrlParserTest extends TestCase
 		Assert::null(Url::parse($url));
 	}
 
+
+	/**
+	 * @return array<string, array{0:string, 1:string}>
+	 */
+	public function getUrlsToSettle(): array
+	{
+		return [
+			'percent escape uncovering a capital' => ['https://ex%41mple.com/', 'https://example.com/'],
+			'capitals in the host' => ['https://EXAMPLE.com/x', 'https://example.com/x'],
+			'the scheme is not promoted' => ['http://ex%41mple.com/x', 'http://example.com/x'],
+			'a non-special scheme survives' => ['ftp://example.com/x', 'ftp://example.com/x'],
+			'the port stays' => ['https://ex%41mple.com:8443/x', 'https://example.com:8443/x'],
+			'path, query and fragment stay' => ['https://ex%41mple.com/a%20b?q=1#f', 'https://example.com/a%20b?q=1#f'],
+			'credentials stay' => ['https://user:pass@ex%41mple.com/', 'https://user:pass@example.com/'],
+			'an escape in the path is not touched' => ['https://example.com/%41', 'https://example.com/%41'],
+			'already settled' => ['https://example.com/', 'https://example.com/'],
+		];
+	}
+
+
+	/**
+	 * @dataProvider getUrlsToSettle
+	 */
+	public function testNormalizeSettlesTheHostAndNothingElse(string $url, string $expected): void
+	{
+		$settled = $this->securityTxtUrlParser->normalize(new Url($url));
+		Assert::same($expected, $settled->toAsciiString());
+		// Settling twice is settling once, or callers could not treat it as a fixed point
+		Assert::same($expected, $this->securityTxtUrlParser->normalize($settled)->toAsciiString());
+	}
+
+
+	/**
+	 * The branch that used to hand back the unsettled URL. `xn--a` is not valid punycode, so parsing the serialization refuses it outright, and returning the original would
+	 * leave a URL whose readable form is the bare `https://` with the host and path gone.
+	 */
+	public function testNormalizeRefusesAUrlThatWillNotParseAgain(): void
+	{
+		Assert::throws(function (): void {
+			$this->securityTxtUrlParser->normalize(new Url('https://%78n--a.example/'));
+		}, SecurityTxtCannotParseHostnameException::class, "Can't parse hostname from https://xn--a.example/");
+	}
+
 }
 
 (new SecurityTxtUrlParserTest())->run();

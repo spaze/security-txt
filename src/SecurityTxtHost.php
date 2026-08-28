@@ -27,7 +27,8 @@ final readonly class SecurityTxtHost
 	{
 		$unicode = $url->getUnicodeHost();
 		$ascii = $url->getAsciiHost();
-		if ($unicode === null || $ascii === null) {
+		// A host with a label that is not valid punycode parses to a readable form of `''`, which resolves to nothing and prints as nothing
+		if ($unicode === null || $ascii === null || $unicode === '') {
 			throw new SecurityTxtCannotParseHostnameException($url->toUnicodeString());
 		}
 		$this->unicode = $unicode;

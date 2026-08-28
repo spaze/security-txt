@@ -350,7 +350,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $splitLines, $this->getDnsProvider($dnsRecords ?? new SecurityTxtDnsRecords('1.1.1.0', null)), $ipAddressValidator, 1);
 		$checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
-		$checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory);
+		$checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory, $urlParser);
 		return new SecurityTxtCheckHostCli(
 			new ConsolePrinter(),
 			$checkHost,
