@@ -77,6 +77,32 @@ final class SecurityTxtHostTest extends TestCase
 		}, SecurityTxtCannotParseHostnameException::class);
 	}
 
+
+	/**
+	 * @return array<string, array{0:string}>
+	 */
+	public function getUrlsWithNoUsableHost(): array
+	{
+		return [
+			'a file URL' => ['file:///x'],
+			'a label that is not valid punycode' => ['https://%78n--a.example/'],
+		];
+	}
+
+
+	/**
+	 * An empty host is as unusable as a missing one: it resolves to nothing, prints as nothing, and a result carrying it cannot be read back, because the serialized form is
+	 * the empty string and `fromString('')` refuses it.
+	 *
+	 * @dataProvider getUrlsWithNoUsableHost
+	 */
+	public function testAnEmptyHostIsRefusedLikeAMissingOne(string $url): void
+	{
+		Assert::throws(function () use ($url): void {
+			new SecurityTxtHost(new Url($url));
+		}, SecurityTxtCannotParseHostnameException::class);
+	}
+
 }
 
 (new SecurityTxtHostTest())->run();

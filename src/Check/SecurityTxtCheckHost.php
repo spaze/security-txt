@@ -21,6 +21,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
+use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Uri\WhatWg\Url;
@@ -75,6 +76,7 @@ final class SecurityTxtCheckHost
 		private readonly SecurityTxtParser $parser,
 		private readonly SecurityTxtFetcher $fetcher,
 		private readonly SecurityTxtCheckHostResultFactory $resultFactory,
+		private readonly SecurityTxtUrlParser $urlParser,
 	) {
 		$this->initFetcherCallbacks();
 	}
@@ -101,8 +103,10 @@ final class SecurityTxtCheckHost
 	 */
 	public function check(Url $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtCheckHostResult
 	{
-		// The fetcher starts every check over https, whatever scheme the caller typed, so the host is judged under https too rather than under a scheme that decides nothing
-		$host = new SecurityTxtHost($url->withScheme('https'));
+		// The same stripping the fetcher does before it derives anything, so a password or a token in the URL cannot reach a message, a callback or a stored result
+		$host = new SecurityTxtHost($this->urlParser->normalize(
+			$url->withUsername(null)->withPassword(null)->withScheme('https')->withQuery(null)->withFragment(null),
+		));
 		$this->callOnCallback($this->onHost, $host);
 		$fetchResult = $this->fetcher->fetch($url, $requireTopLevelLocation, $noIpv6, $maxAllowedRedirects);
 		$parseResult = $this->parser->parseFetchResult($fetchResult, $expiresWarningThreshold, $strictMode);

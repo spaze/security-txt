@@ -5,6 +5,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Closure;
 use LogicException;
 use Override;
 use ReflectionMethod;
@@ -478,6 +479,209 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$fetchResult = $fetcher->fetch(new Url('https://com.example/'));
 		Assert::same('Contact: https://example.com/contact', $fetchResult->getContents());
+	}
+
+
+	/**
+	 * @return array<string, array{0:string, 1:string, 2:string}>
+	 */
+	public function getUrlsToNormalize(): array
+	{
+		return [
+			'percent escape uncovering a capital' => ['https://ex%41mple.com/', 'example.com', 'https://example.com/.well-known/security.txt'],
+			'capitals in the host' => ['https://EXAMPLE.com/', 'example.com', 'https://example.com/.well-known/security.txt'],
+			'readable internationalized' => ["https://h\u{E1}\u{10D}ky.example/", 'xn--hky-ela4t.example', 'https://xn--hky-ela4t.example/.well-known/security.txt'],
+			'punycode in capitals' => ['https://XN--HKY-ELA4T.example/', 'xn--hky-ela4t.example', 'https://xn--hky-ela4t.example/.well-known/security.txt'],
+			'already settled' => ['https://example.com/', 'example.com', 'https://example.com/.well-known/security.txt'],
+			'a port, which is authority but not host' => ['https://ex%41mple.com:8443/', 'example.com', 'https://example.com:8443/.well-known/security.txt'],
+			'an escape uncovering a punycode prefix' => ['https://%78%6E--%78%6E--.example/', 'xn-.example', 'https://xn-.example/.well-known/security.txt'],
+			'http, which the fetcher forces to https' => ['http://ex%41mple.com/', 'example.com', 'https://example.com/.well-known/security.txt'],
+			'credentials, query and fragment, all dropped' => ['https://user:pass@ex%41mple.com/p?q=1#f', 'example.com', 'https://example.com/.well-known/security.txt'],
+		];
+	}
+
+
+	/**
+	 * The invariant the `CURLOPT_RESOLVE` pin rests on: the host keying it has to be the one curl reads out of the URL it is handed, or curl finds no entry and resolves the
+	 * name itself, reaching an address this library never validated. Deriving both from one normalized URL is what makes that structural rather than a coincidence.
+	 *
+	 * @dataProvider getUrlsToNormalize
+	 */
+	public function testTheFetchedUrlAndThePinnedHostAgree(string $url, string $expectedHost, string $expectedWellKnownUrl): void
+	{
+		$seen = [];
+		$client = $this->getObservingHttpClient(function (string $url, string $host) use (&$seen): void {
+			$seen[] = ['url' => $url, 'host' => $host];
+		});
+		$fetcher = new SecurityTxtFetcher($client, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		Assert::exception(function () use ($fetcher, $url): void {
+			$fetcher->fetch(new Url($url));
+		}, SecurityTxtNotFoundException::class);
+		$first = $seen[0] ?? null;
+		Assert::notSame(null, $first);
+		assert($first !== null);
+		// The request goes to the settled URL, and the host it is pinned by is that URL's host
+		Assert::same($expectedWellKnownUrl, $first['url']);
+		Assert::same($expectedHost, $first['host']);
+		foreach ($seen as $one) {
+			// The host as curl reads it, a raw substring of the URL string, not reparsed: reparsing would re-apply the settling under test
+			preg_match('~^https://([^/?#]+)~', $one['url'], $matches);
+			$authority = $matches[1] ?? null;
+			Assert::type('string', $authority);
+			assert(is_string($authority));
+			// The authority is not the host: strip any userinfo and any port, or a URL carrying either fails an invariant that is about neither
+			$at = strrpos($authority, '@');
+			$curlReads = $at === false ? $authority : substr($authority, $at + 1);
+			$colon = strrpos($curlReads, ':');
+			if ($colon !== false && !str_contains(substr($curlReads, $colon), ']')) {
+				$curlReads = substr($curlReads, 0, $colon);
+			}
+			// Identical, not merely equal ignoring case: curl would match a case difference, but after settling there is no case difference left to allow for, and allowing
+			// for one would let a settling that only folded case pass as though it had settled the host
+			Assert::same($one['host'], $curlReads);
+			Assert::same($expectedHost, $one['host']);
+		}
+	}
+
+
+	/**
+	 * Records what each request was actually given: the URL string a client would hand to curl, and the host that keys the pin.
+	 *
+	 * @param Closure(string, string): void $observe
+	 */
+	private function getObservingHttpClient(Closure $observe): SecurityTxtFetcherHttpClient
+	{
+		return new class ($observe) implements SecurityTxtFetcherHttpClient {
+
+			/**
+			 * @param Closure(string, string): void $observe
+			 */
+			public function __construct(private readonly Closure $observe)
+			{
+			}
+
+
+			#[Override]
+			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+			{
+				($this->observe)($url->getUrl()->toAsciiString(), $host->getAscii());
+				return new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+			}
+
+		};
+	}
+
+
+	/**
+	 * A redirect names the next host, and it is the checked host that names it, so it is settled exactly like the URL a check starts from. Otherwise a `Location:` reaching a
+	 * host one way and a caller typing the same host another way would be two different checks of one host.
+	 */
+	public function testARedirectedUrlIsSettledToo(): void
+	{
+		$seen = [];
+		$client = $this->getObservingHttpClient(function (string $url, string $host) use (&$seen): void {
+			$seen[] = ['url' => $url, 'host' => $host];
+		});
+		$httpClient = new class ($client) implements SecurityTxtFetcherHttpClient {
+
+			private int $requests = 0;
+
+
+			public function __construct(private readonly SecurityTxtFetcherHttpClient $inner)
+			{
+			}
+
+
+			#[Override]
+			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+			{
+				$this->inner->getResponse($url, $host, $ipAddress, $ipAddressType);
+				return $this->requests++ === 0
+					? new SecurityTxtFetcherResponse(301, ['location' => 'https://ex%41mple.com/redirected'], '', false, $ipAddress, $ipAddressType)
+					: new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+			}
+
+		};
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		Assert::exception(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'));
+		}, SecurityTxtNotFoundException::class);
+		$redirected = $seen[1] ?? null;
+		Assert::notSame(null, $redirected);
+		assert($redirected !== null);
+		// Not `exAmple.com`, which is what the escape decodes to before a second parse folds the case it uncovered
+		Assert::same('https://example.com/redirected', $redirected['url']);
+		Assert::same('example.com', $redirected['host']);
+	}
+
+
+	/**
+	 * Settling folds the case an escape uncovered and nothing else. A redirect to `http://` is still followed to `http://`, which the fetcher allows and reports as a file
+	 * location that is not https, so settling must not quietly promote it.
+	 */
+	public function testSettlingARedirectLeavesItsSchemeAlone(): void
+	{
+		$seen = [];
+		$client = $this->getObservingHttpClient(function (string $url, string $host) use (&$seen): void {
+			$seen[] = ['url' => $url, 'host' => $host];
+		});
+		$httpClient = new class ($client) implements SecurityTxtFetcherHttpClient {
+
+			private int $requests = 0;
+
+
+			public function __construct(private readonly SecurityTxtFetcherHttpClient $inner)
+			{
+			}
+
+
+			#[Override]
+			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+			{
+				$this->inner->getResponse($url, $host, $ipAddress, $ipAddressType);
+				return $this->requests++ === 0
+					? new SecurityTxtFetcherResponse(301, ['location' => 'http://ex%41mple.com/redirected'], '', false, $ipAddress, $ipAddressType)
+					: new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+			}
+
+		};
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		Assert::exception(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'));
+		}, SecurityTxtNotFoundException::class);
+		$redirected = $seen[1] ?? null;
+		Assert::notSame(null, $redirected);
+		assert($redirected !== null);
+		Assert::same('http://example.com/redirected', $redirected['url']);
+	}
+
+
+	/**
+	 * Settling a redirect happens after the hop is recorded and after the scheme is refused, so a `Location` the fetcher will not follow still says where the host sent us.
+	 * Settling first turned this into a hostname error with an empty chain.
+	 */
+	public function testARefusedRedirectStillReportsWhereItPointed(): void
+	{
+		$httpClient = new class implements SecurityTxtFetcherHttpClient {
+
+			private int $requests = 0;
+
+
+			#[Override]
+			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+			{
+				return $this->requests++ === 0
+					? new SecurityTxtFetcherResponse(301, ['location' => 'ftp://%78n--a.example/'], '', false, $ipAddress, $ipAddressType)
+					: new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+			}
+
+		};
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$e = Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'));
+		}, SecurityTxtUrlUnsupportedSchemeException::class);
+		assert($e instanceof SecurityTxtUrlUnsupportedSchemeException);
+		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://%78n--a.example/'], $e->getRedirects());
 	}
 
 
