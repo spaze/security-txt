@@ -150,7 +150,8 @@ If that's the case, then you may want to encode the `Spaze\SecurityTxt\Fetcher\S
 
 Fetch exceptions can be recreated with `Spaze\SecurityTxt\Json\SecurityTxtJson::createFetcherExceptionFromJsonValues()`.
 
-JSON is not versioned. Newer versions of this library will make a best effort to decode JSON created by previous versions, but compatibility cannot be guaranteed across refactors or format changes.
+A stored result carries a `formatVersion`, and `Spaze\SecurityTxt\Json\SecurityTxtJson::FORMAT_VERSION` is the one this library writes.
+Decoding refuses a result written by a newer version, because it cannot know what the fields mean there, and makes a best effort on an older one or on one stored by a 2.x version, which carries no `formatVersion` at all, but compatibility cannot be guaranteed across refactors or format changes.
 
 When the JSON can't be decoded, the `create*FromJsonValues()` methods throw `Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException`.
 If it's a result you have stored, treat it as a cache miss and check the host again, instead of reporting the error to the user: the stored data was either written by an older version of this library or damaged some other way, and it will not become readable later.

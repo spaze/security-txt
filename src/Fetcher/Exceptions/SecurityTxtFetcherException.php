@@ -47,11 +47,9 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	 * as an object on a live check and as a string on a replay, and a string is encoded where a host reads as itself, so the same failure said `háčky.example` once and
 	 * `h%C3%A1%C4%8Dky.example` the next time.
 	 *
-	 * The wire carries what `getUnicode()` writes, and `fromString()` takes exactly that and nothing else, but the two are not quite inverses: a punycode label whose payload
-	 * decodes to characters that are not in normalization order, `xn--wuao` decodes to U+0352 U+0359 and NFC orders them the other way, comes back out of `getUnicode()` as a
-	 * spelling that reparses to a different host, and `fromString()` refuses it. That host is unusual but a redirect can name one, so this keeps the string rather than throwing:
-	 * a failure that reads encoded is what happened before any of this, while a replay that dies takes the whole stored result with it. The exceptions carrying a host accept
-	 * both, so the string arm is a value they can hold.
+	 * The wire carries what `getUnicode()` writes, and `fromString()` takes that back, for every host a check can reach over HTTP or HTTPS. It refuses one reached over a scheme
+	 * WHATWG calls opaque, whose host is case sensitive where a string is parsed back under HTTPS, so this keeps the string rather than throwing: a failure that reads encoded
+	 * beats a replay that dies and takes the whole stored result with it. The exceptions carrying a host accept both, so the string arm is a value they can hold.
 	 */
 	final protected static function toHost(string|SecurityTxtHost $host): string|SecurityTxtHost
 	{

@@ -171,6 +171,17 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 		Assert::throws(function () use ($values): void {
 			$this->securityTxtJson->createCheckHostResultFromJsonValues($values);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: host is not a hostname');
+
+		// `xn--khby` decodes to U+0648 U+0654, a pair NFC composes to a single character that encodes back as `xn--jgb`, so a stored host holding the decoded form names a host
+		// this version cannot rebuild and never writes: it keeps such a label as it was given. The spelling is written out, not derived through the current decoder, which one
+		// that leaves `xn--khby` encoded would turn into an accepted hostname and the assertion into nothing
+		$values = [
+			'class' => SecurityTxtCheckHostResult::class,
+			'host' => "\u{0648}\u{0654}.example",
+		];
+		Assert::throws(function () use ($values): void {
+			$this->securityTxtJson->createCheckHostResultFromJsonValues($values);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: host is not a hostname');
 		$values = [
 			'class' => SecurityTxtCheckHostResult::class,
 			'host' => 'host.example',
