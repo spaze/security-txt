@@ -10,6 +10,7 @@ use DateInterval;
 use DateTimeImmutable;
 use LogicException;
 use ReflectionClass;
+use ReflectionNamedType;
 use ReflectionParameter;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
@@ -50,6 +51,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
+use Throwable;
 use Uri\WhatWg\Url;
 use ValueError;
 
@@ -200,20 +202,18 @@ final class SecurityTxtJsonTest extends TestCase
 
 
 	/**
-	 * @return string|int|list<string>
+	 * @return string|int|list<string>|BackedEnum
 	 */
-	private function getConstructorParamValue(string $class, ReflectionParameter $parameter): string|int|array
+	private function getConstructorParamValue(string $class, ReflectionParameter $parameter): string|int|array|BackedEnum
 	{
 		// A field name is used for all strings because some violations read the value as a field name, and the constructor doesn't say which ones
 		$string = SecurityTxtField::Contact->value;
 		$type = (string)$parameter->getType();
-		// An enum param goes on the wire as its backing value, so any case proves the round trip, and the first one is used
-		foreach (explode('|', $type) as $part) {
-			if (is_subclass_of($part, BackedEnum::class)) {
-				$cases = $part::cases();
-				assert($cases !== []);
-				return $cases[0]->value;
-			}
+		// An enum param takes a case, which goes on the wire as its backing value and comes back as the case, so any one proves the round trip, and the first is used
+		if (is_subclass_of($type, BackedEnum::class)) {
+			$cases = $type::cases();
+			assert($cases !== []);
+			return $cases[0];
 		}
 		return match ($type) {
 			'string', '?string' => $string,
@@ -368,7 +368,7 @@ final class SecurityTxtJsonTest extends TestCase
 					'https://example.com/.well-known/security.txt',
 					['https://redir1.example/'],
 					'2001:DB8::1',
-					SecurityTxtIpAddressType::V6->value,
+					SecurityTxtIpAddressType::V6,
 					'Could not connect to server',
 				),
 			],
@@ -479,28 +479,113 @@ final class SecurityTxtJsonTest extends TestCase
 
 
 	/**
-	 * A host string the wire can genuinely carry but `SecurityTxtHost::fromString()` refuses still has to replay. A scheme WHATWG calls opaque runs no IDNA and its host is case
-	 * sensitive, while a string is parsed back under HTTPS, which folds the case, so such a host reads encoded rather than taking the whole stored result down with it.
+	 * A host string the wire can carry but `SecurityTxtHost::fromString()` refuses takes the whole stored error down. A scheme WHATWG calls opaque runs no IDNA and its host is
+	 * case sensitive, while a string is parsed back under HTTPS, which folds the case, so the name cannot rebuild the host it was written for. A check cannot reach such a
+	 * host, it fetches over HTTP and HTTPS only, though a caller can build one directly the way this test does; a released 2.x writer stored the raw decode, so its blob for
+	 * a label like `xn--khby` is refused the same way, a cache miss to check again, just like the result-level replay already refuses those. What this pins is the boundary
+	 * refusing rather than degrading into a host that reads encoded, which was one host reading as two things.
 	 */
-	public function testCreateFetcherExceptionFromJsonValuesKeepsAHostItCannotParseBack(): void
+	public function testCreateFetcherExceptionFromJsonValuesRefusesAHostItCannotRebuild(): void
 	{
-		// An opaque scheme is the remaining case a string cannot be rebuilt from: its host is case sensitive, and a string is parsed back under HTTPS, which folds the case
 		$host = new SecurityTxtHost(new Url('foo://Plain.Example/x'));
 		Assert::throws(function () use ($host): void {
 			SecurityTxtHost::fromString($host->getUnicode());
 		}, SecurityTxtCannotParseHostnameException::class);
 
 		$live = new SecurityTxtHostNotFoundException('https://example.com/', $host);
+		Assert::contains($host->getUnicode(), $live->getMessage());
 		$encoded = json_encode(['error' => $live]);
 		assert(is_string($encoded));
 		$decoded = json_decode($encoded, true);
 		assert(is_array($decoded));
-		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
-		Assert::type(SecurityTxtHostNotFoundException::class, $replayed);
-		// The live message reads the host as itself; the replayed one has only a string, which is encoded. `Plain.Example` is printable ASCII either way, so what separates
-		// them here is the type the value arrived as, not its bytes
-		Assert::contains($host->getUnicode(), $live->getMessage());
-		Assert::same([$host->getUnicode()], array_values(array_filter($replayed->getMessageValues(), fn(string|SecurityTxtHost $v): bool => !$v instanceof SecurityTxtHost && $v === $host->getUnicode())));
+		$e = Assert::throws(function () use ($decoded): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtHostNotFoundException::class);
+		Assert::type(SecurityTxtCannotParseHostnameException::class, $e?->getPrevious());
+	}
+
+
+	/**
+	 * The spread reads a string key as a named argument and ignores what an integer key says, feeding those values in iteration order, so the rebuild has to read keys the same
+	 * two ways: `['3' => …, '0' => …]` means third-in-iteration-order-first, not fourth-parameter-and-first. The library writes params as a plain array, so only a blob written
+	 * by someone else can carry keys like these, and it replays the same as it did when the constructors took the scalars themselves.
+	 */
+	public function testCreateFetcherExceptionFromJsonValuesReadsKeysLikeTheSpread(): void
+	{
+		$named = $this->securityTxtJson->createFetcherExceptionFromJsonValues([
+			'error' => [
+				'class' => SecurityTxtHostNotFoundException::class,
+				'params' => ['host' => "h\u{E1}\u{10D}ky.example", 'url' => 'https://example.com/'],
+			],
+		]);
+		Assert::same("Can't open https://example.com/, can't resolve h\u{E1}\u{10D}ky.example", $named->getMessage());
+		// The host arrived as a string and reads as itself, so it was rebuilt into a host, not left in the string arm
+		Assert::type(SecurityTxtHost::class, $named->getMessageValues()[1]);
+
+		$decoded = json_decode('{"error": {"class": "' . str_replace('\\', '\\\\', SecurityTxtHostIpAddressInvalidException::class) . '", "params": {"0": "example.com", "1": "1.2.3.4", "3": 2, "2": "https://example.com/"}}}', true);
+		assert(is_array($decoded));
+		$outOfOrder = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
+		Assert::type(SecurityTxtHostIpAddressInvalidException::class, $outOfOrder);
+		assert($outOfOrder instanceof SecurityTxtHostIpAddressInvalidException);
+		Assert::same('Host example.com resolves to an invalid IPv6 address 1.2.3.4', $outOfOrder->getMessage());
+		Assert::same(SecurityTxtIpAddressType::V6, $outOfOrder->getIpAddressType());
+	}
+
+
+	/**
+	 * `createConstructorArguments()` rebuilds exactly two kinds of typed value, a host and a backed enum, so a constructor param of any other class type would serialize fine,
+	 * work on every live check and fail only at replay in a consumer, taking each stored result carrying it along. Every concrete exception is enumerated from the filesystem,
+	 * the way `getViolations()` nets violations, so a class added later is covered by being written. `Throwable` is allowed because `$previous` stays out of the params by
+	 * convention, and a union is refused outright, which is the point of the change these boundaries came from.
+	 */
+	public function testEveryFetcherExceptionConstructorParamCanComeBackFromTheWire(): void
+	{
+		$files = glob(__DIR__ . '/../../src/Fetcher/Exceptions/*.php');
+		assert(is_array($files));
+		$namespace = (new ReflectionClass(SecurityTxtFetcherException::class))->getNamespaceName();
+		$checked = 0;
+		foreach ($files as $file) {
+			$class = $namespace . '\\' . basename($file, '.php');
+			assert(class_exists($class));
+			$reflection = new ReflectionClass($class);
+			if ($reflection->isAbstract() || !$reflection->isSubclassOf(SecurityTxtFetcherException::class)) {
+				continue;
+			}
+			foreach ($reflection->getConstructor()?->getParameters() ?? [] as $parameter) {
+				$type = $parameter->getType();
+				Assert::true($type instanceof ReflectionNamedType, "{$class} \${$parameter->getName()} has a union type or no type at all");
+				assert($type instanceof ReflectionNamedType);
+				$name = $type->getName();
+				// The types `json_decode()` produces, plus the two the boundary rebuilds from one of them
+				$replayable = in_array($name, ['string', 'int', 'float', 'bool', 'null', 'array', SecurityTxtHost::class], true) || is_subclass_of($name, BackedEnum::class);
+				// `$previous` is passed by a live caller and never serialized, so it is the one parameter whose type the wire never has to carry
+				Assert::true(
+					$replayable || ($name === Throwable::class && $parameter->getName() === 'previous'),
+					"{$class} \${$parameter->getName()} is a {$name}, which a replay of stored JSON cannot rebuild",
+				);
+				$checked++;
+			}
+		}
+		Assert::true($checked > 0); // Would pass without testing anything if the path above was wrong
+	}
+
+
+	/**
+	 * The nullable type stays out of the rebuild: null is neither a case value nor a host name, so it passes through to the parameter that allows it.
+	 */
+	public function testCreateFetcherExceptionFromJsonValuesPassesNullThrough(): void
+	{
+		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues([
+			'error' => [
+				'class' => SecurityTxtCannotOpenUrlException::class,
+				'params' => ['https://example.com/', [], null, null, null],
+			],
+		]);
+		Assert::type(SecurityTxtCannotOpenUrlException::class, $replayed);
+		assert($replayed instanceof SecurityTxtCannotOpenUrlException);
+		Assert::null($replayed->getIpAddressType());
+		Assert::null($replayed->getIpAddress());
+		Assert::same("Can't open https://example.com/", $replayed->getMessage());
 	}
 
 

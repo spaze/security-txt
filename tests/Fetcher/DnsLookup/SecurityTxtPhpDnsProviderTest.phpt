@@ -24,9 +24,6 @@ final class SecurityTxtPhpDnsProviderTest extends TestCase
 	 * fail before a packet is sent, so unlike the assertion in `testGetRecords()` this one needs no resolver and runs in the ordinary suite, which is the only place this throw
 	 * is exercised at all.
 	 *
-	 * It does not distinguish handing the exception the host object from handing it `getUnicode()`: `toHost()` turns the string back into a host, so both spell the message the
-	 * same way. Nothing can distinguish them, which is why that line carries no test of its own.
-	 *
 	 * Kept first on purpose: `Tester\Environment::skip()` exits the process, so a method below a `needsInternet()` one never runs in the default suite.
 	 */
 	public function testHostNotFoundNamesTheHostAsItReads(): void

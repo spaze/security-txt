@@ -28,18 +28,17 @@ final class SecurityTxtCannotOpenUrlExceptionTest extends TestCase
 		Assert::same("Can't open https://com.example/ (redirects: https://redir1.example/ → https://redir2.example/)", $exception->getMessage());
 		Assert::same($redirects, $exception->getRedirects());
 
-		// The case itself, not its value, which is what the library passes and what nothing else here covers
 		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', [], '192.0.2.1', SecurityTxtIpAddressType::V4);
 		Assert::same("Can't open https://com.example/ using its IPv4 address 192.0.2.1", $exception->getMessage());
 		Assert::same('192.0.2.1', $exception->getIpAddress());
 		Assert::same(SecurityTxtIpAddressType::V4, $exception->getIpAddressType());
 
-		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', [], '2001:DB8::1', SecurityTxtIpAddressType::V6->value, 'Could not connect to server');
+		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', [], '2001:DB8::1', SecurityTxtIpAddressType::V6, 'Could not connect to server');
 		Assert::same("Can't open https://com.example/ using its IPv6 address 2001:DB8::1 (Could not connect to server)", $exception->getMessage());
 		Assert::same('2001:DB8::1', $exception->getIpAddress());
 		Assert::same(SecurityTxtIpAddressType::V6, $exception->getIpAddressType());
 
-		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', $redirects, '2001:DB8::1', SecurityTxtIpAddressType::V6->value, 'Could not connect to server');
+		$exception = new SecurityTxtCannotOpenUrlException('https://com.example/', $redirects, '2001:DB8::1', SecurityTxtIpAddressType::V6, 'Could not connect to server');
 		Assert::same("Can't open https://com.example/ (redirects: https://redir1.example/ → https://redir2.example/) using its IPv6 address 2001:DB8::1 (Could not connect to server)", $exception->getMessage());
 
 		// What a host sends is encoded in the message, and left alone in the values, which are for a caller that knows what it renders into

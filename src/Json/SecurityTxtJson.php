@@ -3,8 +3,11 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Json;
 
+use BackedEnum;
 use DateMalformedStringException;
 use DateTimeImmutable;
+use ReflectionClass;
+use ReflectionNamedType;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
@@ -76,12 +79,7 @@ final readonly class SecurityTxtJson
 			if (!is_subclass_of($class, SecurityTxtSpecViolation::class)) {
 				throw new SecurityTxtCannotParseJsonException(sprintf("class %s doesn't extend %s", $class, SecurityTxtSpecViolation::class));
 			}
-			try {
-				$object = new $class(...$violation['params']);
-			} catch (Throwable $e) {
-				throw new SecurityTxtCannotParseJsonException("Cannot create an object of class {$class}", previous: $e);
-			}
-			$objects[] = $object;
+			$objects[] = $this->createObjectFromJsonParams($class, $violation['params']);
 		}
 		return $objects;
 	}
@@ -473,12 +471,66 @@ final readonly class SecurityTxtJson
 		if (!is_subclass_of($class, SecurityTxtFetcherException::class)) {
 			throw new SecurityTxtCannotParseJsonException(sprintf('The exception class %s is not a subclass of %s', $class, SecurityTxtFetcherException::class));
 		}
+		return $this->createObjectFromJsonParams($class, $values['error']['params']);
+	}
+
+
+	/**
+	 * @template T of object
+	 * @param class-string<T> $class
+	 * @param array<array-key, mixed> $params
+	 * @return T
+	 * @throws SecurityTxtCannotParseJsonException
+	 */
+	private function createObjectFromJsonParams(string $class, array $params): object
+	{
 		try {
-			$exception = new $class(...$values['error']['params']);
+			return new $class(...$this->createConstructorArguments($class, $params));
 		} catch (Throwable $e) {
 			throw new SecurityTxtCannotParseJsonException("Cannot create an object of class {$class}", previous: $e);
 		}
-		return $exception;
+	}
+
+
+	/**
+	 * The wire stays scalar, and the way back is decided by what each constructor parameter is typed as: a `SecurityTxtHost` is rebuilt from the name it reads as, a backed
+	 * enum from a case value. Both run inside the caller's try, so a name that rebuilds a different host or a value naming no case fails as the class it was meant for, the
+	 * same way any other bad param does. A host that cannot be rebuilt takes the whole stored error down rather than degrading into one that reads encoded, which was one
+	 * host reading as two things: refuse what cannot be rebuilt is the rule `SecurityTxtHost` itself follows, and a refused result is a cache miss to check again. A string
+	 * key is left to the spread, which reads it as a named argument, so it selects the parameter here the same way it does there.
+	 *
+	 * @param class-string $class
+	 * @param array<array-key, mixed> $params
+	 * @return array<array-key, mixed>
+	 */
+	private function createConstructorArguments(string $class, array $params): array
+	{
+		$constructor = (new ReflectionClass($class))->getConstructor();
+		if ($constructor === null) {
+			return $params;
+		}
+		$types = [];
+		foreach ($constructor->getParameters() as $position => $parameter) {
+			$type = $parameter->getType();
+			if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+				$types[$position] = $types[$parameter->getName()] = $type->getName();
+			}
+		}
+		// The spread ignores what an integer key says and feeds those values in iteration order, so a key has to mean here what it will mean there: an integer key becomes
+		// the position the spread will actually give the value, `['3' => 'c', '0' => 'a']` types and calls as `['c', 'a']`, and a string key keeps naming its parameter
+		$arguments = [];
+		$position = 0;
+		foreach ($params as $key => $value) {
+			$key = is_int($key) ? $position++ : $key;
+			$type = $types[$key] ?? null;
+			if ($type === SecurityTxtHost::class && is_string($value)) {
+				$value = SecurityTxtHost::fromString($value);
+			} elseif ($type !== null && is_subclass_of($type, BackedEnum::class) && (is_int($value) || is_string($value))) {
+				$value = $type::from($value);
+			}
+			$arguments[$key] = $value;
+		}
+		return $arguments;
 	}
 
 }

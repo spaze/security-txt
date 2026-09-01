@@ -10,6 +10,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidExceptio
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Tester\Assert;
 use Tester\TestCase;
 use ValueError;
@@ -17,8 +18,8 @@ use ValueError;
 require __DIR__ . '/../../bootstrap.php';
 
 /**
- * The `int` arm of this one had nothing on it: the only test reaching the class goes through `SecurityTxtIpAddressValidator`, which always hands over a case, so `is_int()` was
- * never true and the gate that refuses a value outside the enum was never run. Replacing it with a hardcoded case left the suite green.
+ * The constructor takes only a case now; the wire's int comes back through `SecurityTxtJson`, which turns it into a case before calling, so the gate that refuses a value
+ * outside the enum lives there and is reached through a replay.
  *
  * @testCase
  */
@@ -53,7 +54,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 	 */
 	public function testTheCaseAndItsWireValueNameTheSameFamily(SecurityTxtIpAddressType $type, string $ip, string $label): void
 	{
-		$fromCase = new SecurityTxtHostIpAddressInvalidException("h\u{E1}\u{10D}ky.example", $ip, $type, 'https://com.example/');
+		$fromCase = new SecurityTxtHostIpAddressInvalidException(SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"), $ip, $type, 'https://com.example/');
 		Assert::contains("resolves to an invalid {$label} address", $fromCase->getMessage());
 		Assert::same($type, $fromCase->getIpAddressType());
 
@@ -72,7 +73,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 
 	public function testTheWireCarriesTheCaseValueNotTheCase(): void
 	{
-		$exception = new SecurityTxtHostIpAddressInvalidException("h\u{E1}\u{10D}ky.example", '2001:DB8::1', SecurityTxtIpAddressType::V6, 'https://com.example/');
+		$exception = new SecurityTxtHostIpAddressInvalidException(SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"), '2001:DB8::1', SecurityTxtIpAddressType::V6, 'https://com.example/');
 		$params = $exception->jsonSerialize()['params'];
 		assert(is_array($params));
 		Assert::same(SecurityTxtIpAddressType::V6->value, $params[2]);
