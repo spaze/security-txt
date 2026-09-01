@@ -41,7 +41,8 @@ final readonly class SecurityTxtJson
 	 * nothing about which release wrote the blob, only whether this decoder understands its shape. A consumer wanting to know which release wrote it should carry that itself,
 	 * the way the michalspacek.cz Lambda payload carries `libVersion` alongside, because the two answer different questions.
 	 *
-	 * Bump it only when a stored blob genuinely stops being readable by the previous decoder, never to track a release. A reader already fails on a break it cannot handle,
+	 * Bump it only when a stored blob genuinely stops being readable by the previous decoder, never to track a release, and measure that against decoders that shipped: a wire
+	 * that never made a release has no stored blobs to protect, so a change there moves nothing. A reader already fails on a break it cannot handle,
 	 * so the number costs nothing and turns `fetchResult is not set or not an array` into a sentence naming both versions; bumping it for a change an older reader could have
 	 * tolerated is what would turn a benign upgrade into a forced deploy order. What a bump should mean for a decoder that could partly understand a newer blob is issue #107,
 	 * and nothing here decides it.

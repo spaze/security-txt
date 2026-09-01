@@ -479,15 +479,13 @@ final class SecurityTxtJsonTest extends TestCase
 
 
 	/**
-	 * A host string the wire can genuinely carry but `SecurityTxtHost::fromString()` refuses still has to replay. `getUnicode()` and `fromString()` are not quite inverses: a
-	 * punycode label whose payload decodes out of normalization order comes back as a spelling that reparses to a different host. Such a host reads encoded, which is what it
-	 * did before any of this, rather than taking the whole stored result down with it.
-	 *
-	 * Built from the live object rather than pinned to a literal, because which labels do this is ICU's decision and moves with its version.
+	 * A host string the wire can genuinely carry but `SecurityTxtHost::fromString()` refuses still has to replay. A scheme WHATWG calls opaque runs no IDNA and its host is case
+	 * sensitive, while a string is parsed back under HTTPS, which folds the case, so such a host reads encoded rather than taking the whole stored result down with it.
 	 */
 	public function testCreateFetcherExceptionFromJsonValuesKeepsAHostItCannotParseBack(): void
 	{
-		$host = new SecurityTxtHost(new Url('https://xn--wuao.example/'));
+		// An opaque scheme is the remaining case a string cannot be rebuilt from: its host is case sensitive, and a string is parsed back under HTTPS, which folds the case
+		$host = new SecurityTxtHost(new Url('foo://Plain.Example/x'));
 		Assert::throws(function () use ($host): void {
 			SecurityTxtHost::fromString($host->getUnicode());
 		}, SecurityTxtCannotParseHostnameException::class);
@@ -499,7 +497,10 @@ final class SecurityTxtJsonTest extends TestCase
 		assert(is_array($decoded));
 		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
 		Assert::type(SecurityTxtHostNotFoundException::class, $replayed);
-		Assert::contains(rawurlencode($host->getUnicode()), $replayed->getMessage());
+		// The live message reads the host as itself; the replayed one has only a string, which is encoded. `Plain.Example` is printable ASCII either way, so what separates
+		// them here is the type the value arrived as, not its bytes
+		Assert::contains($host->getUnicode(), $live->getMessage());
+		Assert::same([$host->getUnicode()], array_values(array_filter($replayed->getMessageValues(), fn(string|SecurityTxtHost $v): bool => !$v instanceof SecurityTxtHost && $v === $host->getUnicode())));
 	}
 
 
