@@ -43,31 +43,10 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
-	 * A host as a constructor param has to be a scalar, because that is what a replay of stored JSON hands back, and this is the way back from one. Without it a host arrived
-	 * as an object on a live check and as a string on a replay, and a string is encoded where a host reads as itself, so the same failure said `háčky.example` once and
-	 * `h%C3%A1%C4%8Dky.example` the next time.
-	 *
-	 * The wire carries what `getUnicode()` writes, and `fromString()` takes that back, for every host a check can reach over HTTP or HTTPS. It refuses one reached over a scheme
-	 * WHATWG calls opaque, whose host is case sensitive where a string is parsed back under HTTPS, so this keeps the string rather than throwing: a failure that reads encoded
-	 * beats a replay that dies and takes the whole stored result with it. The exceptions carrying a host accept both, so the string arm is a value they can hold.
+	 * The scalar the wire carries for a message value: a host as the name it reads as, anything else as itself. The constructor params carry the same name, and the way back
+	 * from one is `SecurityTxtJson`, which rebuilds the host before calling a constructor whose parameter asks for one.
 	 */
-	final protected static function toHost(string|SecurityTxtHost $host): string|SecurityTxtHost
-	{
-		if ($host instanceof SecurityTxtHost) {
-			return $host;
-		}
-		try {
-			return SecurityTxtHost::fromString($host);
-		} catch (SecurityTxtCannotParseHostnameException) {
-			return $host;
-		}
-	}
-
-
-	/**
-	 * The scalar a constructor param has to be, whichever arm `toHost()` returned.
-	 */
-	final protected static function hostToString(string|SecurityTxtHost $host): string
+	private function hostToString(string|SecurityTxtHost $host): string
 	{
 		return $host instanceof SecurityTxtHost ? $host->getUnicode() : $host;
 	}
@@ -137,7 +116,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 			'params' => $this->constructorParams,
 			'message' => $this->getMessage(),
 			'messageFormat' => $this->getMessageFormat(),
-			'messageValues' => array_map(self::hostToString(...), $this->getMessageValues()),
+			'messageValues' => array_map($this->hostToString(...), $this->getMessageValues()),
 			'url' => $this->getUrl(),
 			'redirects' => $this->getRedirects(),
 		];
