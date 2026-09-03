@@ -40,9 +40,13 @@ final readonly class SecurityTxtJson
 {
 
 	/**
-	 * The shape of what `jsonSerialize()` writes, bumped when a stored result stops being readable by the code that read the previous one. Not the library version: this says
-	 * nothing about which release wrote the blob, only whether this decoder understands its shape. A consumer wanting to know which release wrote it should carry that itself,
-	 * the way the michalspacek.cz Lambda payload carries `libVersion` alongside, because the two answer different questions.
+	 * What a stored result means, bumped when one stops being readable by the code that read the previous one. Not only the keys: an exception or a violation stores a class
+	 * name and the arguments its constructor was called with, bar the `$previous` exception, which is never stored and so leaves a replayed exception unchained. A decoder
+	 * replays by calling that constructor again, so renaming a class, reordering a parameter or adding a required one breaks a stored blob while `jsonSerialize()` goes on
+	 * writing the same two keys. `SecurityTxtWireContractTest` pins those signatures so such a
+	 * change has to be noticed here rather than in a consumer. Not the library version: this says
+	 * nothing about which release wrote the blob, only whether this decoder understands its shape. A consumer wanting to know which release wrote it should carry that
+	 * alongside itself, the installed version of this package say, because the two answer different questions.
 	 *
 	 * Bump it only when a stored blob genuinely stops being readable by the previous decoder, never to track a release, and measure that against decoders that shipped: a wire
 	 * that never made a release has no stored blobs to protect, so a change there moves nothing. A reader already fails on a break it cannot handle,

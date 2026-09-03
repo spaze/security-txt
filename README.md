@@ -150,6 +150,14 @@ If that's the case, then you may want to encode the `Spaze\SecurityTxt\Fetcher\S
 
 Fetch exceptions can be recreated with `Spaze\SecurityTxt\Json\SecurityTxtJson::createFetcherExceptionFromJsonValues()`.
 
+This JSON is internal to this library: it exists so a result can be handed between processes, a Lambda and the site that called it, or stored in a cache and read back here.
+It is not a published data format, so do not read fields out of it, decode it and use the object.
+Not necessarily the same version of it, though: a Lambda and the site that calls it are deployed separately and routinely differ, so reading a result written by another version is a requirement rather than an accident, and `formatVersion` below is how a version says it cannot.
+A serialized exception or violation carries the class it is and the arguments it was built from, apart from the `$previous` exception an exception may have been given, and nothing else, because that is what the decoder reads.
+A replayed exception is therefore not chained, `getPrevious()` is null on one, and `getFile()`, `getLine()` and the trace describe where the decoder built it rather than where anything was thrown. What comes back is what the constructor makes of its arguments: everything the decoded object answers, the message, the how-to-fix, the format, the values, the correct value, the spec references, its constructor computes from those arguments.
+Recomputing is also what you want where a value depends on when it is read: the Expires date a violation suggests is a year from now, so a decoded result suggests a year from when it is decoded rather than a date that may already have passed while it sat in a cache.
+The result's own `expired` and `expiryDays` are not like that, they are stored and read back as written, because they describe the file at the time of the check rather than at the time of reading.
+
 A stored result carries a `formatVersion`, and `Spaze\SecurityTxt\Json\SecurityTxtJson::FORMAT_VERSION` is the one this library writes.
 Decoding refuses a result written by a newer version, because it cannot know what the fields mean there, and makes a best effort on an older one or on one stored by a 2.x version, which carries no `formatVersion` at all, but compatibility cannot be guaranteed across refactors or format changes.
 
@@ -315,7 +323,8 @@ Those are not encoded, and neither are the values from `getMessageValues()` belo
 ## Formatting messages
 If you'd like to format some of the values contained in the messages, you can use the exception's `getMessageFormat()` and `getMessageValues()` methods.
 The `getMessageFormat()` method will return an error message with `%s` placeholders, while `getMessageValues()` will return the values, including the server-supplied ones,
-which you can, **after a proper sanitization and/or escaping**, wrap in `<code>` tags for example, and use them to replace the placeholders.
+which are deliberately not escaped. Do not `vsprintf()` the format and the values together and print the result: that rebuilds the unescaped values into one string, which is what the already-rendered `getMessage()` exists to avoid.
+Put each value into its own element instead, which you can, **after a proper sanitization and/or escaping**, wrap in `<code>` tags for example, and use them to replace the placeholders one by one.
 A violation's values are `string|Uri\WhatWg\Url` and an exception's are `string|Spaze\SecurityTxt\SecurityTxtHost`, the non-string ones being the values each knows to be a
 URL or a host. Neither has a string form of its own, so do not pass one straight to `implode()`, `htmlspecialchars()` or anything else expecting a string: call
 `toUnicodeString()` on a `Url` and `getUnicode()` on a `SecurityTxtHost`, or hand either to `Spaze\SecurityTxt\SecurityTxtPrintableValue::render()`, which takes all three
