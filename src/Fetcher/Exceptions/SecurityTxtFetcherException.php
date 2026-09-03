@@ -43,16 +43,6 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
-	 * The scalar the wire carries for a message value: a host as the name it reads as, anything else as itself. The constructor params carry the same name, and the way back
-	 * from one is `SecurityTxtJson`, which rebuilds the host before calling a constructor whose parameter asks for one.
-	 */
-	private function hostToString(string|SecurityTxtHost $host): string
-	{
-		return $host instanceof SecurityTxtHost ? $host->getUnicode() : $host;
-	}
-
-
-	/**
 	 * @return literal-string
 	 */
 	public function getMessageFormat(): string
@@ -114,11 +104,6 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 		return [
 			'class' => $this::class,
 			'params' => $this->constructorParams,
-			'message' => $this->getMessage(),
-			'messageFormat' => $this->getMessageFormat(),
-			'messageValues' => array_map($this->hostToString(...), $this->getMessageValues()),
-			'url' => $this->getUrl(),
-			'redirects' => $this->getRedirects(),
 		];
 	}
 

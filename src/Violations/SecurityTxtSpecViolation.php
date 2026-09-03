@@ -80,16 +80,6 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 
 
 	/**
-	 * A value as it goes on the wire: what it was, not how it prints. Serializing the rendered form instead would encode some values and not others, and a reader seeing the
-	 * encoded ones would take the whole object for something it is safe to print, which is the opposite of what this library tells them about these values.
-	 */
-	private function valueToString(string|Url $value): string
-	{
-		return $value instanceof Url ? $value->toUnicodeString() : $value;
-	}
-
-
-	/**
 	 * `$piece` repeated once per item, separated by `$separator`, empty when there are none.
 	 *
 	 * @param literal-string $piece
@@ -190,17 +180,6 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 		return [
 			'class' => $this::class,
 			'params' => $this->constructorParams,
-			'message' => $this->getMessage(),
-			'messageFormat' => $this->getMessageFormat(),
-			'messageValues' => array_map($this->valueToString(...), $this->getMessageValues()),
-			'since' => $this->getSince(),
-			'correctValue' => $this->correctValue !== null ? $this->valueToString($this->correctValue) : null,
-			'howToFix' => $this->getHowToFix(),
-			'howToFixFormat' => $this->getHowToFixFormat(),
-			'howToFixValues' => array_map($this->valueToString(...), $this->getHowToFixValues()),
-			'specSection' => $this->getSpecSection(),
-			'seeAlsoSections' => $this->getSeeAlsoSections(),
-			'specUrl' => $this->getSpecUrl(),
 		];
 	}
 
