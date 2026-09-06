@@ -418,15 +418,6 @@ final readonly class SecurityTxtJson
 
 
 	/**
-	 * A URL is accepted only as this library serializes it, `toUnicodeString()` output, which always parses back to the exact same bytes: not because the parser could not make
-	 * sense of more, but because anything else would be silently rewritten into something the JSON never said, `HTTPS://` reads back lowercased and a punycode host reads back
-	 * as it reads, so whatever is accepted replays byte identical.
-	 *
-	 * @throws SecurityTxtCannotParseJsonException
-	 */
-
-
-	/**
 	 * @param array<array-key, mixed> $values
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
@@ -444,13 +435,17 @@ final readonly class SecurityTxtJson
 	}
 
 
+	/**
+	 * The same rule as the constructor params, said as this caller reports a bad value. One rule, because a URL stored in a field and the same URL stored as a param are the
+	 * same question, and two answers to it would mean a spelling accepted in one place and refused in the other.
+	 */
 	private function createUrlFromJsonValue(string $value, string $field): Url
 	{
-		$url = Url::parse($value);
-		if ($url === null || $url->toUnicodeString() !== $value) {
+		try {
+			return $this->createStoredUrl($value);
+		} catch (ValueError) {
 			throw new SecurityTxtCannotParseJsonException("{$field} is not a URL");
 		}
-		return $url;
 	}
 
 
@@ -531,19 +526,27 @@ final readonly class SecurityTxtJson
 			if ($type === SecurityTxtHost::class && is_string($value)) {
 				$value = SecurityTxtHost::fromString($value);
 			} elseif ($type === Url::class && is_string($value)) {
-				// Refused rather than rewritten, like a host: a value that serializes back as something else would replay as a URL nobody stored. Either canonical spelling
-				// counts, since a result stored before the wire carried A-labels holds the readable one
-				$url = Url::parse($value);
-				if ($url === null || ($url->toAsciiString() !== $value && $url->toUnicodeString() !== $value)) {
-					throw new ValueError(sprintf('%s is not a URL as this library writes one', $value));
-				}
-				$value = $url;
+				$value = $this->createStoredUrl($value);
 			} elseif ($type !== null && is_subclass_of($type, BackedEnum::class) && (is_int($value) || is_string($value))) {
 				$value = $type::from($value);
 			}
 			$arguments[$key] = $value;
 		}
 		return $arguments;
+	}
+
+
+	/**
+	 * A URL out of a stored result, refused rather than rewritten, like a host: a value that serializes back as something else would replay as a URL nobody stored. Either
+	 * canonical spelling counts, since a result stored before the wire carried A-labels holds the readable one.
+	 */
+	private function createStoredUrl(string $value): Url
+	{
+		$url = Url::parse($value);
+		if ($url === null || ($url->toAsciiString() !== $value && $url->toUnicodeString() !== $value)) {
+			throw new ValueError(sprintf('%s is not a URL as this library writes one', $value));
+		}
+		return $url;
 	}
 
 }

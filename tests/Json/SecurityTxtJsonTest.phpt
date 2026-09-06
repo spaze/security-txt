@@ -268,6 +268,25 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	/**
+	 * The URLs a result was fetched from are stored the way this library spells one, which for a host whose punycode does not survive decoding is its A-labels. Decoded
+	 * instead, `https://xn--khby.example/` is written as `https://ؤ.example/`, which names a host nothing resolved, and reading it back refuses it as not a URL this library
+	 * writes, taking a whole stored result down with it rather than the one field.
+	 */
+	public function testAFetchResultOnAHostThatDoesNotDecodeSurvivesStorage(): void
+	{
+		$url = new Url('https://xn--khby.example/.well-known/security.txt');
+		$encoded = json_encode(new SecurityTxtFetchResult($url, $url, [], '', false, [], [], []));
+		assert(is_string($encoded));
+		Assert::contains('xn--khby.example', $encoded);
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		$replayed = $this->securityTxtJson->createFetchResultFromJsonValues($decoded);
+		Assert::same($url->toAsciiString(), $replayed->getConstructedUrl()->toAsciiString());
+		Assert::same($url->toAsciiString(), $replayed->getFinalUrl()->toAsciiString());
+	}
+
+
 	public function testCreateFetchResultFromJsonValuesErrors(): void
 	{
 		Assert::throws(function (): void {
@@ -291,8 +310,10 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'HTTPS://url.example/']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a URL');
+		// A URL that serializes back as something else, here with the path a parse adds, would replay as a URL nobody stored. A-labels are not that: they are a spelling this
+		// library writes, for a host whose punycode does not survive decoding, and the same rule reads one here as reads one out of the constructor params
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://xn--bcher-kva.example/']);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a URL');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/']);
