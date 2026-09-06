@@ -182,10 +182,10 @@ final class SecurityTxtFetcher
 	private function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, Url $originalUrl, Url &$finalUrl, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherResponse
 	{
 		$ipRecord = $ipv6Record = null;
-		if (filter_var($host->getUnicode(), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
-			$ipRecord = $host->getUnicode();
+		if (filter_var($host->getAscii(), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+			$ipRecord = $host->getAscii();
 		} else {
-			if (preg_match('/^\[(.*)]$/', $host->getUnicode(), $matches) === 1) {
+			if (preg_match('/^\[(.*)]$/', $host->getAscii(), $matches) === 1) {
 				$hostIpv6 = $matches[1];
 				if (filter_var($hostIpv6, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
 					$ipv6Record = $hostIpv6;
