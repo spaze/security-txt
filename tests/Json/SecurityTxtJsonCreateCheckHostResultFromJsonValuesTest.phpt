@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtBugBounty;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
@@ -94,7 +95,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 		$fetchResult = new SecurityTxtFetchResult(
 			new Url('http://www.example.com/.well-known/security.txt'),
 			new Url('https://www.example.com/.well-known/security.txt'),
-			['http://example.com' => ['https://example.com', 'https://www.example.com']],
+			['http://example.com' => new SecurityTxtRedirects('https://example.com', 'https://www.example.com')],
 			implode('', $lines),
 			true,
 			$lines,

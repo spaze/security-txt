@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Uri\WhatWg\Url;
 
@@ -13,7 +14,7 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 {
 
 	/**
-	 * @param array<string, list<string>> $redirects
+	 * @param array<string, SecurityTxtRedirects> $redirects
 	 * @param array<int, string> $lines
 	 * @param list<SecurityTxtSpecViolation> $errors
 	 * @param list<SecurityTxtSpecViolation> $warnings
@@ -71,7 +72,7 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 	/**
 	 * The redirect URLs, do not render as HTML or Markdown, could be malicious.
 	 *
-	 * @return array<string, list<string>>
+	 * @return array<string, SecurityTxtRedirects>
 	 */
 	public function getRedirects(): array
 	{
@@ -106,9 +107,11 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 		return [
 			'class' => $this::class,
 			'formatVersion' => SecurityTxtJson::FORMAT_VERSION,
-			'constructedUrl' => $this->getConstructedUrl()->toUnicodeString(),
-			'finalUrl' => $this->getFinalUrl()->toUnicodeString(),
-			'redirects' => $this->getRedirects(),
+			// Spelled the way this library spells one, not decoded: `toUnicodeString()` on a host whose punycode does not survive decoding writes a URL naming another host,
+			// which `SecurityTxtJson` then refuses as not a URL this library writes, taking a whole stored result down over a URL nobody stored
+			'constructedUrl' => SecurityTxtPrintableValue::render($this->getConstructedUrl()),
+			'finalUrl' => SecurityTxtPrintableValue::render($this->getFinalUrl()),
+			'redirects' => array_map(fn(SecurityTxtRedirects $redirects): array => $redirects->toStrings(), $this->getRedirects()),
 			'contents' => $this->getContents(),
 			'isTruncated' => $this->isTruncated(),
 			'errors' => $this->getErrors(),

@@ -21,13 +21,16 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidExceptio
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -245,8 +248,8 @@ final class SecurityTxtJsonTest extends TestCase
 			new Url('https://example.com/security.txt'),
 			new Url('https://www.example.com/security.txt'),
 			[
-				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
-				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
+				'https://example.com/.well-known/security.txt' => new SecurityTxtRedirects('https://www.example.com/.well-known/security.txt'),
+				'https://example.com/security.txt' => new SecurityTxtRedirects('https://www.example.com/security.txt'),
 			],
 			implode($lines),
 			true,
@@ -264,6 +267,25 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::same($result->getConstructedUrl()->toUnicodeString(), $actualResult->getConstructedUrl()->toUnicodeString());
 		Assert::same($result->getFinalUrl()->toUnicodeString(), $actualResult->getFinalUrl()->toUnicodeString());
 		Assert::same($encoded, json_encode($actualResult));
+	}
+
+
+	/**
+	 * The URLs a result was fetched from are stored the way this library spells one, which for a host whose punycode does not survive decoding is its A-labels. Decoded
+	 * instead, `https://xn--khby.example/` is written as `https://ؤ.example/`, which names a host nothing resolved, and reading it back refuses it as not a URL this library
+	 * writes, taking a whole stored result down with it rather than the one field.
+	 */
+	public function testAFetchResultOnAHostThatDoesNotDecodeSurvivesStorage(): void
+	{
+		$url = new Url('https://xn--khby.example/.well-known/security.txt');
+		$encoded = json_encode(new SecurityTxtFetchResult($url, $url, [], '', false, [], [], []));
+		assert(is_string($encoded));
+		Assert::contains('xn--khby.example', $encoded);
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		$replayed = $this->securityTxtJson->createFetchResultFromJsonValues($decoded);
+		Assert::same($url->toAsciiString(), $replayed->getConstructedUrl()->toAsciiString());
+		Assert::same($url->toAsciiString(), $replayed->getFinalUrl()->toAsciiString());
 	}
 
 
@@ -290,8 +312,10 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'HTTPS://url.example/']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a URL');
+		// A URL that serializes back as something else, here with the path a parse adds, would replay as a URL nobody stored. A-labels are not that: they are a spelling this
+		// library writes, for a host whose punycode does not survive decoding, and the same rule reads one here as reads one out of the constructor params
 		Assert::throws(function (): void {
-			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://xn--bcher-kva.example/']);
+			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example']);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: constructedUrl is not a URL');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetchResultFromJsonValues(['class' => SecurityTxtFetchResult::class, 'constructedUrl' => 'https://url.example/']);
@@ -346,27 +370,27 @@ final class SecurityTxtJsonTest extends TestCase
 		$host = SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example");
 		return [
 			SecurityTxtHostNotFoundException::class => [
-				new SecurityTxtHostNotFoundException('https://example.com/.well-known/security.txt', $host),
+				new SecurityTxtHostNotFoundException(new Url('https://example.com/.well-known/security.txt'), $host),
 			],
 			SecurityTxtHostIpAddressNotFoundException::class => [
-				new SecurityTxtHostIpAddressNotFoundException('https://example.com/.well-known/security.txt', $host),
+				new SecurityTxtHostIpAddressNotFoundException(new Url('https://example.com/.well-known/security.txt'), $host),
 			],
 			SecurityTxtOnlyIpv6HostButIpv6DisabledException::class => [
-				new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, '2001:DB8::1', 'https://example.com/.well-known/security.txt'),
+				new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, '2001:DB8::1', new Url('https://example.com/.well-known/security.txt')),
 			],
 			SecurityTxtHostIpAddressInvalidException::class => [
-				new SecurityTxtHostIpAddressInvalidException($host, '1.1.1.0', SecurityTxtIpAddressType::V6, 'https://example.com/.well-known/security.txt'),
+				new SecurityTxtHostIpAddressInvalidException($host, '1.1.1.0', SecurityTxtIpAddressType::V6, new Url('https://example.com/.well-known/security.txt')),
 			],
 			SecurityTxtHostIpAddressNotPublicException::class => [
-				new SecurityTxtHostIpAddressNotPublicException($host, '127.0.0.1', 'https://example.com/.well-known/security.txt'),
+				new SecurityTxtHostIpAddressNotPublicException($host, '127.0.0.1', new Url('https://example.com/.well-known/security.txt')),
 			],
 			SecurityTxtTooManyRedirectsException::class => [
-				new SecurityTxtTooManyRedirectsException('https://example.com', ['https://example.com', 'https://www.example.com'], 1),
+				new SecurityTxtTooManyRedirectsException(new Url('https://example.com'), new SecurityTxtRedirects('https://example.com', 'https://www.example.com'), 1),
 			],
 			SecurityTxtCannotOpenUrlException::class => [
 				new SecurityTxtCannotOpenUrlException(
-					'https://example.com/.well-known/security.txt',
-					['https://redir1.example/'],
+					new Url('https://example.com/.well-known/security.txt'),
+					new SecurityTxtRedirects('https://redir1.example/'),
 					'2001:DB8::1',
 					SecurityTxtIpAddressType::V6,
 					'Could not connect to server',
@@ -390,7 +414,7 @@ final class SecurityTxtJsonTest extends TestCase
 						'html' => false,
 						'truncated' => false,
 					],
-				], 'https://1.example/'),
+				], new Url('https://1.example/')),
 			],
 		];
 	}
@@ -474,7 +498,7 @@ final class SecurityTxtJsonTest extends TestCase
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtCannotOpenUrlException::class);
 		Assert::type(ValueError::class, $e?->getPrevious());
 		Assert::same('1337 is not a valid backing value for enum Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType', $e?->getPrevious()?->getMessage());
-		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['url', 303, '1.1.1.0', SecurityTxtIpAddressType::V4->value]]]));
+		Assert::type(SecurityTxtUrlNotFoundException::class, $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtUrlNotFoundException::class, 'params' => ['https://example.com/', 303, '1.1.1.0', SecurityTxtIpAddressType::V4->value]]]));
 	}
 
 
@@ -485,6 +509,30 @@ final class SecurityTxtJsonTest extends TestCase
 	 * a label like `xn--khby` is refused the same way, a cache miss to check again, just like the result-level replay already refuses those. What this pins is the boundary
 	 * refusing rather than degrading into a host that reads encoded, which was one host reading as two things.
 	 */
+
+
+	/**
+	 * A URL is refused rather than rewritten, the way a host is. `HTTPS://EXAMPLE.com/x` parses, but into something else, so replaying it would hand back a URL nobody stored
+	 * and a consumer would never see that it had changed. Either spelling this library writes is fine, since a result stored before URLs went on the wire as A-labels holds
+	 * the readable one.
+	 */
+	public function testCreateFetcherExceptionFromJsonValuesRefusesAUrlItWouldRewrite(): void
+	{
+		foreach (["https://h\u{E1}\u{10D}ky.example/x", 'https://xn--hky-ela4t.example/x'] as $spelling) {
+			$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues([
+				'error' => ['class' => SecurityTxtNoLocationHeaderException::class, 'params' => [$spelling, 302]],
+			]);
+			Assert::contains("h\u{E1}\u{10D}ky.example", $replayed->getMessage(), "a result holding {$spelling} does not replay readably");
+		}
+		$e = Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues([
+				'error' => ['class' => SecurityTxtNoLocationHeaderException::class, 'params' => ['HTTPS://EXAMPLE.com/x', 302]],
+			]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtNoLocationHeaderException::class);
+		Assert::type(ValueError::class, $e?->getPrevious());
+	}
+
+
 	public function testCreateFetcherExceptionFromJsonValuesRefusesAHostItCannotRebuild(): void
 	{
 		$host = new SecurityTxtHost(new Url('foo://Plain.Example/x'));
@@ -492,7 +540,7 @@ final class SecurityTxtJsonTest extends TestCase
 			SecurityTxtHost::fromString($host->getUnicode());
 		}, SecurityTxtCannotParseHostnameException::class);
 
-		$live = new SecurityTxtHostNotFoundException('https://example.com/', $host);
+		$live = new SecurityTxtHostNotFoundException(new Url('https://example.com/'), $host);
 		Assert::contains($host->getUnicode(), $live->getMessage());
 		$encoded = json_encode(['error' => $live]);
 		assert(is_string($encoded));
@@ -556,8 +604,8 @@ final class SecurityTxtJsonTest extends TestCase
 				Assert::true($type instanceof ReflectionNamedType, "{$class} \${$parameter->getName()} has a union type or no type at all");
 				assert($type instanceof ReflectionNamedType);
 				$name = $type->getName();
-				// The types `json_decode()` produces, plus the two the boundary rebuilds from one of them
-				$replayable = in_array($name, ['string', 'int', 'float', 'bool', 'null', 'array', SecurityTxtHost::class], true) || is_subclass_of($name, BackedEnum::class);
+				// The types `json_decode()` produces, plus the ones the boundary rebuilds from one of them
+				$replayable = in_array($name, ['string', 'int', 'float', 'bool', 'null', 'array', SecurityTxtHost::class, SecurityTxtRedirects::class, Url::class], true) || is_subclass_of($name, BackedEnum::class);
 				// `$previous` is passed by a live caller and never serialized, so it is the one parameter whose type the wire never has to carry
 				Assert::true(
 					$replayable || ($name === Throwable::class && $parameter->getName() === 'previous'),
@@ -980,6 +1028,22 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	/**
+	 * Not every URL this library records has a spelling that reads back: a redirect to `ftp://%78n--a.example/` resolves, and the fetcher writes down where it led, but the
+	 * `ftp://xn--a.example/` it serializes as will not parse in any spelling. A chain that refused one would take down the whole stored result it is only a part of.
+	 */
+	public function testAChainKeepsARedirectThatDoesNotReadBack(): void
+	{
+		$refused = 'ftp://xn--a.example/';
+		Assert::null(Url::parse($refused));
+		$built = new SecurityTxtUrlUnsupportedSchemeException(new Url('https://start.example/'), new SecurityTxtRedirects('https://start.example/.well-known/security.txt', $refused));
+		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => json_decode((string)json_encode($built), true)]);
+		Assert::same($built->getMessage(), $replayed->getMessage());
+		Assert::contains($refused, $replayed->getMessage());
+		Assert::same(['https://start.example/.well-known/security.txt', $refused], $replayed->getRedirects()->toStrings());
+	}
+
+
 	public function testCreateRedirectsFromJsonValues(): void
 	{
 		$values = [
@@ -992,7 +1056,7 @@ final class SecurityTxtJsonTest extends TestCase
 				'https://com.example/',
 			],
 		];
-		Assert::same($values, $this->securityTxtJson->createRedirectsFromJsonValues($values));
+		Assert::same($values, array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $this->securityTxtJson->createRedirectsFromJsonValues($values)));
 	}
 
 

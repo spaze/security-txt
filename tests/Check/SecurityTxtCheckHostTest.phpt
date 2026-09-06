@@ -376,20 +376,41 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 
 	/**
-	 * A password or a token in the URL must not reach a message, a callback or a stored result. The fetcher strips them before deriving anything; this derives a host too, so
-	 * it strips them as well.
+	 * @return array<string, array{0:string, 1:bool}>
 	 */
-	public function testCredentialsNeverReachAMessage(): void
+	public function getCredentialUrls(): array
+	{
+		return [
+			// `%78n--a` is `xn--a`, not valid punycode, so this fails before there is a URL to carry and only the string it was given survives
+			'a host that never parses' => ['https://user:hunter2@%78n--a.example/?token=s3cr3t#frag', false],
+			'a host that does' => ['https://user:hunter2@example.com/?token=s3cr3t#frag', true],
+		];
+	}
+
+
+	/**
+	 * A password or a token in the URL must not reach a message, a callback or a stored result. The fetcher strips them before deriving anything; this derives a host too, so
+	 * it strips them as well. Checked on all three of the ways one leaves an exception, since the URL travels as an object and is spelled once on the way to storage.
+	 *
+	 * @dataProvider getCredentialUrls
+	 */
+	public function testCredentialsNeverReachAMessage(string $url, bool $carriesUrl): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'nope', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$checkHost = new SecurityTxtCheckHost($this->parser, new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new SecurityTxtDnsRecords('1.1.1.0', null)), $this->ipAddressValidator), $this->checkHostResultFactory, $this->urlParser);
-		$e = Assert::throws(function () use ($checkHost): void {
-			$checkHost->check(new Url('https://user:hunter2@%78n--a.example/?token=s3cr3t#frag'));
+		$e = Assert::throws(function () use ($checkHost, $url): void {
+			$checkHost->check(new Url($url));
 		}, SecurityTxtFetcherException::class);
 		assert($e instanceof SecurityTxtFetcherException);
+		$carried = $e->getUrl();
+		Assert::same($carriesUrl, $carried !== null);
+		$stored = json_encode($e, JSON_THROW_ON_ERROR);
 		foreach (['hunter2', 's3cr3t', 'user:'] as $secret) {
 			Assert::notContains($secret, $e->getMessage());
-			Assert::notContains($secret, $e->getUrl());
+			Assert::notContains($secret, $stored);
+			if ($carried !== null) {
+				Assert::notContains($secret, $carried->toAsciiString());
+			}
 		}
 	}
 

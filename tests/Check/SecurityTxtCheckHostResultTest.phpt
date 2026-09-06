@@ -7,6 +7,7 @@ namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
@@ -42,7 +43,7 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 	public function testGetters(): void
 	{
 		$result = $this->getResult();
-		Assert::same(['http://example.com' => ['https://example.com', 'https://www.example.com']], $result->getRedirects());
+		Assert::same(['http://example.com' => ['https://example.com/', 'https://www.example.com/']], array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $result->getRedirects()));
 		Assert::same('http://www.example.com/.well-known/security.txt', $result->getConstructedUrl()->toUnicodeString());
 		Assert::same('https://www.example.com/.well-known/security.txt', $result->getFinalUrl()->toUnicodeString());
 	}
@@ -60,7 +61,7 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 				'constructedUrl' => 'http://www.example.com/.well-known/security.txt',
 				'finalUrl' => 'https://www.example.com/.well-known/security.txt',
 				'redirects' => [
-					'http://example.com' => ['https://example.com', 'https://www.example.com'],
+					'http://example.com' => ['https://example.com/', 'https://www.example.com/'],
 				],
 				'contents' => "Hi-ring: https://example.com/hiring\nExpires: " . $this->expires->format(SecurityTxtExpires::FORMAT),
 				'isTruncated' => true,
@@ -151,7 +152,7 @@ final class SecurityTxtCheckHostResultTest extends TestCase
 		$fetchResult = new SecurityTxtFetchResult(
 			new Url('http://www.example.com/.well-known/security.txt'),
 			new Url('https://www.example.com/.well-known/security.txt'),
-			['http://example.com' => ['https://example.com', 'https://www.example.com']],
+			['http://example.com' => new SecurityTxtRedirects('https://example.com/', 'https://www.example.com/')],
 			implode($lines),
 			true,
 			$lines,

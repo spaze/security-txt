@@ -12,6 +12,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 use ValueError;
 
 require __DIR__ . '/../../bootstrap.php';
@@ -31,7 +32,7 @@ final class SecurityTxtUrlNotFoundExceptionTest extends TestCase
 
 	public function testGetIpAddressTypeIsACase(): void
 	{
-		$exception = new SecurityTxtUrlNotFoundException('https://com.example/', 404, '192.0.2.1', SecurityTxtIpAddressType::V4);
+		$exception = new SecurityTxtUrlNotFoundException(new Url('https://com.example/'), 404, '192.0.2.1', SecurityTxtIpAddressType::V4);
 		Assert::same('192.0.2.1', $exception->getIpAddress());
 		Assert::same(SecurityTxtIpAddressType::V4, $exception->getIpAddressType());
 	}
@@ -43,7 +44,7 @@ final class SecurityTxtUrlNotFoundExceptionTest extends TestCase
 	 */
 	public function testTheWireCarriesTheCaseValue(): void
 	{
-		$exception = new SecurityTxtUrlNotFoundException('https://com.example/', 404, '2001:DB8::1', SecurityTxtIpAddressType::V6);
+		$exception = new SecurityTxtUrlNotFoundException(new Url('https://com.example/'), 404, '2001:DB8::1', SecurityTxtIpAddressType::V6);
 		$params = $exception->jsonSerialize()['params'];
 		assert(is_array($params));
 		Assert::same(SecurityTxtIpAddressType::V6->value, $params[3]);

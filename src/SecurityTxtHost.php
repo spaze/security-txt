@@ -41,43 +41,11 @@ final readonly class SecurityTxtHost
 			throw new SecurityTxtCannotParseHostnameException($url->toUnicodeString());
 		}
 		$this->ascii = $ascii;
-		$this->unicode = self::readable($ascii, $decoded);
-	}
-
-
-	/**
-	 * Which spelling this host reads as. Decoding an A-label is not always reversible: `xn--khby` decodes to U+0648 U+0654, which encodes back as `xn--jgb`, so the decoded
-	 * spelling would name a different host than the one that was asked for. Decided per label, the way browsers decide it: a label decodes only when the host with just that
-	 * label decoded still encodes back to the same host, so `xn--bcher-kva.xn--khby.example` reads as `bücher.xn--khby.example` rather than losing the readable label to the
-	 * one next to it. Judged in place, not alone, because a lone label can encode differently than it does beside a neighbour: `xn--wuao` decoded re-encodes as itself alone
-	 * and as `xn--wuan` in a domain. The assembled name has to encode back as a whole too, the bidi rule reads across labels, or the host reads as its A-labels.
-	 */
-	private static function readable(string $ascii, string $decoded): string
-	{
-		if (self::encodesTo($decoded, $ascii)) {
-			return $decoded;
-		}
-		$asciiLabels = explode('.', $ascii);
-		$decodedLabels = explode('.', $decoded);
-		if (count($asciiLabels) !== count($decodedLabels)) {
-			return $ascii;
-		}
-		$labels = $asciiLabels;
-		foreach ($decodedLabels as $key => $decodedLabel) {
-			$spliced = $asciiLabels;
-			$spliced[$key] = $decodedLabel;
-			if (self::encodesTo(implode('.', $spliced), $ascii)) {
-				$labels[$key] = $decodedLabel;
-			}
-		}
-		$name = implode('.', $labels);
-		return self::encodesTo($name, $ascii) ? $name : $ascii;
-	}
-
-
-	private static function encodesTo(string $spelling, string $ascii): bool
-	{
-		return Url::parse("https://{$spelling}")?->getAsciiHost() === $ascii;
+		// Which spelling this host reads as. Decoding an A-label is not always reversible: `xn--khby` decodes to U+0648 U+0654, which encodes back as `xn--jgb`, so the
+		// decoded spelling would name a different host than the one that was asked for. All or nothing, so a host reads the way the URL it came out of reads: `Url`
+		// serializes a host all decoded or all encoded and has no way to say a mixed one, and one name for a host is worth more than a readable label beside an
+		// unreadable one
+		$this->unicode = Url::parse("https://{$decoded}")?->getAsciiHost() === $ascii ? $decoded : $ascii;
 	}
 
 

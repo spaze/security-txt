@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtBugBounty;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
@@ -35,6 +36,7 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Throwable;
 use Uri\WhatWg\Url;
+use ValueError;
 
 final readonly class SecurityTxtJson
 {
@@ -90,8 +92,12 @@ final readonly class SecurityTxtJson
 
 
 	/**
+	 * A chain comes back as the spellings a stored result carries, handed to `SecurityTxtRedirects` rather than to each reader as a bare array, so what a redirect reads as is
+	 * decided once, by the chain, and a replayed result says what the one it was made from said. Not read back into `Url` objects here: a URL this library records need not
+	 * have a spelling that parses, which is why the chain holds the strings, see `SecurityTxtRedirects`.
+	 *
 	 * @param array<array-key, mixed> $values
-	 * @return array<string, list<string>>
+	 * @return array<string, SecurityTxtRedirects>
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
 	public function createRedirectsFromJsonValues(array $values): array
@@ -104,12 +110,14 @@ final readonly class SecurityTxtJson
 			if (!is_array($urlRedirects)) {
 				throw new SecurityTxtCannotParseJsonException("redirects > {$url} is not an array");
 			}
+			$urls = [];
 			foreach ($urlRedirects as $urlRedirect) {
 				if (!is_string($urlRedirect)) {
 					throw new SecurityTxtCannotParseJsonException('redirects contains an item which is not a string');
 				}
-				$redirects[$url][] = $urlRedirect;
+				$urls[] = $urlRedirect;
 			}
+			$redirects[$url] = new SecurityTxtRedirects(...$urls);
 		}
 		return $redirects;
 	}
@@ -417,15 +425,6 @@ final readonly class SecurityTxtJson
 
 
 	/**
-	 * A URL is accepted only as this library serializes it, `toUnicodeString()` output, which always parses back to the exact same bytes: not because the parser could not make
-	 * sense of more, but because anything else would be silently rewritten into something the JSON never said, `HTTPS://` reads back lowercased and a punycode host reads back
-	 * as it reads, so whatever is accepted replays byte identical.
-	 *
-	 * @throws SecurityTxtCannotParseJsonException
-	 */
-
-
-	/**
 	 * @param array<array-key, mixed> $values
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
@@ -443,13 +442,17 @@ final readonly class SecurityTxtJson
 	}
 
 
+	/**
+	 * The same rule as the constructor params, said as this caller reports a bad value. One rule, because a URL stored in a field and the same URL stored as a param are the
+	 * same question, and two answers to it meant a spelling accepted in one place and refused in the other.
+	 */
 	private function createUrlFromJsonValue(string $value, string $field): Url
 	{
-		$url = Url::parse($value);
-		if ($url === null || $url->toUnicodeString() !== $value) {
+		try {
+			return $this->createStoredUrl($value);
+		} catch (ValueError) {
 			throw new SecurityTxtCannotParseJsonException("{$field} is not a URL");
 		}
-		return $url;
 	}
 
 
@@ -497,8 +500,8 @@ final readonly class SecurityTxtJson
 
 
 	/**
-	 * The wire stays scalar, and the way back is decided by what each constructor parameter is typed as: a `SecurityTxtHost` is rebuilt from the name it reads as, a backed
-	 * enum from a case value. Both run inside the caller's try, so a name that rebuilds a different host or a value naming no case fails as the class it was meant for, the
+	 * The wire stays scalar, and the way back is decided by what each constructor parameter is typed as: a `SecurityTxtHost` is rebuilt from the name it reads as, a `Url`
+	 * from the spelling the wire carries, a backed enum from a case value. Both run inside the caller's try, so a name that rebuilds a different host or a value naming no case fails as the class it was meant for, the
 	 * same way any other bad param does. A host that cannot be rebuilt takes the whole stored error down rather than degrading into one that reads encoded, which was one
 	 * host reading as two things: refuse what cannot be rebuilt is the rule `SecurityTxtHost` itself follows, and a refused result is a cache miss to check again. A string
 	 * key is left to the spread, which reads it as a named argument, so it selects the parameter here the same way it does there.
@@ -529,12 +532,35 @@ final readonly class SecurityTxtJson
 			$type = $types[$key] ?? null;
 			if ($type === SecurityTxtHost::class && is_string($value)) {
 				$value = SecurityTxtHost::fromString($value);
+			} elseif ($type === Url::class && is_string($value)) {
+				$value = $this->createStoredUrl($value);
+			} elseif ($type === SecurityTxtRedirects::class && is_array($value)) {
+				foreach ($value as $redirect) {
+					if (!is_string($redirect)) {
+						throw new ValueError(sprintf('a redirect is of type %s, not a string', get_debug_type($redirect)));
+					}
+				}
+				$value = new SecurityTxtRedirects(...$value);
 			} elseif ($type !== null && is_subclass_of($type, BackedEnum::class) && (is_int($value) || is_string($value))) {
 				$value = $type::from($value);
 			}
 			$arguments[$key] = $value;
 		}
 		return $arguments;
+	}
+
+
+	/**
+	 * A URL out of the stored params, refused rather than rewritten, like a host: a value that serializes back as something else would replay as a URL nobody stored. Either
+	 * canonical spelling counts, since a result stored before the wire carried A-labels holds the readable one.
+	 */
+	private function createStoredUrl(string $value): Url
+	{
+		$url = Url::parse($value);
+		if ($url === null || ($url->toAsciiString() !== $value && $url->toUnicodeString() !== $value)) {
+			throw new ValueError(sprintf('%s is not a URL as this library writes one', $value));
+		}
+		return $url;
 	}
 
 }

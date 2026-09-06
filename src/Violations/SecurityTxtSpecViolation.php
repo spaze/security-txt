@@ -75,7 +75,9 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 			return null;
 		}
 		$url = Url::parse($value);
-		return $url !== null && $url->toUnicodeString() === $value ? $url : $value;
+		// Either canonical spelling counts: a URL this library wrote reaches a violation as A-labels, one read out of a checked file as whatever it said. What still fails
+		// both is a value that parses as something other than itself, `HTTP://` or a missing slash, which is often the finding and must not be printed normalised
+		return $url !== null && ($url->toUnicodeString() === $value || $url->toAsciiString() === $value) ? $url : $value;
 	}
 
 

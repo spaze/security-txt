@@ -5,12 +5,13 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Throwable;
+use Uri\WhatWg\Url;
 
 final class SecurityTxtUrlNotFoundException extends SecurityTxtFetcherException
 {
 
 	public function __construct(
-		string $url,
+		Url $url,
 		int $code,
 		private readonly string $ipAddress,
 		private readonly SecurityTxtIpAddressType $ipAddressType,

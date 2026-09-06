@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
 
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Uri\WhatWg\Url;
 
 /**
@@ -35,9 +36,20 @@ final class SecurityTxtPrintableValue
 	 */
 	private static function renderUrl(Url $url): string
 	{
-		return in_array($url->getScheme(), ['http', 'https'], true)
-			? $url->toUnicodeString()
-			: self::encode($url->toUnicodeString());
+		// A scheme this library would not fetch is printed as it was given, encoded: decoding is what loses things, `ftp://%78n--a.example/` has a label that is not punycode
+		// and reads back as `ftp://`, and a URL that has lost its host says nothing about where a redirect pointed
+		if (!in_array($url->getScheme(), ['http', 'https'], true)) {
+			return self::encode($url->toAsciiString());
+		}
+		// `toUnicodeString()` decodes every punycode label, and decoding one is not always reversible: `xn--khby` decodes to a pair that composes to a single character and
+		// encodes back as `xn--jgb`, so the readable URL would name a host the fetcher never went to. `SecurityTxtHost` settles which spelling a host reads as, and this asks
+		// it rather than keeping a second copy of the rule, so a URL and the host beside it in one message are never spelled two ways
+		try {
+			$host = new SecurityTxtHost($url);
+		} catch (SecurityTxtCannotParseHostnameException) {
+			return $url->toAsciiString();
+		}
+		return $host->getUnicode() === $url->getUnicodeHost() ? $url->toUnicodeString() : $url->toAsciiString();
 	}
 
 

@@ -11,6 +11,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicExcept
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -76,11 +77,11 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 	{
 		if ($isValid) {
 			Assert::noError(function () use ($ipAddress, $type): void {
-				$this->validator->validate($ipAddress, $type, $this->host('example.com'), 'https://example.com/');
+				$this->validator->validate($ipAddress, $type, $this->host('example.com'), new Url('https://example.com/'));
 			});
 		} else {
 			Assert::throws(function () use ($ipAddress, $type): void {
-				$this->validator->validate($ipAddress, $type, $this->host('example.com'), 'https://example.com/');
+				$this->validator->validate($ipAddress, $type, $this->host('example.com'), new Url('https://example.com/'));
 			}, SecurityTxtHostIpAddressNotPublicException::class, "Host example.com resolves to a non-public IP address {$ipAddress}");
 		}
 	}
@@ -105,7 +106,7 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 	public function testValidateInvalidIpAddress(string $ipAddress, SecurityTxtIpAddressType $type, string $typeLabel): void
 	{
 		Assert::throws(function () use ($ipAddress, $type): void {
-			$this->validator->validate($ipAddress, $type, $this->host('example.com'), 'https://example.com/');
+			$this->validator->validate($ipAddress, $type, $this->host('example.com'), new Url('https://example.com/'));
 		}, SecurityTxtHostIpAddressInvalidException::class, "Host example.com resolves to an invalid {$typeLabel} address {$ipAddress}");
 	}
 
@@ -135,7 +136,7 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 		// Built out here rather than inside the closure: `host()` throws, and a throw in there would be weighed against the expected class instead of failing outright
 		$securityTxtHost = $this->host($host);
 		Assert::throws(function () use ($ipAddress, $type, $securityTxtHost, $host): void {
-			$this->validator->validate($ipAddress, $type, $securityTxtHost, "https://{$host}/");
+			$this->validator->validate($ipAddress, $type, $securityTxtHost, new Url("https://{$host}/"));
 		}, $class, "Host {$host} {$expected}");
 	}
 

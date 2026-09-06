@@ -27,6 +27,7 @@ use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesCheckMultipleFiel
 use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesSetFieldValue;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
@@ -251,7 +252,9 @@ final class SecurityTxtParser
 
 	public function parseFetchResult(SecurityTxtFetchResult $fetchResult, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseHostResult
 	{
-		$parseResult = $this->parseString($fetchResult->getContents(), $fetchResult->getFinalUrl()->toUnicodeString(), $expiresWarningThreshold, $strictMode);
+		// The URL spelled the way this library spells one, not decoded: a file fetched from a host whose punycode does not survive decoding would otherwise be reported at a
+		// URL naming a different host, and `SecurityTxtSpecViolation::asUrl()` cannot read that spelling back either, so it prints percent encoded beside a host that reads
+		$parseResult = $this->parseString($fetchResult->getContents(), SecurityTxtPrintableValue::render($fetchResult->getFinalUrl()), $expiresWarningThreshold, $strictMode);
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,

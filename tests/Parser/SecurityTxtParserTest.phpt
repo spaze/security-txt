@@ -12,6 +12,7 @@ use SensitiveParameter;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -854,6 +855,20 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	/**
+	 * Where a file was found is reported at the host it was fetched from. Decoded instead, a file on `xn--khby.example` is reported at `ؤ.example`, which resolves to
+	 * `xn--jgb.example`, and `SecurityTxtSpecViolation::asUrl()` cannot read that spelling back either, so it prints percent encoded beside a host that reads.
+	 */
+	public function testTheFileIsReportedAtTheHostItWasFetchedFrom(): void
+	{
+		$url = new Url('http://xn--khby.example/.well-known/security.txt');
+		$lines = ["Contact: https://example.com/\n"];
+		$fetchResult = new SecurityTxtFetchResult($url, $url, [], implode($lines), false, $lines, [], []);
+		$fileErrors = $this->securityTxtParser->parseFetchResult($fetchResult)->getFileErrors();
+		Assert::same('The file at http://xn--khby.example/.well-known/security.txt must use HTTPS', $fileErrors[0]->getMessage());
+	}
+
+
 	public function testParseFetchResult(): void
 	{
 		$lines = ["Contact: mailto:example@example.com\r\n", "Expires: 2020-12-31T23:59:59.000Z"];
@@ -861,8 +876,8 @@ final class SecurityTxtParserTest extends TestCase
 			new Url('https://example.com/security.txt'),
 			new Url('https://www.example.com/security.txt'),
 			[
-				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
-				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
+				'https://example.com/.well-known/security.txt' => new SecurityTxtRedirects('https://www.example.com/.well-known/security.txt'),
+				'https://example.com/security.txt' => new SecurityTxtRedirects('https://www.example.com/security.txt'),
 			],
 			implode('', $lines),
 			true,

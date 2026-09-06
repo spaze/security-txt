@@ -123,11 +123,10 @@ final class SecurityTxtHostTest extends TestCase
 			// A label whose decoded form encodes back as a different host reads as what was written. Which labels ICU decodes that way moves with its version, so these assert
 			// that the two forms agree rather than which spelling they agree on
 			'decodes to a different host' => ['https://xn--khby.example/', 'xn--khby.example', null],
-			// Decided per label: the readable label reads decoded next to one that keeps its punycode, whether the decoder decodes that one irreversibly or leaves it be
-			'mixed, decoded next to punycode' => ['https://xn--bcher-kva.xn--khby.example/', 'xn--bcher-kva.xn--khby.example', "b\u{FC}cher.xn--khby.example"],
-			// Judged in place: decoded `xn--wuao` re-encodes as itself alone but as `xn--wuan` beside a neighbour, so trusting the lone label would decode it into a name that
-			// rebuilds a different host, and this pins that its neighbour still reads decoded
-			'mixed, in-place beats alone' => ['https://xn--wuao.xn--r8jz45g.jp/', 'xn--wuao.xn--r8jz45g.jp', "xn--wuao.\u{4F8B}\u{3048}.jp"],
+			// All or nothing: a label that would read next to one that cannot keeps its punycode too, so the name is the one the URL it came out of reads as. Which labels the
+			// decoder decodes irreversibly moves with its version, so these assert the forms agree and the name is not mixed rather than which spelling they agree on
+			'mixed, one label reads and one does not' => ['https://xn--bcher-kva.xn--khby.example/', 'xn--bcher-kva.xn--khby.example', null],
+			'mixed, decoded out of normalization order' => ['https://xn--wuao.xn--r8jz45g.jp/', 'xn--wuao.xn--r8jz45g.jp', null],
 			'decodes out of normalization order' => ['https://xn--wuao.example/', 'xn--wuao.example', null],
 			'plain' => ['https://EXAMPLE.com/', 'example.com', 'example.com'],
 			'an IPv4 literal' => ['https://1.1.1.1/', '1.1.1.1', '1.1.1.1'],
@@ -140,7 +139,11 @@ final class SecurityTxtHostTest extends TestCase
 	 * One host has one name. The two forms are spellings of it, so whichever is written down has to encode back to the same host, and what a host reads as has to be what it can
 	 * be rebuilt from, which is what a stored result depends on.
 	 *
-	 * @param string|null $reads null where ICU's decode decides the spelling, leaving only the agreement to assert
+	 * A name is also never a mix of the two: `Url` serializes a host all decoded or all encoded and has no way to say a mixed one, so a name that mixed them would be a
+	 * spelling no URL on that host could ever read as, which is the disagreement one name per host exists to prevent. Asserted for every host here rather than pinned per
+	 * case, since which labels the decoder decodes irreversibly moves with its version.
+	 *
+	 * @param string|null $reads null where the decoder decides the spelling, leaving only the agreement to assert
 	 * @dataProvider getHostSpellingsAndNames
 	 */
 	public function testBothFormsNameTheSameHostAndRebuildIt(string $url, string $ascii, ?string $reads): void
@@ -151,6 +154,8 @@ final class SecurityTxtHostTest extends TestCase
 			Assert::same($reads, $host->getUnicode());
 		}
 		Assert::same($ascii, SecurityTxtHost::fromString($host->getUnicode())->getAscii());
+		$name = $host->getUnicode();
+		Assert::true($name === $ascii || $name === new Url($url)->getUnicodeHost(), "{$name} is neither what the host reads as nor its A-labels");
 	}
 
 }
