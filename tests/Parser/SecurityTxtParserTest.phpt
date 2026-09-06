@@ -12,6 +12,7 @@ use SensitiveParameter;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -875,8 +876,8 @@ final class SecurityTxtParserTest extends TestCase
 			new Url('https://example.com/security.txt'),
 			new Url('https://www.example.com/security.txt'),
 			[
-				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
-				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
+				'https://example.com/.well-known/security.txt' => new SecurityTxtRedirects('https://www.example.com/.well-known/security.txt'),
+				'https://example.com/security.txt' => new SecurityTxtRedirects('https://www.example.com/security.txt'),
 			],
 			implode('', $lines),
 			true,

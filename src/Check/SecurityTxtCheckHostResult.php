@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Check;
 use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtHost;
@@ -49,7 +50,7 @@ final readonly class SecurityTxtCheckHostResult implements JsonSerializable
 
 
 	/**
-	 * @return array<string, list<string>>
+	 * @return array<string, SecurityTxtRedirects>
 	 */
 	public function getRedirects(): array
 	{

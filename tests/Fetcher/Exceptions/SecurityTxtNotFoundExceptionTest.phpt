@@ -69,7 +69,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 			'https://3.example/' => ['https://redir3.example/'],
 		];
 		Assert::same($redirects, $exception->getAllRedirects());
-		Assert::same([], $exception->getRedirects());
+		Assert::same([], $exception->getRedirects()->toStrings());
 		$allIps = [
 			'192.0.2.1' => [SecurityTxtIpAddressType::V4, 200],
 			'2001:DB8::2' => [SecurityTxtIpAddressType::V6, 200],

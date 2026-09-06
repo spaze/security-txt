@@ -12,6 +12,7 @@ use ReflectionNamedType;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -48,22 +49,22 @@ final class SecurityTxtWireContractTest extends TestCase
 	private function getContract(): array
 	{
 		return [
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlException' => '(Uri\\WhatWg\\Url $url, array $redirects, ?string $ipAddress = NULL, ?Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType = NULL, ?string $error = NULL, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?string $ipAddress = NULL, ?Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType = NULL, ?string $error = NULL, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlExtensionNotLoadedException' => '(Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlUserAgentInvalidException' => '(Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotParseHostnameException' => '(string $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtConnectedToWrongIpAddressException' => '(string $expectedIpAddress, string $connectedToIpAddress, Uri\\WhatWg\\Url $url, array $redirects, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtConnectedToWrongIpAddressException' => '(string $expectedIpAddress, string $connectedToIpAddress, Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressInvalidException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotPublicException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoHttpCodeException' => '(Uri\\WhatWg\\Url $url, array $redirects, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoHttpCodeException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoLocationHeaderException' => '(Uri\\WhatWg\\Url $url, int $httpCode, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNotFoundException' => '(array $securityTxtUrls, Uri\\WhatWg\\Url $wellKnownUrl, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtOnlyIpv6HostButIpv6DisabledException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ipv6, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtTooManyRedirectsException' => '(Uri\\WhatWg\\Url $url, array $redirects, int $maxAllowed, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtTooManyRedirectsException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, int $maxAllowed, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlNotFoundException' => '(Uri\\WhatWg\\Url $url, int $code, string $ipAddress, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlUnsupportedSchemeException' => '(Uri\\WhatWg\\Url $url, array $redirects, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlUnsupportedSchemeException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtAcknowledgmentsNotHttps' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtAcknowledgmentsNotUri' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtBugBountyWrongCase' => '(string $value)',
@@ -330,6 +331,8 @@ final class SecurityTxtWireContractTest extends TestCase
 			$arguments[] = match (true) {
 				$name === Throwable::class => null,
 				$name === SecurityTxtHost::class => SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"),
+				// A chain of one, in the spelling a stored result carries, which is what a replay hands back and what a message has to read the same way either side of one
+				$name === SecurityTxtRedirects::class => new SecurityTxtRedirects("https://{$urlHost}/redirected"),
 				$name === Url::class => new Url("https://{$urlHost}/{$parameter->getName()}"),
 				is_subclass_of($name, BackedEnum::class) => $name::cases()[0],
 				$name === 'int' => 400 + $position,

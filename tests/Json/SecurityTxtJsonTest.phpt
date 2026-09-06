@@ -27,8 +27,10 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureExc
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -246,8 +248,8 @@ final class SecurityTxtJsonTest extends TestCase
 			new Url('https://example.com/security.txt'),
 			new Url('https://www.example.com/security.txt'),
 			[
-				'https://example.com/.well-known/security.txt' => ['https://www.example.com/.well-known/security.txt'],
-				'https://example.com/security.txt' => ['https://www.example.com/security.txt'],
+				'https://example.com/.well-known/security.txt' => new SecurityTxtRedirects('https://www.example.com/.well-known/security.txt'),
+				'https://example.com/security.txt' => new SecurityTxtRedirects('https://www.example.com/security.txt'),
 			],
 			implode($lines),
 			true,
@@ -383,12 +385,12 @@ final class SecurityTxtJsonTest extends TestCase
 				new SecurityTxtHostIpAddressNotPublicException($host, '127.0.0.1', new Url('https://example.com/.well-known/security.txt')),
 			],
 			SecurityTxtTooManyRedirectsException::class => [
-				new SecurityTxtTooManyRedirectsException(new Url('https://example.com'), ['https://example.com', 'https://www.example.com'], 1),
+				new SecurityTxtTooManyRedirectsException(new Url('https://example.com'), new SecurityTxtRedirects('https://example.com', 'https://www.example.com'), 1),
 			],
 			SecurityTxtCannotOpenUrlException::class => [
 				new SecurityTxtCannotOpenUrlException(
 					new Url('https://example.com/.well-known/security.txt'),
-					['https://redir1.example/'],
+					new SecurityTxtRedirects('https://redir1.example/'),
 					'2001:DB8::1',
 					SecurityTxtIpAddressType::V6,
 					'Could not connect to server',
@@ -603,7 +605,7 @@ final class SecurityTxtJsonTest extends TestCase
 				assert($type instanceof ReflectionNamedType);
 				$name = $type->getName();
 				// The types `json_decode()` produces, plus the ones the boundary rebuilds from one of them
-				$replayable = in_array($name, ['string', 'int', 'float', 'bool', 'null', 'array', SecurityTxtHost::class, Url::class], true) || is_subclass_of($name, BackedEnum::class);
+				$replayable = in_array($name, ['string', 'int', 'float', 'bool', 'null', 'array', SecurityTxtHost::class, SecurityTxtRedirects::class, Url::class], true) || is_subclass_of($name, BackedEnum::class);
 				// `$previous` is passed by a live caller and never serialized, so it is the one parameter whose type the wire never has to carry
 				Assert::true(
 					$replayable || ($name === Throwable::class && $parameter->getName() === 'previous'),
@@ -1026,6 +1028,22 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	/**
+	 * Not every URL this library records has a spelling that reads back: a redirect to `ftp://%78n--a.example/` resolves, and the fetcher writes down where it led, but the
+	 * `ftp://xn--a.example/` it serializes as will not parse in any spelling. A chain that refused one would take down the whole stored result it is only a part of.
+	 */
+	public function testAChainKeepsARedirectThatDoesNotReadBack(): void
+	{
+		$refused = 'ftp://xn--a.example/';
+		Assert::null(Url::parse($refused));
+		$built = new SecurityTxtUrlUnsupportedSchemeException(new Url('https://start.example/'), new SecurityTxtRedirects('https://start.example/.well-known/security.txt', $refused));
+		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => json_decode((string)json_encode($built), true)]);
+		Assert::same($built->getMessage(), $replayed->getMessage());
+		Assert::contains($refused, $replayed->getMessage());
+		Assert::same(['https://start.example/.well-known/security.txt', $refused], $replayed->getRedirects()->toStrings());
+	}
+
+
 	public function testCreateRedirectsFromJsonValues(): void
 	{
 		$values = [
@@ -1038,7 +1056,7 @@ final class SecurityTxtJsonTest extends TestCase
 				'https://com.example/',
 			],
 		];
-		Assert::same($values, $this->securityTxtJson->createRedirectsFromJsonValues($values));
+		Assert::same($values, array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $this->securityTxtJson->createRedirectsFromJsonValues($values)));
 	}
 
 

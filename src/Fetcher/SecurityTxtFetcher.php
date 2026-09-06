@@ -39,7 +39,7 @@ use Uri\WhatWg\Url;
 final class SecurityTxtFetcher
 {
 
-	/** @var array<string, list<string>> */
+	/** @var array<string, SecurityTxtRedirects> Keyed by the URL a chain started at, which has to be a string; what the chain holds does not */
 	private array $redirects = [];
 
 	/** @var list<callable(Url): void> */
@@ -234,15 +234,16 @@ final class SecurityTxtFetcher
 		if ($wellKnownContents === null && $topLevelContents === null) {
 			$wellKnownUrl = SecurityTxtPrintableValue::render($wellKnown->getUrl());
 			$topLevelUrl = SecurityTxtPrintableValue::render($topLevel->getUrl());
-			// The two `'type' => ...->value` below are scalar on purpose: unlike the three exceptions that take the case itself, `SecurityTxtNotFoundException` reads this
-			// array back with `is_int()`, so a case here becomes `type is not set or not an int`. Nothing catches that, the shape is `mixed` to the analysers
+			// The `'type' => ...->value` and the spelled out chains below are scalar on purpose: unlike the exceptions that take a case, a `Url` or a chain itself,
+			// `SecurityTxtNotFoundException` reads this array back with `is_int()` and `is_string()`, being the shape a stored result carries and replays from. Nothing
+			// catches one left as an object, the shape is `mixed` to the analysers
 			throw new SecurityTxtNotFoundException(
 				[
 					$wellKnownUrl => [
 						'ip' => $wellKnown->getIpAddress(),
 						'type' => $wellKnown->getIpAddressType()->value,
 						'code' => $wellKnown->getHttpCode(),
-						'redirects' => $this->redirects[$wellKnownUrl] ?? [],
+						'redirects' => ($this->redirects[$wellKnownUrl] ?? new SecurityTxtRedirects())->toStrings(),
 						'html' => $wellKnown->isRegularHtmlPage(),
 						'truncated' => $wellKnown->isTruncated(),
 					],
@@ -250,7 +251,7 @@ final class SecurityTxtFetcher
 						'ip' => $topLevel->getIpAddress(),
 						'type' => $topLevel->getIpAddressType()->value,
 						'code' => $topLevel->getHttpCode(),
-						'redirects' => $this->redirects[$topLevelUrl] ?? [],
+						'redirects' => ($this->redirects[$topLevelUrl] ?? new SecurityTxtRedirects())->toStrings(),
 						'html' => $topLevel->isRegularHtmlPage(),
 						'truncated' => $topLevel->isTruncated(),
 					],
@@ -379,9 +380,9 @@ final class SecurityTxtFetcher
 			$this->callOnCallback($this->onRedirect, $url, $locationUrl);
 			// Where the redirect led rather than the header that said so: a `Location` can be relative, or spell a host in punycode, and this is a record of the URLs a check
 			// went to and not of what a server typed
-			$this->redirects[$originalUrlString][] = SecurityTxtPrintableValue::render($locationUrl);
+			$this->redirects[$originalUrlString] = ($this->redirects[$originalUrlString] ?? new SecurityTxtRedirects())->withRedirect($locationUrl);
 			$finalUrl = $locationUrl;
-			if (count($this->redirects[$originalUrlString]) > $maxAllowedRedirects) {
+			if ($this->redirects[$originalUrlString]->count() > $maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrlString], $maxAllowedRedirects);
 			}
 			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as
@@ -394,16 +395,13 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @return list<string>
+	 * A chain read back starts at the URL it was asked for, which is not a redirect and so is not recorded as one.
 	 */
-	private function getRedirects(Url $url): array
+	private function getRedirects(Url $url): SecurityTxtRedirects
 	{
 		$urlString = SecurityTxtPrintableValue::render($url);
-		$redirects = $this->redirects[$urlString] ?? [];
-		if ($redirects !== []) {
-			array_unshift($redirects, $urlString);
-		}
-		return $redirects;
+		$redirects = $this->redirects[$urlString] ?? null;
+		return $redirects === null ? new SecurityTxtRedirects() : new SecurityTxtRedirects($urlString, ...$redirects->toStrings());
 	}
 
 

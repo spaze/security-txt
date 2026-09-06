@@ -317,7 +317,7 @@ as a string that `getMessage()` encodes. Its constructor params are the values t
 But please be aware that the messages still contain server-supplied information, so please do not display the messages as HTML and do not feed them into a Markdown parser or similar.
 If you'd do that, a malicious server could inject content that would result in Cross-Site Scripting attack for example.
 
-The same applies to other server-supplied values you might display, such as the fetched file contents (`SecurityTxtFetchResult::getContents()`) and the redirect URLs (`getRedirects()`): escape them before displaying and don't render them as HTML.
+The same applies to other server-supplied values you might display, such as the fetched file contents (`SecurityTxtFetchResult::getContents()`) and the redirect URLs (`getRedirects()`, which hands back a `SecurityTxtRedirects` whose `toStrings()` gives the chain): escape them before displaying and don't render them as HTML.
 Those are not encoded, and neither are the values from `getMessageValues()` below, because only the code displaying them knows what it is displaying them into.
 
 ## Formatting messages

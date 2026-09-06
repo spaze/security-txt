@@ -10,12 +10,11 @@ final readonly class SecurityTxtFetcherUrl
 {
 
 	/**
-	 * @param list<string> $redirects
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 */
 	public function __construct(
 		private Url $url,
-		private array $redirects,
+		private SecurityTxtRedirects $redirects,
 	) {
 		$scheme = $url->getScheme();
 		if (!in_array(strtolower($scheme), ['http', 'https'], true)) {
@@ -30,10 +29,7 @@ final readonly class SecurityTxtFetcherUrl
 	}
 
 
-	/**
-	 * @return list<string>
-	 */
-	public function getRedirects(): array
+	public function getRedirects(): SecurityTxtRedirects
 	{
 		return $this->redirects;
 	}

@@ -20,6 +20,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledE
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -152,10 +153,10 @@ final class SecurityTxtFetcherTest extends TestCase
 		$finalUrl = new Url('https://passed-by-ref.example/');
 		if ($expectedException !== null) {
 			Assert::throws(function () use ($method, $fetcher, $finalUrl): void {
-				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), []), SecurityTxtHost::fromString('example.com'), new Url('https://example.com/foo'), &$finalUrl, true, null]);
+				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('example.com'), new Url('https://example.com/foo'), &$finalUrl, true, null]);
 			}, $expectedException);
 		} else {
-			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), []), SecurityTxtHost::fromString('example.com'), new Url('https://example.com/foo'), &$finalUrl, true, null]);
+			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('example.com'), new Url('https://example.com/foo'), &$finalUrl, true, null]);
 			assert($response instanceof SecurityTxtFetcherResponse);
 			Assert::same($expectedHttpCode, $response->getHttpCode());
 			Assert::same($expectedLocation, $response->getHeader('location'));
@@ -305,7 +306,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same('random', $fetchResult->getContents());
 		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
 		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
-		Assert::same([], $fetchResult->getRedirects());
+		Assert::same([], array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
 	}
 
 
@@ -319,7 +320,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same('random', $fetchResult->getContents());
 		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
 		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
-		Assert::same([], $fetchResult->getRedirects());
+		Assert::same([], array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
 	}
 
 
@@ -333,7 +334,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same('random', $fetchResult->getContents());
 		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
 		Assert::same('https://example.com:4433/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
-		Assert::same([], $fetchResult->getRedirects());
+		Assert::same([], array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
 	}
 
 
@@ -347,7 +348,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same('random', $fetchResult->getContents());
 		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
 		Assert::same('https://[2001:1337:42:ec00:2468:7ea:cafe:d00d]:4433/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
-		Assert::same([], $fetchResult->getRedirects());
+		Assert::same([], array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
 	}
 
 
@@ -378,14 +379,14 @@ final class SecurityTxtFetcherTest extends TestCase
 			'https://com.example/.well-known/security.txt' => ['https://location1.example/.well-known/'],
 			'https://com.example/security.txt' => ['https://location1.example/'],
 		];
-		Assert::same($redirects, $fetchResult->getRedirects());
+		Assert::same($redirects, array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
 
 		$redirects = [
 			'https://com.example/.well-known/security.txt' => ['https://location2.example/.well-known/'],
 			'https://com.example/security.txt' => ['https://location2.example/'],
 		];
 		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
-		Assert::same($redirects, $fetchResult->getRedirects());
+		Assert::same($redirects, array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
 	}
 
 
@@ -400,7 +401,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		Assert::same('random', $fetchResult->getContents());
 		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getFinalUrl()->toUnicodeString());
 		Assert::same('https://com.example/.well-known/security.txt', $fetchResult->getConstructedUrl()->toUnicodeString());
-		Assert::same([], $fetchResult->getRedirects());
+		Assert::same([], array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
 	}
 
 
@@ -682,7 +683,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		}, SecurityTxtUrlUnsupportedSchemeException::class);
 		assert($e instanceof SecurityTxtUrlUnsupportedSchemeException);
 		// The chain records where a redirect led rather than the header that said so, and an escape in the host is resolved out of it without losing the host
-		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://xn--a.example/'], $e->getRedirects());
+		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://xn--a.example/'], $e->getRedirects()->toStrings());
 	}
 
 
@@ -732,7 +733,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			'https://com.example/.well-known/security.txt -> https://com.example/one/security.txt',
 			'https://com.example/one/security.txt -> https://com.example/two/security.txt',
 		], $onRedirects);
-		Assert::same(['https://com.example/one/security.txt', 'https://com.example/two/security.txt'], $exception->getRedirects());
+		Assert::same(['https://com.example/one/security.txt', 'https://com.example/two/security.txt'], $exception->getRedirects()->toStrings());
 
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 0);

@@ -11,6 +11,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherCurlClient;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Tester\Assert;
 use Tester\TestCase;
@@ -42,7 +43,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 			Assert::fail("Can't find an IP address for example.com");
 		} else {
 			$response = $client->getResponse(
-				new SecurityTxtFetcherUrl($url, []),
+				new SecurityTxtFetcherUrl($url, new SecurityTxtRedirects()),
 				SecurityTxtHost::fromString('example.com'),
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
@@ -65,7 +66,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 			Assert::fail("Can't find an IP address for httpbin.org");
 		} else {
 			$response = $client->getResponse(
-				new SecurityTxtFetcherUrl($url, []),
+				new SecurityTxtFetcherUrl($url, new SecurityTxtRedirects()),
 				SecurityTxtHost::fromString('httpbin.org'),
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
@@ -86,7 +87,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 			Assert::fail("Can't find an IP address for httpbin.org");
 		} else {
 			$response = $client->getResponse(
-				new SecurityTxtFetcherUrl($url, []),
+				new SecurityTxtFetcherUrl($url, new SecurityTxtRedirects()),
 				SecurityTxtHost::fromString('httpbin.org'),
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
@@ -103,7 +104,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://httpbin.org/headers'), []), SecurityTxtHost::fromString('foobar'), '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://httpbin.org/headers'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('foobar'), '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtConnectedToWrongIpAddressException::class, "Can't open https://httpbin.org/headers, connected to %S% instead of 1.1.1.0 as expected");
 	}
 
@@ -113,7 +114,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), []), SecurityTxtHost::fromString('com.example'), '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('com.example'), '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/ using its IPv4 address 1.1.1.0 (%a%)");
 	}
 
@@ -139,7 +140,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	{
 		$client = new SecurityTxtFetcherCurlClient($userAgent);
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), []), SecurityTxtHost::fromString('com.example'), '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('com.example'), '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlUserAgentInvalidException::class, "Can't open https://com.example/, the specified user agent contains a control character and is invalid");
 	}
 

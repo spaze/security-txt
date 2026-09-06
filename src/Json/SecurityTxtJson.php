@@ -15,6 +15,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtAcknowledgments;
 use Spaze\SecurityTxt\Fields\SecurityTxtBugBounty;
 use Spaze\SecurityTxt\Fields\SecurityTxtCanonical;
@@ -91,8 +92,12 @@ final readonly class SecurityTxtJson
 
 
 	/**
+	 * A chain comes back as the spellings a stored result carries, handed to `SecurityTxtRedirects` rather than to each reader as a bare array, so what a redirect reads as is
+	 * decided once, by the chain, and a replayed result says what the one it was made from said. Not read back into `Url` objects here: a URL this library records need not
+	 * have a spelling that parses, which is why the chain holds the strings, see `SecurityTxtRedirects`.
+	 *
 	 * @param array<array-key, mixed> $values
-	 * @return array<string, list<string>>
+	 * @return array<string, SecurityTxtRedirects>
 	 * @throws SecurityTxtCannotParseJsonException
 	 */
 	public function createRedirectsFromJsonValues(array $values): array
@@ -105,12 +110,14 @@ final readonly class SecurityTxtJson
 			if (!is_array($urlRedirects)) {
 				throw new SecurityTxtCannotParseJsonException("redirects > {$url} is not an array");
 			}
+			$urls = [];
 			foreach ($urlRedirects as $urlRedirect) {
 				if (!is_string($urlRedirect)) {
 					throw new SecurityTxtCannotParseJsonException('redirects contains an item which is not a string');
 				}
-				$redirects[$url][] = $urlRedirect;
+				$urls[] = $urlRedirect;
 			}
+			$redirects[$url] = new SecurityTxtRedirects(...$urls);
 		}
 		return $redirects;
 	}
@@ -437,7 +444,7 @@ final readonly class SecurityTxtJson
 
 	/**
 	 * The same rule as the constructor params, said as this caller reports a bad value. One rule, because a URL stored in a field and the same URL stored as a param are the
-	 * same question, and two answers to it would mean a spelling accepted in one place and refused in the other.
+	 * same question, and two answers to it meant a spelling accepted in one place and refused in the other.
 	 */
 	private function createUrlFromJsonValue(string $value, string $field): Url
 	{
@@ -527,6 +534,13 @@ final readonly class SecurityTxtJson
 				$value = SecurityTxtHost::fromString($value);
 			} elseif ($type === Url::class && is_string($value)) {
 				$value = $this->createStoredUrl($value);
+			} elseif ($type === SecurityTxtRedirects::class && is_array($value)) {
+				foreach ($value as $redirect) {
+					if (!is_string($redirect)) {
+						throw new ValueError(sprintf('a redirect is of type %s, not a string', get_debug_type($redirect)));
+					}
+				}
+				$value = new SecurityTxtRedirects(...$value);
 			} elseif ($type !== null && is_subclass_of($type, BackedEnum::class) && (is_int($value) || is_string($value))) {
 				$value = $type::from($value);
 			}
@@ -537,7 +551,7 @@ final readonly class SecurityTxtJson
 
 
 	/**
-	 * A URL out of a stored result, refused rather than rewritten, like a host: a value that serializes back as something else would replay as a URL nobody stored. Either
+	 * A URL out of the stored params, refused rather than rewritten, like a host: a value that serializes back as something else would replay as a URL nobody stored. Either
 	 * canonical spelling counts, since a result stored before the wire carried A-labels holds the readable one.
 	 */
 	private function createStoredUrl(string $value): Url

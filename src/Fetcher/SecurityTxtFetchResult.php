@@ -14,7 +14,7 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 {
 
 	/**
-	 * @param array<string, list<string>> $redirects
+	 * @param array<string, SecurityTxtRedirects> $redirects
 	 * @param array<int, string> $lines
 	 * @param list<SecurityTxtSpecViolation> $errors
 	 * @param list<SecurityTxtSpecViolation> $warnings
@@ -72,7 +72,7 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 	/**
 	 * The redirect URLs, do not render as HTML or Markdown, could be malicious.
 	 *
-	 * @return array<string, list<string>>
+	 * @return array<string, SecurityTxtRedirects>
 	 */
 	public function getRedirects(): array
 	{
@@ -111,7 +111,7 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 			// which `SecurityTxtJson` then refuses as not a URL this library writes, taking a whole stored result down over a URL nobody stored
 			'constructedUrl' => SecurityTxtPrintableValue::render($this->getConstructedUrl()),
 			'finalUrl' => SecurityTxtPrintableValue::render($this->getFinalUrl()),
-			'redirects' => $this->getRedirects(),
+			'redirects' => array_map(fn(SecurityTxtRedirects $redirects): array => $redirects->toStrings(), $this->getRedirects()),
 			'contents' => $this->getContents(),
 			'isTruncated' => $this->isTruncated(),
 			'errors' => $this->getErrors(),

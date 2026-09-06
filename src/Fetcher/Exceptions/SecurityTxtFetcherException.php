@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 use Exception;
 use JsonSerializable;
 use Override;
+use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Throwable;
@@ -19,11 +20,11 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
-	 * @param list<scalar|null|Url|SecurityTxtHost|array<array-key, scalar|array<array-key, scalar|list<string>>>> $constructorParams Passed as themselves, a URL and a host are put in the spelling the wire carries when this is serialized and not before, so no caller has to know one
+	 * @param list<scalar|null|Url|SecurityTxtHost|SecurityTxtRedirects|array<array-key, scalar|array<array-key, scalar|list<string>>>> $constructorParams Passed as themselves, a URL and a host are put in the spelling the wire carries when this is serialized and not before, so no caller has to know one
 	 * @param literal-string $messageFormat Never build this from anything the checked host sends, it is used as a format and only the values are encoded when printed
 	 * @param array<array-key, string|Url|SecurityTxtHost> $messageValues A host and a URL are passed as themselves so each prints as it reads, like everywhere else. Stored as a list, see the constructor
 	 * @param Url|null $url Null where there is none to name, which is what a hostname that would not parse leaves behind. Nullable but not optional, so a subclass with a URL to hand over cannot leave it out by saying nothing
-	 * @param list<string> $redirects
+	 * @param SecurityTxtRedirects $redirects Where the check was sent, empty when it was not
 	 * @throws Throwable
 	 */
 	public function __construct(
@@ -31,7 +32,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 		private readonly string $messageFormat,
 		array $messageValues,
 		private readonly ?Url $url,
-		private readonly array $redirects = [],
+		private readonly SecurityTxtRedirects $redirects = new SecurityTxtRedirects(),
 		int $code = 0,
 		?Throwable $previous = null,
 	) {
@@ -54,32 +55,19 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
-	 * A recorded chain as message values. The entries are URLs this library resolved and wrote down, so they print as URLs rather than as text a host sent, which is what a
-	 * plain string in a message means.
-	 *
-	 * @param list<string> $redirects
-	 * @return list<string|Url>
-	 */
-	protected function redirectValues(array $redirects): array
-	{
-		return array_map(fn(string $redirect): string|Url => Url::parse($redirect) ?? $redirect, $redirects);
-	}
-
-
-	/**
 	 * The ` (redirects: %s → %s)` part of a message, with one placeholder per redirect, empty when there was none.
 	 *
-	 * @param list<string> $redirects
 	 * @param literal-string $suffix Added inside the brackets after the last redirect
 	 * @return literal-string
 	 */
-	protected function getRedirectsFormat(array $redirects, string $suffix = ''): string
+	protected function getRedirectsFormat(SecurityTxtRedirects $redirects, string $suffix = ''): string
 	{
-		if ($redirects === []) {
+		$count = $redirects->count();
+		if ($count === 0) {
 			return '';
 		}
 		$format = ' (redirects: %s';
-		for ($i = 1; $i < count($redirects); $i++) {
+		for ($i = 1; $i < $count; $i++) {
 			$format .= ' → %s';
 		}
 		return $format . $suffix . ')';
@@ -101,10 +89,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	}
 
 
-	/**
-	 * @return list<string>
-	 */
-	public function getRedirects(): array
+	public function getRedirects(): SecurityTxtRedirects
 	{
 		return $this->redirects;
 	}
@@ -135,6 +120,9 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	{
 		if ($param instanceof Url || $param instanceof SecurityTxtHost) {
 			return SecurityTxtPrintableValue::render($param);
+		}
+		if ($param instanceof SecurityTxtRedirects) {
+			return $param->toStrings();
 		}
 		return is_array($param) ? array_map($this->paramToWire(...), $param) : $param;
 	}
