@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
 
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Uri\WhatWg\Url;
 
 /**
@@ -35,9 +36,18 @@ final class SecurityTxtPrintableValue
 	 */
 	private static function renderUrl(Url $url): string
 	{
-		return in_array($url->getScheme(), ['http', 'https'], true)
-			? $url->toUnicodeString()
-			: self::encode($url->toUnicodeString());
+		if (!in_array($url->getScheme(), ['http', 'https'], true)) {
+			return self::encode($url->toUnicodeString());
+		}
+		// `toUnicodeString()` decodes every punycode label, and decoding one is not always reversible: `xn--khby` decodes to a pair that composes to a single character and
+		// encodes back as `xn--jgb`, so the readable URL would name a host the fetcher never went to. `SecurityTxtHost` settles which spelling a host reads as, so the readable
+		// form is used only where it agrees, and the whole URL reads as its A-labels where it does not
+		try {
+			$host = new SecurityTxtHost($url);
+		} catch (SecurityTxtCannotParseHostnameException) {
+			return $url->toAsciiString();
+		}
+		return $host->getUnicode() === $url->getUnicodeHost() ? $url->toUnicodeString() : $url->toAsciiString();
 	}
 
 
