@@ -57,9 +57,8 @@ final class SecurityTxtPrintableValueTest extends TestCase
 	 * What a printed URL must never do is name a different host than the one it was built from, which is what it did before: `https://xn--khby.example/` printed as
 	 * `https://ؤ.example/`, and that resolves to `xn--jgb`.
 	 *
-	 * It is not the same as reading letter for letter like the host does. A host decodes label by label, so `xn--hky-ela4t.xn--wuao.example` reads as
-	 * `háčky.xn--wuao.example`, while a URL falls back to its A-labels whole as soon as any label does not survive decoding. Both name the host that was resolved, which is
-	 * the property worth having; the URL is just less decoded than it could be.
+	 * A host reads the same way, all of it or none of it, so the URL in a message and the host beside it are the same string on every host, not only on the ones where
+	 * every label happens to decode.
 	 */
 	public function testAPrintedUrlNamesTheHostItWasBuiltFrom(): void
 	{

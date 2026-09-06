@@ -42,8 +42,8 @@ final class SecurityTxtPrintableValue
 			return self::encode($url->toAsciiString());
 		}
 		// `toUnicodeString()` decodes every punycode label, and decoding one is not always reversible: `xn--khby` decodes to a pair that composes to a single character and
-		// encodes back as `xn--jgb`, so the readable URL would name a host the fetcher never went to. `SecurityTxtHost` settles which spelling a host reads as, so the readable
-		// form is used only where it agrees, and the whole URL reads as its A-labels where it does not
+		// encodes back as `xn--jgb`, so the readable URL would name a host the fetcher never went to. `SecurityTxtHost` settles which spelling a host reads as, and this asks
+		// it rather than keeping a second copy of the rule, so a URL and the host beside it in one message are never spelled two ways
 		try {
 			$host = new SecurityTxtHost($url);
 		} catch (SecurityTxtCannotParseHostnameException) {
