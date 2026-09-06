@@ -66,26 +66,9 @@ final class SecurityTxtCheckHostCli
 				$this->exit(CheckExitStatus::Ok);
 			}
 		} catch (SecurityTxtFetcherException $e) {
-			// The values are URLs, IP addresses, codes and a message from curl, and only a URL written the way this library writes one prints as it reads
-			$this->consolePrinter->error($e->getMessageFormat(), ...array_map($this->url(...), $e->getMessageValues()));
+			$this->consolePrinter->error($e->getMessageFormat(), ...$e->getMessageValues());
 			$this->exit(CheckExitStatus::FileError);
 		}
-	}
-
-
-	/**
-	 * Exceptions and violations carry their values as strings to survive a JSON round trip, so a value that is the canonical serialization of a URL is parsed back here to print
-	 * as it reads. Anything else stays a string and gets encoded, whether it does not parse at all or parses as something other than itself: a violation often quotes the value
-	 * it is about, `HTTP://` or a missing slash may be the finding, and printing it normalized would hide the evidence. A host arrives as itself, already knowing how it reads,
-	 * so there is nothing to parse back.
-	 */
-	private function url(string|SecurityTxtHost $value): string|Url|SecurityTxtHost
-	{
-		if ($value instanceof SecurityTxtHost) {
-			return $value;
-		}
-		$url = Url::parse($value);
-		return $url !== null && $url->toUnicodeString() === $value ? $url : $value;
 	}
 
 

@@ -7,8 +7,12 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundWrongUrlStructureException;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
+use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -59,7 +63,7 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 				'html' => true,
 				'truncated' => false,
 			],
-		], 'https://1.example/');
+		], new Url('https://1.example/'));
 		$redirects = [
 			'https://1.example/' => ['https://redir1.example/'],
 			'https://3.example/' => ['https://redir3.example/'],
@@ -175,8 +179,27 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 	public function testErrors(array $urls, string $error): void
 	{
 		Assert::throws(function () use ($urls): void {
-			new SecurityTxtNotFoundException($urls, 'https://example.com/');
+			new SecurityTxtNotFoundException($urls, new Url('https://example.com/'));
 		}, SecurityTxtNotFoundWrongUrlStructureException::class, 'Cannot create Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException: ' . $error);
+	}
+
+
+	/**
+	 * A result stored before URLs were written as A-labels keys its URLs by the readable spelling, while the lookup that finds the well-known one among them is done in the
+	 * wire spelling, so the keys handed in are put in that spelling first. Without it such a result does not replay at all: it fails saying the well-known URL is not among
+	 * its own keys, and the whole stored result goes with it.
+	 */
+	public function testUrlsKeyedTheOldWayStillReplay(): void
+	{
+		$json = new SecurityTxtJson(new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider()));
+		$components = ['ip' => '192.0.2.1', 'type' => SecurityTxtIpAddressType::V4->value, 'code' => 404, 'redirects' => [], 'html' => false, 'truncated' => false];
+		foreach (["https://h\u{E1}\u{10D}ky.example/.well-known/security.txt", 'https://xn--hky-ela4t.example/.well-known/security.txt'] as $spelling) {
+			$replayed = $json->createFetcherExceptionFromJsonValues([
+				'error' => ['class' => SecurityTxtNotFoundException::class, 'params' => [[$spelling => $components], $spelling]],
+			]);
+			Assert::type(SecurityTxtNotFoundException::class, $replayed);
+			Assert::contains("h\u{E1}\u{10D}ky.example", $replayed->getMessage(), "a result keyed by {$spelling} does not replay readably");
+		}
 	}
 
 }

@@ -19,7 +19,7 @@ final readonly class SecurityTxtFetcherUrl
 	) {
 		$scheme = $url->getScheme();
 		if (!in_array(strtolower($scheme), ['http', 'https'], true)) {
-			throw new SecurityTxtUrlUnsupportedSchemeException($this->url->toUnicodeString(), $this->redirects);
+			throw new SecurityTxtUrlUnsupportedSchemeException($this->url, $this->redirects);
 		}
 	}
 

@@ -4,7 +4,9 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Throwable;
+use Uri\WhatWg\Url;
 
 final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 {
@@ -20,16 +22,25 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 	 * @param array<array-key, mixed>|non-empty-array<string, array{ip:string, type:value-of<SecurityTxtIpAddressType>, code:int, redirects:list<string>, html:bool, truncated:bool}> $securityTxtUrls URL => IP address, IP address type, HTTP code, redirects, regular HTML page?, response too long?
 	 * @throws SecurityTxtNotFoundWrongUrlStructureException
 	 */
-	public function __construct(array $securityTxtUrls, string $wellKnownUrl, ?Throwable $previous = null)
+	public function __construct(array $securityTxtUrls, Url $wellKnownUrl, ?Throwable $previous = null)
 	{
+		// Keyed by the spelling the wire carries, and the keys handed in are put in that spelling first: a result stored before URLs were written as A-labels carries the
+		// readable ones, and looking those up by an A-label would find nothing and take the whole stored result down
+		$wellKnownUrlString = SecurityTxtPrintableValue::render($wellKnownUrl);
+		$byWireSpelling = [];
+		foreach ($securityTxtUrls as $givenUrl => $givenComponents) {
+			$parsedUrl = is_string($givenUrl) ? Url::parse($givenUrl) : null;
+			$byWireSpelling[$parsedUrl !== null ? SecurityTxtPrintableValue::render($parsedUrl) : $givenUrl] = $givenComponents;
+		}
+		$securityTxtUrls = $byWireSpelling;
 		$message = "Can't read %s: ";
 		$messageValues = ['security.txt'];
 		$urls = [];
 		if ($securityTxtUrls === []) {
 			throw new SecurityTxtNotFoundWrongUrlStructureException('securityTxtUrls is empty');
 		}
-		if (!array_key_exists($wellKnownUrl, $securityTxtUrls)) {
-			throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls does not contain the well-known URL {$wellKnownUrl}");
+		if (!array_key_exists($wellKnownUrlString, $securityTxtUrls)) {
+			throw new SecurityTxtNotFoundWrongUrlStructureException("securityTxtUrls does not contain the well-known URL {$wellKnownUrlString}");
 		}
 		foreach ($securityTxtUrls as $url => $components) {
 			if (!is_string($url)) {
@@ -88,7 +99,8 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 			} else {
 				$message .= '%s (%s) => %s';
 			}
-			$messageValues[] = $url;
+			// The key is the spelling the wire carries; the value is the object, so a message quotes the URL the way everything else does
+			$messageValues[] = Url::parse($url) ?? $url;
 			$messageValues[] = $components['ip'];
 			if (!$components['html'] && !$components['truncated']) {
 				$messageValues[] = (string)$components['code'];

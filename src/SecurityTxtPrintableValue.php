@@ -36,8 +36,10 @@ final class SecurityTxtPrintableValue
 	 */
 	private static function renderUrl(Url $url): string
 	{
+		// A scheme this library would not fetch is printed as it was given, encoded: decoding is what loses things, `ftp://%78n--a.example/` has a label that is not punycode
+		// and reads back as `ftp://`, and a URL that has lost its host says nothing about where a redirect pointed
 		if (!in_array($url->getScheme(), ['http', 'https'], true)) {
-			return self::encode($url->toUnicodeString());
+			return self::encode($url->toAsciiString());
 		}
 		// `toUnicodeString()` decodes every punycode label, and decoding one is not always reversible: `xn--khby` decodes to a pair that composes to a single character and
 		// encodes back as `xn--jgb`, so the readable URL would name a host the fetcher never went to. `SecurityTxtHost` settles which spelling a host reads as, so the readable

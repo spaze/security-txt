@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Throwable;
+use Uri\WhatWg\Url;
 
 final class SecurityTxtUrlUnsupportedSchemeException extends SecurityTxtFetcherException
 {
@@ -11,12 +12,12 @@ final class SecurityTxtUrlUnsupportedSchemeException extends SecurityTxtFetcherE
 	/**
 	 * @param list<string> $redirects
 	 */
-	public function __construct(string $url, array $redirects, ?Throwable $previous = null)
+	public function __construct(Url $url, array $redirects, ?Throwable $previous = null)
 	{
 		parent::__construct(
 			[$url, $redirects],
 			'URL %s has an unsupported scheme' . $this->getRedirectsFormat($redirects),
-			[$url, ...$redirects],
+			[$url, ...$this->redirectValues($redirects)],
 			$url,
 			$redirects,
 			previous: $previous,

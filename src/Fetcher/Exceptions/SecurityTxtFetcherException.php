@@ -9,18 +9,20 @@ use Override;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Throwable;
+use Uri\WhatWg\Url;
 
 abstract class SecurityTxtFetcherException extends Exception implements JsonSerializable
 {
 
-	/** @var list<string|SecurityTxtHost> */
+	/** @var list<string|Url|SecurityTxtHost> */
 	private readonly array $messageValues;
 
 
 	/**
-	 * @param list<scalar|null|array<array-key, scalar|array<array-key, scalar|list<string>>>> $constructorParams
+	 * @param list<scalar|null|Url|SecurityTxtHost|array<array-key, scalar|array<array-key, scalar|list<string>>>> $constructorParams Passed as themselves, a URL and a host are put in the spelling the wire carries when this is serialized and not before, so no caller has to know one
 	 * @param literal-string $messageFormat Never build this from anything the checked host sends, it is used as a format and only the values are encoded when printed
-	 * @param array<array-key, string|SecurityTxtHost> $messageValues A host is passed as one so it prints as it reads, like everywhere else. Stored as a list, see the constructor
+	 * @param array<array-key, string|Url|SecurityTxtHost> $messageValues A host and a URL are passed as themselves so each prints as it reads, like everywhere else. Stored as a list, see the constructor
+	 * @param Url|null $url Null where there is none to name, which is what a hostname that would not parse leaves behind. Nullable but not optional, so a subclass with a URL to hand over cannot leave it out by saying nothing
 	 * @param list<string> $redirects
 	 * @throws Throwable
 	 */
@@ -28,7 +30,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 		private readonly array $constructorParams,
 		private readonly string $messageFormat,
 		array $messageValues,
-		private readonly string $url,
+		private readonly ?Url $url,
 		private readonly array $redirects = [],
 		int $code = 0,
 		?Throwable $previous = null,
@@ -48,6 +50,19 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	public function getMessageFormat(): string
 	{
 		return $this->messageFormat;
+	}
+
+
+	/**
+	 * A recorded chain as message values. The entries are URLs this library resolved and wrote down, so they print as URLs rather than as text a host sent, which is what a
+	 * plain string in a message means.
+	 *
+	 * @param list<string> $redirects
+	 * @return list<string|Url>
+	 */
+	protected function redirectValues(array $redirects): array
+	{
+		return array_map(fn(string $redirect): string|Url => Url::parse($redirect) ?? $redirect, $redirects);
 	}
 
 
@@ -72,7 +87,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
-	 * @return list<string|SecurityTxtHost>
+	 * @return list<string|Url|SecurityTxtHost>
 	 */
 	public function getMessageValues(): array
 	{
@@ -80,7 +95,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	}
 
 
-	public function getUrl(): string
+	public function getUrl(): ?Url
 	{
 		return $this->url;
 	}
@@ -96,6 +111,9 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
+	 * The one place a stored URL or host is spelled. `SecurityTxtJson` reads the constructor back and turns the string into the object again, so what a subclass hands over is
+	 * what its own constructor takes, and a spelling nobody writes is a spelling nobody can get wrong.
+	 *
 	 * @return array<string, mixed>
 	 */
 	#[Override]
@@ -103,8 +121,22 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	{
 		return [
 			'class' => $this::class,
-			'params' => $this->constructorParams,
+			'params' => array_map($this->paramToWire(...), $this->constructorParams),
 		];
+	}
+
+
+	/**
+	 * Only a URL and a host are spelled, everything else is data and goes as it is: `SecurityTxtPrintableValue::render()` percent encodes a plain string, which is what makes it
+	 * safe to print and exactly what would corrupt an IP address or a header value on the way to storage. Arrays are walked because a `Url` in one would otherwise reach
+	 * `json_encode()` as an object with nothing public on it and be stored as `{}`.
+	 */
+	private function paramToWire(mixed $param): mixed
+	{
+		if ($param instanceof Url || $param instanceof SecurityTxtHost) {
+			return SecurityTxtPrintableValue::render($param);
+		}
+		return is_array($param) ? array_map($this->paramToWire(...), $param) : $param;
 	}
 
 }

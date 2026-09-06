@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher\Exceptions;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Throwable;
+use Uri\WhatWg\Url;
 
 final class SecurityTxtCannotOpenUrlException extends SecurityTxtFetcherException
 {
@@ -14,7 +15,7 @@ final class SecurityTxtCannotOpenUrlException extends SecurityTxtFetcherExceptio
 	 * @param string|null $error Must not contain anything the checked host controls; `curl_strerror()` is safe, `curl_error()` is not because it quotes strings like the certificate subject name. It reaches `getMessage()`, which encodes it down to printable ASCII, and `getMessageValues()` and the serialized `params`, which do not, so a consumer logging or rendering either one sees whatever was put here
 	 */
 	public function __construct(
-		string $url,
+		Url $url,
 		array $redirects,
 		private readonly ?string $ipAddress = null,
 		private readonly ?SecurityTxtIpAddressType $ipAddressType = null,
@@ -22,7 +23,7 @@ final class SecurityTxtCannotOpenUrlException extends SecurityTxtFetcherExceptio
 		?Throwable $previous = null,
 	) {
 		$format = "Can't open %s" . $this->getRedirectsFormat($redirects);
-		$values = [$url, ...$redirects];
+		$values = [$url, ...$this->redirectValues($redirects)];
 		if ($this->ipAddress !== null) {
 			$format .= match ($this->ipAddressType) {
 				SecurityTxtIpAddressType::V4 => ' using its IPv4 address %s',

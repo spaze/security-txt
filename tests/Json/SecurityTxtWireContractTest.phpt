@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxtHost;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Tester\Assert;
@@ -47,22 +48,22 @@ final class SecurityTxtWireContractTest extends TestCase
 	private function getContract(): array
 	{
 		return [
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlException' => '(string $url, array $redirects, ?string $ipAddress = NULL, ?Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType = NULL, ?string $error = NULL, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlExtensionNotLoadedException' => '(string $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlUserAgentInvalidException' => '(string $url, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlException' => '(Uri\\WhatWg\\Url $url, array $redirects, ?string $ipAddress = NULL, ?Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType = NULL, ?string $error = NULL, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlExtensionNotLoadedException' => '(Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlUserAgentInvalidException' => '(Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotParseHostnameException' => '(string $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtConnectedToWrongIpAddressException' => '(string $expectedIpAddress, string $connectedToIpAddress, string $url, array $redirects, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressInvalidException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, string $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotFoundException' => '(string $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotPublicException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, string $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostNotFoundException' => '(string $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoHttpCodeException' => '(string $url, array $redirects, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoLocationHeaderException' => '(string $url, int $httpCode, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNotFoundException' => '(array $securityTxtUrls, string $wellKnownUrl, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtOnlyIpv6HostButIpv6DisabledException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ipv6, string $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtTooManyRedirectsException' => '(string $url, array $redirects, int $maxAllowed, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlNotFoundException' => '(string $url, int $code, string $ipAddress, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlUnsupportedSchemeException' => '(string $url, array $redirects, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtConnectedToWrongIpAddressException' => '(string $expectedIpAddress, string $connectedToIpAddress, Uri\\WhatWg\\Url $url, array $redirects, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressInvalidException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotPublicException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoHttpCodeException' => '(Uri\\WhatWg\\Url $url, array $redirects, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoLocationHeaderException' => '(Uri\\WhatWg\\Url $url, int $httpCode, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNotFoundException' => '(array $securityTxtUrls, Uri\\WhatWg\\Url $wellKnownUrl, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtOnlyIpv6HostButIpv6DisabledException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ipv6, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtTooManyRedirectsException' => '(Uri\\WhatWg\\Url $url, array $redirects, int $maxAllowed, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlNotFoundException' => '(Uri\\WhatWg\\Url $url, int $code, string $ipAddress, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlUnsupportedSchemeException' => '(Uri\\WhatWg\\Url $url, array $redirects, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtAcknowledgmentsNotHttps' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtAcknowledgmentsNotUri' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtBugBountyWrongCase' => '(string $value)',
@@ -190,7 +191,7 @@ final class SecurityTxtWireContractTest extends TestCase
 	public function testTheWireCarriesTheCallAndNothingElse(): void
 	{
 		foreach ($this->getReplayableClasses() as $class) {
-			$built = new ReflectionClass($class)->newInstanceArgs($this->getConstructorArguments($class));
+			$built = new ReflectionClass($class)->newInstanceArgs($this->getConstructorArguments($class, "h\u{E1}\u{10D}ky.example"));
 			assert($built instanceof SecurityTxtFetcherException || $built instanceof SecurityTxtSpecViolation);
 			Assert::same(['class', 'params'], array_keys($built->jsonSerialize()), "{$class} writes something other than the call");
 		}
@@ -201,22 +202,61 @@ final class SecurityTxtWireContractTest extends TestCase
 	{
 		$json = new SecurityTxtJson(new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider()));
 		$checked = 0;
-		foreach ($this->getReplayableClasses() as $class) {
-			$built = new ReflectionClass($class)->newInstanceArgs($this->getConstructorArguments($class));
-			assert($built instanceof SecurityTxtFetcherException || $built instanceof SecurityTxtSpecViolation);
-			$wire = json_decode((string)json_encode($built), true);
-			assert(is_array($wire));
-			$replayed = $built instanceof SecurityTxtFetcherException
-				? $json->createFetcherExceptionFromJsonValues(['error' => $wire])
-				: $json->createViolationsFromJsonValues([$wire])[0];
-			Assert::same($built::class, $replayed::class);
-			// Every accessor, not just the message: a constructor argument that stops reaching `constructorParams` is lost on replay while the class, the message and the
-			// re-serialized params can all still match, which is exactly what a value the message does not mention looks like when it goes missing
-			Assert::same($this->getAccessorValues($built), $this->getAccessorValues($replayed), "{$class} does not replay into an equivalent object");
-			Assert::same($built->jsonSerialize(), $replayed->jsonSerialize(), "{$class} does not re-serialize to what it was");
-			$checked++;
+		// Both ways a host can settle, because the two stringifications a call site could reach for each agree with the settled spelling on one of them: `toUnicodeString()` is
+		// right for a host that decodes reversibly and names another host for one that does not, `toAsciiString()` the other way about. One host proves neither wrong
+		foreach (["h\u{E1}\u{10D}ky.example", 'xn--khby.example'] as $urlHost) {
+			foreach ($this->getReplayableClasses() as $class) {
+				$built = new ReflectionClass($class)->newInstanceArgs($this->getConstructorArguments($class, $urlHost));
+				assert($built instanceof SecurityTxtFetcherException || $built instanceof SecurityTxtSpecViolation);
+				$wire = json_decode((string)json_encode($built), true);
+				assert(is_array($wire));
+				$replayed = $built instanceof SecurityTxtFetcherException
+					? $json->createFetcherExceptionFromJsonValues(['error' => $wire])
+					: $json->createViolationsFromJsonValues([$wire])[0];
+				Assert::same($built::class, $replayed::class);
+				// A URL reaches an exception as a `Url` and reads as itself. Stringified into the values instead it comes out one of two other ways, percent encoded if the
+				// readable spelling was passed or as an A-label if the wire one was, and both put a URL beside a host that reads, which is the seam this pins shut
+				foreach (['h%C3%A1%C4%8Dky.example', 'xn--hky-ela4t.example'] as $spelling) {
+					Assert::notContains($spelling, $built->getMessage(), "{$class} spells a URL {$spelling} where a host beside it reads");
+				}
+				// The same rule on the wire, which the round trip below cannot check: a class spelling a URL its own way replays into itself perfectly well and still disagrees
+				// with every other URL the library stores, and a stored result is looked up by those
+				$this->assertStoredUrlsReadAsTheLibrarySpellsThem($class, $wire);
+				// Every accessor, not just the message: a constructor argument that stops reaching `constructorParams` is lost on replay while the class, the message and the
+				// re-serialized params can all still match, which is exactly what a value the message does not mention looks like when it goes missing
+				Assert::same($this->getAccessorValues($built), $this->getAccessorValues($replayed), "{$class} does not replay into an equivalent object");
+				Assert::same($built->jsonSerialize(), $replayed->jsonSerialize(), "{$class} does not re-serialize to what it was");
+				$checked++;
+			}
 		}
-		Assert::same(count($this->getReplayableClasses()), $checked);
+		Assert::same(count($this->getReplayableClasses()) * 2, $checked);
+	}
+
+
+	/**
+	 * Every URL a stored result carries, key or value, spelled the way this library spells one. Walked rather than searched for a needle, so it holds for any host: the two
+	 * stringifications a call site could reach for instead of handing the object over each read as the settled spelling for some hosts and as a different host for others.
+	 *
+	 * Keys as well as values, that is where the URLs a check visited are stored, and it is what a stored result is looked up by.
+	 *
+	 * @param array<array-key, mixed> $wire
+	 */
+	private function assertStoredUrlsReadAsTheLibrarySpellsThem(string $class, array $wire): void
+	{
+		foreach ($wire as $key => $value) {
+			foreach ([$key, $value] as $candidate) {
+				if (!is_string($candidate) || !str_starts_with($candidate, 'https://')) {
+					continue;
+				}
+				$url = Url::parse($candidate);
+				Assert::notNull($url, "{$class} stores {$candidate}, which is not a URL");
+				assert($url instanceof Url);
+				Assert::same(SecurityTxtPrintableValue::render($url), $candidate, "{$class} stores a URL in a spelling this library does not write");
+			}
+			if (is_array($value)) {
+				$this->assertStoredUrlsReadAsTheLibrarySpellsThem($class, $value);
+			}
+		}
 	}
 
 
@@ -269,14 +309,17 @@ final class SecurityTxtWireContractTest extends TestCase
 	 * @param class-string $class
 	 * @return list<mixed>
 	 */
-	private function getConstructorArguments(string $class): array
+	private function getConstructorArguments(string $class, string $urlHost): array
 	{
 		if ($class === SecurityTxtPossibelFieldTypo::class) {
 			return ['Contct', SecurityTxtField::Contact->value, 'Contct: https://example.com/'];
 		}
 		if ($class === SecurityTxtNotFoundException::class) {
-			$url = 'https://example.com/.well-known/security.txt';
-			return [[$url => ['ip' => '192.0.2.1', 'type' => SecurityTxtIpAddressType::V4->value, 'code' => 404, 'redirects' => [], 'html' => false, 'truncated' => false]], $url];
+			$url = new Url("https://{$urlHost}/.well-known/security.txt");
+			return [
+				[$url->toAsciiString() => ['ip' => '192.0.2.1', 'type' => SecurityTxtIpAddressType::V4->value, 'code' => 404, 'redirects' => [], 'html' => false, 'truncated' => false]],
+				$url,
+			];
 		}
 		// Every argument is distinct, including two of the same type next to each other: fed the same value twice, a constructor that stores its params in the wrong order
 		// replays into an object that looks identical, and the swap this test exists to catch would pass
@@ -287,6 +330,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			$arguments[] = match (true) {
 				$name === Throwable::class => null,
 				$name === SecurityTxtHost::class => SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"),
+				$name === Url::class => new Url("https://{$urlHost}/{$parameter->getName()}"),
 				is_subclass_of($name, BackedEnum::class) => $name::cases()[0],
 				$name === 'int' => 400 + $position,
 				$name === 'array' => ["https://example.com/{$parameter->getName()}"],

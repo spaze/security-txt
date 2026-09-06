@@ -35,6 +35,7 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Throwable;
 use Uri\WhatWg\Url;
+use ValueError;
 
 final readonly class SecurityTxtJson
 {
@@ -497,8 +498,8 @@ final readonly class SecurityTxtJson
 
 
 	/**
-	 * The wire stays scalar, and the way back is decided by what each constructor parameter is typed as: a `SecurityTxtHost` is rebuilt from the name it reads as, a backed
-	 * enum from a case value. Both run inside the caller's try, so a name that rebuilds a different host or a value naming no case fails as the class it was meant for, the
+	 * The wire stays scalar, and the way back is decided by what each constructor parameter is typed as: a `SecurityTxtHost` is rebuilt from the name it reads as, a `Url`
+	 * from the spelling the wire carries, a backed enum from a case value. Both run inside the caller's try, so a name that rebuilds a different host or a value naming no case fails as the class it was meant for, the
 	 * same way any other bad param does. A host that cannot be rebuilt takes the whole stored error down rather than degrading into one that reads encoded, which was one
 	 * host reading as two things: refuse what cannot be rebuilt is the rule `SecurityTxtHost` itself follows, and a refused result is a cache miss to check again. A string
 	 * key is left to the spread, which reads it as a named argument, so it selects the parameter here the same way it does there.
@@ -529,6 +530,14 @@ final readonly class SecurityTxtJson
 			$type = $types[$key] ?? null;
 			if ($type === SecurityTxtHost::class && is_string($value)) {
 				$value = SecurityTxtHost::fromString($value);
+			} elseif ($type === Url::class && is_string($value)) {
+				// Refused rather than rewritten, like a host: a value that serializes back as something else would replay as a URL nobody stored. Either canonical spelling
+				// counts, since a result stored before the wire carried A-labels holds the readable one
+				$url = Url::parse($value);
+				if ($url === null || ($url->toAsciiString() !== $value && $url->toUnicodeString() !== $value)) {
+					throw new ValueError(sprintf('%s is not a URL as this library writes one', $value));
+				}
+				$value = $url;
 			} elseif ($type !== null && is_subclass_of($type, BackedEnum::class) && (is_int($value) || is_string($value))) {
 				$value = $type::from($value);
 			}

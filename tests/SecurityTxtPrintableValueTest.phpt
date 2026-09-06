@@ -25,7 +25,10 @@ final class SecurityTxtPrintableValueTest extends TestCase
 			// `xn--khby` decodes to a pair that composes to one character and encodes back as `xn--jgb`, so the decoded URL would name a host nothing resolved
 			'as it resolves where decoding is not' => ['https://xn--khby.example/security.txt', 'https://xn--khby.example/security.txt'],
 			'and where only one label of several is' => ['https://xn--bcher-kva.xn--khby.example/x', 'https://xn--bcher-kva.xn--khby.example/x'],
-			'a scheme this library does not fetch is encoded whole' => ['foo://Plain.Example/x', 'foo://plain.example/x'],
+			// Non-ASCII on purpose: an all-ASCII opaque URL renders the same whether or not the scheme is checked, so it would pin nothing
+			'a scheme this library does not fetch is printed as given' => ['foo://xn--hky-ela4t.example/x', 'foo://xn--hky-ela4t.example/x'],
+			// Its host is case sensitive and decoding one can lose it entirely, `%78n--a` is not punycode and reads back as nothing at all
+			'and keeps its host and its case' => ['ftp://%78n--a.EXAMPLE/x', 'ftp://xn--a.EXAMPLE/x'],
 			// Pins what the case-sensitive scheme check here relies on: the parser normalises a scheme, so a URL written in any case is still one this library fetches and
 			// is rendered by the host rule rather than falling to the arm for schemes it would not
 			'a scheme written in any case is still one this library fetches' => ["HtTpS://h\u{E1}\u{10D}ky.example/x", "https://h\u{E1}\u{10D}ky.example/x"],
@@ -51,16 +54,22 @@ final class SecurityTxtPrintableValueTest extends TestCase
 
 
 	/**
-	 * The rule is the host's, so the two cannot disagree about the same host, which is what they did before: a URL said `ؤ.example` where the host said `xn--khby.example`.
+	 * What a printed URL must never do is name a different host than the one it was built from, which is what it did before: `https://xn--khby.example/` printed as
+	 * `https://ؤ.example/`, and that resolves to `xn--jgb`.
+	 *
+	 * It is not the same as reading letter for letter like the host does. A host decodes label by label, so `xn--hky-ela4t.xn--wuao.example` reads as
+	 * `háčky.xn--wuao.example`, while a URL falls back to its A-labels whole as soon as any label does not survive decoding. Both name the host that was resolved, which is
+	 * the property worth having; the URL is just less decoded than it could be.
 	 */
-	public function testAUrlAndAHostAgreeAboutTheSameHost(): void
+	public function testAPrintedUrlNamesTheHostItWasBuiltFrom(): void
 	{
-		foreach (['xn--khby.example', 'xn--wuao.example', "h\u{E1}\u{10D}ky.example", 'example.com'] as $name) {
+		$names = ['xn--khby.example', 'xn--wuao.example', "h\u{E1}\u{10D}ky.example", 'example.com', 'xn--hky-ela4t.xn--wuao.example', 'xn--bcher-kva.xn--khby.example'];
+		foreach ($names as $name) {
 			$url = Url::parse("https://{$name}/");
 			assert($url instanceof Url);
-			$rendered = SecurityTxtPrintableValue::render($url);
-			$host = SecurityTxtPrintableValue::render(new SecurityTxtHost($url));
-			Assert::contains($host, $rendered, "a URL on {$name} does not read as the host does");
+			$printed = Url::parse(SecurityTxtPrintableValue::render($url));
+			Assert::notNull($printed, "what was printed for {$name} does not parse");
+			Assert::same($url->getAsciiHost(), $printed?->getAsciiHost(), "a URL on {$name} prints as a different host");
 		}
 	}
 

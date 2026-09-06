@@ -185,11 +185,12 @@ final class ConsolePrinterTest extends TestCase
 	{
 		$printer = new ConsolePrinter();
 		ob_start();
-		// A scheme this library would not fetch has an opaque path escaped by different rules, so it is encoded rather than vouched for
+		// A scheme this library would not fetch has an opaque path escaped by different rules, so it is encoded rather than vouched for, and printed as it was given: WHATWG
+		// runs no IDNA for one, its host is case sensitive, and the readable serialization lowercases it into a different host
 		$printer->info('Using %s', new Url('foo://EXAMPLE.COM/a b'));
 		$printer->info('Using %s', new Url("https://\u{4F8B}\u{3048}.jp/"));
 		$output = ob_get_clean();
-		$expected = "[Info] Using foo://example.com/a%20b\n"
+		$expected = "[Info] Using foo://EXAMPLE.COM/a%20b\n"
 			. "[Info] Using https://\u{4F8B}\u{3048}.jp/\n";
 		Assert::same($expected, $output);
 	}

@@ -26,6 +26,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\SecurityTxtContentType;
 use Spaze\SecurityTxt\SecurityTxtHost;
+use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
@@ -197,7 +198,7 @@ final class SecurityTxtFetcher
 			$ipv6Record = $dnsRecords->getIpv6Record();
 		}
 		if ($noIpv6 && $ipv6Record !== null && $ipRecord === null) {
-			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl()->toUnicodeString());
+			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl());
 		}
 		if (!$noIpv6 && $ipv6Record !== null) {
 			$ipAddress = $ipv6Record;
@@ -207,13 +208,13 @@ final class SecurityTxtFetcher
 			$ipAddressType = SecurityTxtIpAddressType::V4;
 		}
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
-			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl()->toUnicodeString(), $host);
+			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host);
 		}
-		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl()->toUnicodeString());
+		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl());
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
-			throw new SecurityTxtUrlNotFoundException($url->getUrl()->toUnicodeString(), $response->getHttpCode(), $ipAddress, $ipAddressType);
+			throw new SecurityTxtUrlNotFoundException($url->getUrl(), $response->getHttpCode(), $ipAddress, $ipAddressType);
 		}
 		if ($response->getHttpCode() >= 300) {
 			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6, $maxAllowedRedirects);
@@ -231,8 +232,8 @@ final class SecurityTxtFetcher
 		$wellKnownContents = $wellKnown->isRegularHtmlPage() || $wellKnown->isTruncated() ? null : $wellKnown->getContents();
 		$topLevelContents = $topLevel->isRegularHtmlPage() || $topLevel->isTruncated() ? null : $topLevel->getContents();
 		if ($wellKnownContents === null && $topLevelContents === null) {
-			$wellKnownUrl = $wellKnown->getUrl()->toUnicodeString();
-			$topLevelUrl = $topLevel->getUrl()->toUnicodeString();
+			$wellKnownUrl = SecurityTxtPrintableValue::render($wellKnown->getUrl());
+			$topLevelUrl = SecurityTxtPrintableValue::render($topLevel->getUrl());
 			// The two `'type' => ...->value` below are scalar on purpose: unlike the three exceptions that take the case itself, `SecurityTxtNotFoundException` reads this
 			// array back with `is_int()`, so a case here becomes `type is not set or not an int`. Nothing catches that, the shape is `mixed` to the analysers
 			throw new SecurityTxtNotFoundException(
@@ -254,7 +255,7 @@ final class SecurityTxtFetcher
 						'truncated' => $topLevel->isTruncated(),
 					],
 				],
-				$wellKnownUrl,
+				$wellKnown->getUrl(),
 			);
 		} elseif ($wellKnownContents !== null && $topLevelContents === null) {
 			if ($requireTopLevelLocation) {
@@ -281,9 +282,9 @@ final class SecurityTxtFetcher
 
 		$contentTypeHeader = $result->getContentType();
 		if ($contentTypeHeader === null || $contentTypeHeader->getLowercaseContentType() !== SecurityTxtContentType::CONTENT_TYPE) {
-			$errors[] = new SecurityTxtContentTypeInvalid($result->getUrl()->toUnicodeString(), $contentTypeHeader?->getContentType());
+			$errors[] = new SecurityTxtContentTypeInvalid(SecurityTxtPrintableValue::render($result->getUrl()), $contentTypeHeader?->getContentType());
 		} elseif ($contentTypeHeader->getLowercaseCharsetParameter() !== SecurityTxtContentType::CHARSET_PARAMETER) {
-			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getUrl()->toUnicodeString(), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharsetParameter());
+			$errors[] = new SecurityTxtContentTypeWrongCharset(SecurityTxtPrintableValue::render($result->getUrl()), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharsetParameter());
 		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),
@@ -371,15 +372,17 @@ final class SecurityTxtFetcher
 		}
 		$location = $response->getHeader('Location');
 		if ($location === null) {
-			throw new SecurityTxtNoLocationHeaderException($url->toUnicodeString(), $response->getHttpCode());
+			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
 		} else {
-			$originalUrlString = $originalUrl->toUnicodeString();
+			$originalUrlString = SecurityTxtPrintableValue::render($originalUrl);
 			$locationUrl = $this->urlParser->getRedirectUrl($location, $url);
 			$this->callOnCallback($this->onRedirect, $url, $locationUrl);
-			$this->redirects[$originalUrlString][] = $location;
+			// Where the redirect led rather than the header that said so: a `Location` can be relative, or spell a host in punycode, and this is a record of the URLs a check
+			// went to and not of what a server typed
+			$this->redirects[$originalUrlString][] = SecurityTxtPrintableValue::render($locationUrl);
 			$finalUrl = $locationUrl;
 			if (count($this->redirects[$originalUrlString]) > $maxAllowedRedirects) {
-				throw new SecurityTxtTooManyRedirectsException($url->toUnicodeString(), $this->redirects[$originalUrlString], $maxAllowedRedirects);
+				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrlString], $maxAllowedRedirects);
 			}
 			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as
 			// a hostname that will not parse, losing the redirect chain that says where the host sent us. Settling comes after it for the same reason
@@ -395,7 +398,7 @@ final class SecurityTxtFetcher
 	 */
 	private function getRedirects(Url $url): array
 	{
-		$urlString = $url->toUnicodeString();
+		$urlString = SecurityTxtPrintableValue::render($url);
 		$redirects = $this->redirects[$urlString] ?? [];
 		if ($redirects !== []) {
 			array_unshift($redirects, $urlString);

@@ -681,7 +681,8 @@ final class SecurityTxtFetcherTest extends TestCase
 			$fetcher->fetch(new Url('https://start.example/'));
 		}, SecurityTxtUrlUnsupportedSchemeException::class);
 		assert($e instanceof SecurityTxtUrlUnsupportedSchemeException);
-		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://%78n--a.example/'], $e->getRedirects());
+		// The chain records where a redirect led rather than the header that said so, and an escape in the host is resolved out of it without losing the host
+		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://xn--a.example/'], $e->getRedirects());
 	}
 
 
@@ -726,12 +727,12 @@ final class SecurityTxtFetcherTest extends TestCase
 			$fetcher->fetch(new Url('https://com.example/'));
 		}, SecurityTxtTooManyRedirectsException::class);
 		assert($exception instanceof SecurityTxtTooManyRedirectsException);
-		// The callback gets where the fetcher went, the wire keeps what the host sent
+		// Both the callback and the chain say where the fetcher went, so a relative `Location` is resolved rather than recorded as the host wrote it
 		Assert::same([
 			'https://com.example/.well-known/security.txt -> https://com.example/one/security.txt',
 			'https://com.example/one/security.txt -> https://com.example/two/security.txt',
 		], $onRedirects);
-		Assert::same(['/one/security.txt', '/two/security.txt'], $exception->getRedirects());
+		Assert::same(['https://com.example/one/security.txt', 'https://com.example/two/security.txt'], $exception->getRedirects());
 
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 0);
