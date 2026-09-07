@@ -357,8 +357,8 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 
 	/**
-	 * The host a check reports has to be the host it fetched. It is built here and again inside the fetcher, from the same URL but by different routes, so this pins that the
-	 * reported one is settled too: without it a check of `https://ex%41mple.com/` fetches `example.com` and reports `exAmple.com`.
+	 * The host a check reports has to be the host it fetched. It is derived here and again inside the fetcher, twice from one shared rule rather than by two routes as it was,
+	 * so this pins that the reported one is settled too: without it a check of `https://ex%41mple.com/` fetches `example.com` and reports `exAmple.com`.
 	 */
 	public function testTheReportedHostIsTheOneFetched(): void
 	{
@@ -382,8 +382,8 @@ final class SecurityTxtCheckHostTest extends TestCase
 	{
 		return [
 			// `%78n--a` is `xn--a`, not valid punycode, so this fails before there is a URL to carry and only the string it was given survives
-			'a host that never parses' => ['https://user:hunter2@%78n--a.example/?token=s3cr3t#frag', false],
-			'a host that does' => ['https://user:hunter2@example.com/?token=s3cr3t#frag', true],
+			'a host that never parses' => ['https://user:hunter2@%78n--a.example/reset/s3cr3t/?token=s3cr3t#frag', false],
+			'a host that does' => ['https://user:hunter2@example.com/reset/s3cr3t/?token=s3cr3t#frag', true],
 		];
 	}
 

@@ -201,6 +201,52 @@ final class SecurityTxtUrlParserTest extends TestCase
 
 
 	/**
+	 * @return array<string, array{0:string, 1:string}>
+	 */
+	public function getUrlsAndTheirBase(): array
+	{
+		return [
+			// Everything a secret can hide in goes, the host and the port stay, because only those decide what is checked
+			'credentials' => ['https://user:hunter2@example.com/', 'https://example.com/'],
+			'a token in the path' => ['https://example.com/reset/s3cr3t-token', 'https://example.com/'],
+			'a token in the query' => ['https://example.com/?token=s3cr3t', 'https://example.com/'],
+			'a fragment' => ['https://example.com/#s3cr3t', 'https://example.com/'],
+			'all of them at once' => ['https://user:hunter2@example.com/reset/s3cr3t?token=s3cr3t#s3cr3t', 'https://example.com/'],
+			'a port, which decides what is checked' => ['https://example.com:8443/x', 'https://example.com:8443/'],
+			'a host settled on the way' => ['https://ex%41mple.com/x', 'https://example.com/'],
+			'and one read as it resolves' => ["https://h\u{E1}\u{10D}ky.example/x", 'https://xn--hky-ela4t.example/'],
+			// Asked for, not guaranteed: WHATWG makes the scheme setter a no-op across the special boundary
+			'HTTP is asked to be HTTPS' => ['http://example.com/x', 'https://example.com/'],
+			'a scheme that cannot be' => ['foo://example.com/x', 'foo://example.com/'],
+		];
+	}
+
+
+	/**
+	 * What a check is about, decided once. Pinned directly because both callers now trust it: `SecurityTxtCheckHost` takes the host out of it and `SecurityTxtFetcher` puts
+	 * the two paths onto it, so narrowing it later would move what every check reports without failing a test that names it.
+	 *
+	 * @dataProvider getUrlsAndTheirBase
+	 */
+	public function testWhatACheckIsAbout(string $url, string $base): void
+	{
+		Assert::same($base, $this->securityTxtUrlParser->getBaseUrl(new Url($url))->toAsciiString());
+	}
+
+
+	/**
+	 * Handed its own answer it returns it unchanged, which is what lets a caller pass either the URL it was given or one already reduced.
+	 */
+	public function testTheBaseOfABaseIsItself(): void
+	{
+		foreach (['https://user:hunter2@example.com/a/b?q#f', 'https://example.com:8443/x', 'https://[::1]/y'] as $url) {
+			$once = $this->securityTxtUrlParser->getBaseUrl(new Url($url));
+			Assert::same($once->toAsciiString(), $this->securityTxtUrlParser->getBaseUrl($once)->toAsciiString());
+		}
+	}
+
+
+	/**
 	 * The branch that used to hand back the unsettled URL. `xn--a` is not valid punycode, so parsing the serialization refuses it outright, and returning the original would
 	 * leave a URL whose readable form is the bare `https://` with the host and path gone.
 	 */
