@@ -255,10 +255,10 @@ final class SecurityTxtCheckHostTest extends TestCase
 			$onFetchWarning = [$line, $violation];
 		});
 		$result = $checkHost->check(new Url($url));
-		Assert::equal([new SecurityTxtContentTypeInvalid($url, $contentType)], $result->getFetchErrors());
+		Assert::equal([new SecurityTxtContentTypeInvalid(new Url($url), $contentType)], $result->getFetchErrors());
 		Assert::equal([new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents)], $result->getFetchWarnings());
 		// A fetch violation belongs to no line
-		Assert::equal([null, new SecurityTxtContentTypeInvalid($url, $contentType)], $onFetchError);
+		Assert::equal([null, new SecurityTxtContentTypeInvalid(new Url($url), $contentType)], $onFetchError);
 		Assert::equal([null, new SecurityTxtTopLevelDiffers($wellKnownContents, $topLevelContents)], $onFetchWarning);
 	}
 

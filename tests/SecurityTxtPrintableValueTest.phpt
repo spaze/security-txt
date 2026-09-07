@@ -49,7 +49,7 @@ final class SecurityTxtPrintableValueTest extends TestCase
 		$parsed = Url::parse($url);
 		Assert::notNull($parsed);
 		assert($parsed instanceof Url);
-		Assert::same($expected, SecurityTxtPrintableValue::render($parsed));
+		Assert::same($expected, new SecurityTxtPrintableValue($parsed)->render());
 	}
 
 
@@ -66,7 +66,7 @@ final class SecurityTxtPrintableValueTest extends TestCase
 		foreach ($names as $name) {
 			$url = Url::parse("https://{$name}/");
 			assert($url instanceof Url);
-			$printed = Url::parse(SecurityTxtPrintableValue::render($url));
+			$printed = Url::parse(new SecurityTxtPrintableValue($url)->render());
 			Assert::notNull($printed, "what was printed for {$name} does not parse");
 			Assert::same($url->getAsciiHost(), $printed?->getAsciiHost(), "a URL on {$name} prints as a different host");
 		}

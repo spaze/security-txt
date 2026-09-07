@@ -390,12 +390,29 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
+	/**
+	 * The header a content type violation reports came from the response, and after a redirect that response is at the final URL, not the one the check was built from. Naming
+	 * the constructed one puts a URL in the message that never sent the header, one line under the callback that says where the file was actually read.
+	 */
+	public function testAContentTypeIsReportedAtTheUrlThatSentIt(): void
+	{
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(301, ['location' => 'https://cdn.example/securitytxt'], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
+		Assert::same('https://cdn.example/securitytxt', $fetchResult->getFinalUrl()->toUnicodeString());
+		Assert::contains('https://cdn.example/securitytxt', $fetchResult->getErrors()[0]->getMessage());
+	}
+
+
 	public function testFetchWrongCharset(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => 'text/plain; charset=utf-42'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
 		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
-		$expectedError = new SecurityTxtContentTypeWrongCharset('https://com.example/.well-known/security.txt', 'text/plain', 'charset=utf-42');
+		$expectedError = new SecurityTxtContentTypeWrongCharset(new Url('https://com.example/.well-known/security.txt'), 'text/plain', 'charset=utf-42');
 		Assert::equal([$expectedError], $fetchResult->getErrors());
 		Assert::same([], $fetchResult->getWarnings());
 		Assert::same('random', $fetchResult->getContents());

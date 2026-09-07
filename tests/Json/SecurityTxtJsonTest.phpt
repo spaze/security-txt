@@ -205,9 +205,9 @@ final class SecurityTxtJsonTest extends TestCase
 
 
 	/**
-	 * @return string|int|list<string>|BackedEnum
+	 * @return string|int|list<string>|BackedEnum|Url|SecurityTxtHost
 	 */
-	private function getConstructorParamValue(string $class, ReflectionParameter $parameter): string|int|array|BackedEnum
+	private function getConstructorParamValue(string $class, ReflectionParameter $parameter): string|int|array|BackedEnum|Url|SecurityTxtHost
 	{
 		// A field name is used for all strings because some violations read the value as a field name, and the constructor doesn't say which ones
 		$string = SecurityTxtField::Contact->value;
@@ -222,7 +222,11 @@ final class SecurityTxtJsonTest extends TestCase
 			'string', '?string' => $string,
 			'int' => 303,
 			'array' => [$string],
-			// Objects would be serialized to JSON as an array and the violation couldn't be recreated from it
+			// A URL and a host are spelled onto the wire by the base and read back by their declared type, the way a violation the library builds one for is replayed. Both
+			// nullable spellings too, since `getName()` strips the `?` where it matters and a violation naming a URL that may be absent is the natural shape for one
+			Url::class, '?' . Url::class => new Url('https://example.com/security.txt'),
+			SecurityTxtHost::class, '?' . SecurityTxtHost::class => SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"),
+			// Any other object would reach `json_encode()` with nothing public on it and be stored as `{}`, which no violation could be recreated from
 			default => throw new LogicException(sprintf('%s::__construct() has the $%s param of an unsupported type %s', $class, $parameter->getName(), $type)),
 		};
 	}
@@ -254,7 +258,7 @@ final class SecurityTxtJsonTest extends TestCase
 			implode($lines),
 			true,
 			$lines,
-			[new SecurityTxtContentTypeWrongCharset('https://example.com/security.txt', 'text/plain', null)],
+			[new SecurityTxtContentTypeWrongCharset(new Url('https://example.com/security.txt'), 'text/plain', null)],
 			[new SecurityTxtTopLevelPathOnly()],
 		);
 		$encoded = json_encode($result);

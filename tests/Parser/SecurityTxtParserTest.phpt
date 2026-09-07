@@ -450,7 +450,7 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::type($violationClass, $parseResult->getFileErrors()[0]);
 		// The value offered as the fix has to differ from the one just rejected, whatever case the scheme was written in
 		$actualCorrectValue = $parseResult->getFileErrors()[0]->getCorrectValue();
-		Assert::same($correctValue, $actualCorrectValue !== null ? SecurityTxtPrintableValue::render($actualCorrectValue) : null);
+		Assert::same($correctValue, $actualCorrectValue !== null ? new SecurityTxtPrintableValue($actualCorrectValue)->render() : null);
 		Assert::same([], $parseResult->getLineErrors());
 		Assert::same([], $parseResult->getLineWarnings());
 		Assert::false($parseResult->isValid());
@@ -521,7 +521,7 @@ final class SecurityTxtParserTest extends TestCase
 		// A correct value the violation knows to be a URL is handed over as one, so it reads as itself wherever it is printed
 		$correctValue = $parseResult->getLineErrors()[1][0]->getCorrectValue();
 		Assert::equal(new Url('https://example.net/'), $correctValue);
-		Assert::same('https://example.net/', SecurityTxtPrintableValue::render($correctValue ?? ''));
+		Assert::same('https://example.net/', new SecurityTxtPrintableValue($correctValue ?? '')->render());
 
 		$uri = 'https://example.net/data/provider-metadata.json';
 		$parseResult = $this->securityTxtParser->parseString("CSAF: {$uri}\n");
@@ -882,7 +882,7 @@ final class SecurityTxtParserTest extends TestCase
 			implode('', $lines),
 			true,
 			$lines,
-			[new SecurityTxtContentTypeWrongCharset('https://example.com/security.txt', 'text/plain', 'charset=utf-9')],
+			[new SecurityTxtContentTypeWrongCharset(new Url('https://example.com/security.txt'), 'text/plain', 'charset=utf-9')],
 			[new SecurityTxtTopLevelPathOnly()],
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
@@ -935,7 +935,7 @@ final class SecurityTxtParserTest extends TestCase
 			implode('', $lines),
 			false,
 			$lines,
-			[new SecurityTxtContentTypeInvalid('https://example.com/security.txt', 'foo/bar')],
+			[new SecurityTxtContentTypeInvalid(new Url('https://example.com/security.txt'), 'foo/bar')],
 			[],
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
@@ -952,7 +952,7 @@ final class SecurityTxtParserTest extends TestCase
 			implode('', $lines),
 			false,
 			$lines,
-			[new SecurityTxtContentTypeInvalid('https://example.com/security.txt', null)],
+			[new SecurityTxtContentTypeInvalid(new Url('https://example.com/security.txt'), null)],
 			[],
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);

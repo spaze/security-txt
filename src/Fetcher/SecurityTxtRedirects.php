@@ -37,7 +37,7 @@ final readonly class SecurityTxtRedirects implements Countable
 
 	public function withRedirect(Url $url): self
 	{
-		return new self(...[...$this->urls, SecurityTxtPrintableValue::render($url)]);
+		return new self(...[...$this->urls, new SecurityTxtPrintableValue($url)->render()]);
 	}
 
 

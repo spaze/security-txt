@@ -4,11 +4,12 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Violations;
 
 use Spaze\SecurityTxt\SecurityTxtContentType;
+use Uri\WhatWg\Url;
 
 final class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 {
 
-	public function __construct(string $uri, string $contentType, ?string $charsetParameter)
+	public function __construct(Url $uri, string $contentType, ?string $charsetParameter)
 	{
 		$format = $charsetParameter !== null
 			? 'The file at %s has a correct %s of %s but the %s parameter should be changed to %s'
@@ -16,7 +17,7 @@ final class SecurityTxtContentTypeWrongCharset extends SecurityTxtSpecViolation
 		parent::__construct(
 			func_get_args(),
 			$format,
-			$charsetParameter !== null ? [self::asUrl($uri), 'Content-Type', $contentType, $charsetParameter, SecurityTxtContentType::CHARSET_PARAMETER] : [self::asUrl($uri), 'Content-Type', $contentType, SecurityTxtContentType::CHARSET_PARAMETER],
+			$charsetParameter !== null ? [$uri, 'Content-Type', $contentType, $charsetParameter, SecurityTxtContentType::CHARSET_PARAMETER] : [$uri, 'Content-Type', $contentType, SecurityTxtContentType::CHARSET_PARAMETER],
 			'draft-foudil-securitytxt-03',
 			SecurityTxtContentType::MEDIA_TYPE,
 			$charsetParameter !== null ? 'Change the parameter to %s' : 'Add a %s parameter',

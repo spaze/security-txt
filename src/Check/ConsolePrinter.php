@@ -91,7 +91,7 @@ final class ConsolePrinter
 	 */
 	private function print(string $level, string $format, array $values): void
 	{
-		$this->printText($this->addColors($level), vsprintf($this->addColors($format), array_map(SecurityTxtPrintableValue::render(...), $values)));
+		$this->printText($this->addColors($level), vsprintf($this->addColors($format), array_map(fn(string|Url|SecurityTxtHost $value): string => new SecurityTxtPrintableValue($value)->render(), $values)));
 	}
 
 
