@@ -3,7 +3,9 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
+use LogicException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
+use Uri\WhatWg\InvalidUrlException;
 use Uri\WhatWg\Url;
 use Uri\WhatWg\UrlValidationError;
 use Uri\WhatWg\UrlValidationErrorType;
@@ -34,6 +36,23 @@ final class SecurityTxtUrlParser
 		}
 
 		throw new SecurityTxtCannotParseHostnameException($url);
+	}
+
+
+	/**
+	 * The URL everything about a check derives from, the host and the port being all that decides what is checked. HTTPS is asked for rather than guaranteed: WHATWG makes the
+	 * scheme setter a no-op across the special boundary, so `foo://example/` keeps the scheme it came with and `SecurityTxtFetcherUrl` is what refuses one.
+	 *
+	 * @throws SecurityTxtCannotParseHostnameException
+	 */
+	public function getBaseUrl(Url $url): Url
+	{
+		try {
+			$stripped = $url->withUsername(null)->withPassword(null)->withScheme('https')->withPath('/')->withQuery(null)->withFragment(null);
+		} catch (InvalidUrlException $e) {
+			throw new LogicException("Can't set URL components: {$e->getMessage()}", previous: $e);
+		}
+		return $this->normalize($stripped);
 	}
 
 

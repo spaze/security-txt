@@ -94,16 +94,9 @@ final class SecurityTxtFetcher
 		if ($maxAllowedRedirects !== null) {
 			$this->validateMaxAllowedRedirects($maxAllowedRedirects);
 		}
+		$baseUrl = $this->urlParser->getBaseUrl($url);
+		$host = new SecurityTxtHost($baseUrl);
 		try {
-			$baseUrl = $this->urlParser->normalize(
-				$url
-					->withUsername(null)
-					->withPassword(null)
-					->withScheme('https')
-					->withQuery(null)
-					->withFragment(null),
-			);
-			$host = new SecurityTxtHost($baseUrl);
 			$wellKnownUrl = $baseUrl->withPath('/.well-known/security.txt');
 			$topLevelUrl = $baseUrl->withPath('/security.txt');
 		} catch (InvalidUrlException $e) {

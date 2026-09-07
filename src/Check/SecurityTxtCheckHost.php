@@ -103,10 +103,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function check(Url $url, ?int $expiresWarningThreshold = null, bool $strictMode = false, bool $requireTopLevelLocation = false, bool $noIpv6 = false, ?int $maxAllowedRedirects = null): SecurityTxtCheckHostResult
 	{
-		// The same stripping the fetcher does before it derives anything, so a password or a token in the URL cannot reach a message, a callback or a stored result
-		$host = new SecurityTxtHost($this->urlParser->normalize(
-			$url->withUsername(null)->withPassword(null)->withScheme('https')->withQuery(null)->withFragment(null),
-		));
+		$host = new SecurityTxtHost($this->urlParser->getBaseUrl($url));
 		$this->callOnCallback($this->onHost, $host);
 		$fetchResult = $this->fetcher->fetch($url, $requireTopLevelLocation, $noIpv6, $maxAllowedRedirects);
 		$parseResult = $this->parser->parseFetchResult($fetchResult, $expiresWarningThreshold, $strictMode);
