@@ -7,6 +7,7 @@ use Exception;
 use JsonSerializable;
 use Override;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValue;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Throwable;
@@ -41,7 +42,7 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 		$this->messageValues = array_values($messageValues);
 		// `Exception::getMessage()` is final, so this is the only place the message can be made safe to display anywhere, terminal, log or page alike; `getMessageValues()`
 		// still hands over what the host sent, for a caller that knows what it is rendering into
-		parent::__construct(vsprintf($this->messageFormat, array_map(SecurityTxtPrintableValue::render(...), $this->messageValues)), $code, $previous);
+		parent::__construct(vsprintf($this->messageFormat, array_map(fn(string|Url|SecurityTxtHost $value): string => new SecurityTxtPrintableValue($value)->render(), $this->messageValues)), $code, $previous);
 	}
 
 
@@ -106,25 +107,8 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 	{
 		return [
 			'class' => $this::class,
-			'params' => array_map($this->paramToWire(...), $this->constructorParams),
+			'params' => array_map(fn(mixed $param): string|int|float|bool|array|null => new SecurityTxtJsonValue($param)->toValue(), $this->constructorParams),
 		];
-	}
-
-
-	/**
-	 * Only a URL and a host are spelled, everything else is data and goes as it is: `SecurityTxtPrintableValue::render()` percent encodes a plain string, which is what makes it
-	 * safe to print and exactly what would corrupt an IP address or a header value on the way to storage. Arrays are walked because a `Url` in one would otherwise reach
-	 * `json_encode()` as an object with nothing public on it and be stored as `{}`.
-	 */
-	private function paramToWire(mixed $param): mixed
-	{
-		if ($param instanceof Url || $param instanceof SecurityTxtHost) {
-			return SecurityTxtPrintableValue::render($param);
-		}
-		if ($param instanceof SecurityTxtRedirects) {
-			return $param->toStrings();
-		}
-		return is_array($param) ? array_map($this->paramToWire(...), $param) : $param;
 	}
 
 }

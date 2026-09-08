@@ -5,6 +5,8 @@ namespace Spaze\SecurityTxt\Violations;
 
 use JsonSerializable;
 use Override;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValue;
+use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Uri\WhatWg\Url;
 use ValueError;
@@ -16,19 +18,19 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 
 	private readonly string $howToFix;
 
-	/** @var list<string|Url> */
+	/** @var list<string|Url|SecurityTxtHost> */
 	private readonly array $messageValues;
 
-	/** @var list<string|Url> */
+	/** @var list<string|Url|SecurityTxtHost> */
 	private readonly array $howToFixValues;
 
 
 	/**
 	 * @param list<mixed> $constructorParams
 	 * @param literal-string $messageFormat Never build this from a field value or anything else read from the file, only the values are encoded when the message is printed. The analysers check this where the violation is constructed in code, they cannot check `SecurityTxtJson`, which replays whatever the serialized params hold
-	 * @param array<array-key, string|Url> $messageValues A value the library knows to be a URL is passed as one, so it reads as itself instead of percent encoded. Stored as a list, see the constructor
+	 * @param array<array-key, string|Url|SecurityTxtHost> $messageValues A value the library knows to be a URL or a host is passed as one, so it reads as itself instead of percent encoded. Stored as a list, see the constructor
 	 * @param literal-string $howToFixFormat Never build this from a field value or anything else read from the file, only the values are encoded when the message is printed
-	 * @param array<array-key, string|Url> $howToFixValues Stored as a list, see the constructor
+	 * @param array<array-key, string|Url|SecurityTxtHost> $howToFixValues Stored as a list, see the constructor
 	 * @param list<string> $seeAlsoSections
 	 * @throws ValueError
 	 */
@@ -52,8 +54,8 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 		// `vsprintf()` refuses too few values but ignores surplus ones, which would silently shift every value after them once two formats are composed for printing
 		assert(substr_count($this->messageFormat, '%s') === count($this->messageValues));
 		assert(substr_count($this->howToFixFormat, '%s') === count($this->howToFixValues));
-		$this->message = vsprintf($this->messageFormat, array_map(SecurityTxtPrintableValue::render(...), $this->messageValues));
-		$this->howToFix = vsprintf($this->howToFixFormat, array_map(SecurityTxtPrintableValue::render(...), $this->howToFixValues));
+		$this->message = vsprintf($this->messageFormat, array_map(fn(string|Url|SecurityTxtHost $value): string => new SecurityTxtPrintableValue($value)->render(), $this->messageValues));
+		$this->howToFix = vsprintf($this->howToFixFormat, array_map(fn(string|Url|SecurityTxtHost $value): string => new SecurityTxtPrintableValue($value)->render(), $this->howToFixValues));
 	}
 
 
@@ -108,7 +110,7 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 
 
 	/**
-	 * @return list<string|Url>
+	 * @return list<string|Url|SecurityTxtHost>
 	 */
 	public function getMessageValues(): array
 	{
@@ -144,7 +146,7 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 
 
 	/**
-	 * @return list<string|Url>
+	 * @return list<string|Url|SecurityTxtHost>
 	 */
 	public function getHowToFixValues(): array
 	{
@@ -181,7 +183,7 @@ abstract class SecurityTxtSpecViolation implements JsonSerializable
 	{
 		return [
 			'class' => $this::class,
-			'params' => $this->constructorParams,
+			'params' => array_map(fn(mixed $param): string|int|float|bool|array|null => new SecurityTxtJsonValue($param)->toValue(), $this->constructorParams),
 		];
 	}
 

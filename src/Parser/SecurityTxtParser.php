@@ -254,7 +254,7 @@ final class SecurityTxtParser
 	{
 		// The URL spelled the way this library spells one, not decoded: a file fetched from a host whose punycode does not survive decoding would otherwise be reported at a
 		// URL naming a different host, and `SecurityTxtSpecViolation::asUrl()` cannot read that spelling back either, so it prints percent encoded beside a host that reads
-		$parseResult = $this->parseString($fetchResult->getContents(), SecurityTxtPrintableValue::render($fetchResult->getFinalUrl()), $expiresWarningThreshold, $strictMode);
+		$parseResult = $this->parseString($fetchResult->getContents(), new SecurityTxtPrintableValue($fetchResult->getFinalUrl())->render(), $expiresWarningThreshold, $strictMode);
 		return new SecurityTxtParseHostResult(
 			$parseResult->isValid() && $fetchResult->getErrors() === [] && (!$strictMode || $fetchResult->getWarnings() === []),
 			$parseResult,

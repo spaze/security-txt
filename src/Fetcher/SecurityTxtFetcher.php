@@ -225,8 +225,8 @@ final class SecurityTxtFetcher
 		$wellKnownContents = $wellKnown->isRegularHtmlPage() || $wellKnown->isTruncated() ? null : $wellKnown->getContents();
 		$topLevelContents = $topLevel->isRegularHtmlPage() || $topLevel->isTruncated() ? null : $topLevel->getContents();
 		if ($wellKnownContents === null && $topLevelContents === null) {
-			$wellKnownUrl = SecurityTxtPrintableValue::render($wellKnown->getUrl());
-			$topLevelUrl = SecurityTxtPrintableValue::render($topLevel->getUrl());
+			$wellKnownUrl = new SecurityTxtPrintableValue($wellKnown->getUrl())->render();
+			$topLevelUrl = new SecurityTxtPrintableValue($topLevel->getUrl())->render();
 			// The `'type' => ...->value` and the spelled out chains below are scalar on purpose: unlike the exceptions that take a case, a `Url` or a chain itself,
 			// `SecurityTxtNotFoundException` reads this array back with `is_int()` and `is_string()`, being the shape a stored result carries and replays from. Nothing
 			// catches one left as an object, the shape is `mixed` to the analysers
@@ -275,10 +275,11 @@ final class SecurityTxtFetcher
 		$this->callOnCallback($this->onFinalUrl, $result->getFinalUrl());
 
 		$contentTypeHeader = $result->getContentType();
+		// The URL that answered, not the one the check was built from: a header comes from a response, and after a redirect that response is somewhere else
 		if ($contentTypeHeader === null || $contentTypeHeader->getLowercaseContentType() !== SecurityTxtContentType::CONTENT_TYPE) {
-			$errors[] = new SecurityTxtContentTypeInvalid(SecurityTxtPrintableValue::render($result->getUrl()), $contentTypeHeader?->getContentType());
+			$errors[] = new SecurityTxtContentTypeInvalid($result->getFinalUrl(), $contentTypeHeader?->getContentType());
 		} elseif ($contentTypeHeader->getLowercaseCharsetParameter() !== SecurityTxtContentType::CHARSET_PARAMETER) {
-			$errors[] = new SecurityTxtContentTypeWrongCharset(SecurityTxtPrintableValue::render($result->getUrl()), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharsetParameter());
+			$errors[] = new SecurityTxtContentTypeWrongCharset($result->getFinalUrl(), $contentTypeHeader->getContentType(), $contentTypeHeader->getCharsetParameter());
 		}
 		return new SecurityTxtFetchResult(
 			$result->getUrl(),
@@ -368,7 +369,7 @@ final class SecurityTxtFetcher
 		if ($location === null) {
 			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
 		} else {
-			$originalUrlString = SecurityTxtPrintableValue::render($originalUrl);
+			$originalUrlString = new SecurityTxtPrintableValue($originalUrl)->render();
 			$locationUrl = $this->urlParser->getRedirectUrl($location, $url);
 			$this->callOnCallback($this->onRedirect, $url, $locationUrl);
 			// Where the redirect led rather than the header that said so: a `Location` can be relative, or spell a host in punycode, and this is a record of the URLs a check
@@ -392,7 +393,7 @@ final class SecurityTxtFetcher
 	 */
 	private function getRedirects(Url $url): SecurityTxtRedirects
 	{
-		$urlString = SecurityTxtPrintableValue::render($url);
+		$urlString = new SecurityTxtPrintableValue($url)->render();
 		$redirects = $this->redirects[$urlString] ?? null;
 		return $redirects === null ? new SecurityTxtRedirects() : new SecurityTxtRedirects($urlString, ...$redirects->toStrings());
 	}

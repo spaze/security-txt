@@ -26,11 +26,11 @@ final class SecurityTxtNotFoundException extends SecurityTxtFetcherException
 	{
 		// Keyed by the spelling the wire carries, and the keys handed in are put in that spelling first: a result stored before URLs were written as A-labels carries the
 		// readable ones, and looking those up by an A-label would find nothing and take the whole stored result down
-		$wellKnownUrlString = SecurityTxtPrintableValue::render($wellKnownUrl);
+		$wellKnownUrlString = new SecurityTxtPrintableValue($wellKnownUrl)->render();
 		$byWireSpelling = [];
 		foreach ($securityTxtUrls as $givenUrl => $givenComponents) {
 			$parsedUrl = is_string($givenUrl) ? Url::parse($givenUrl) : null;
-			$byWireSpelling[$parsedUrl !== null ? SecurityTxtPrintableValue::render($parsedUrl) : $givenUrl] = $givenComponents;
+			$byWireSpelling[$parsedUrl !== null ? new SecurityTxtPrintableValue($parsedUrl)->render() : $givenUrl] = $givenComponents;
 		}
 		$securityTxtUrls = $byWireSpelling;
 		$message = "Can't read %s: ";

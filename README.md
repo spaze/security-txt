@@ -325,9 +325,9 @@ If you'd like to format some of the values contained in the messages, you can us
 The `getMessageFormat()` method will return an error message with `%s` placeholders, while `getMessageValues()` will return the values, including the server-supplied ones,
 which are deliberately not escaped. Do not `vsprintf()` the format and the values together and print the result: that rebuilds the unescaped values into one string, which is what the already-rendered `getMessage()` exists to avoid.
 Put each value into its own element instead, which you can, **after a proper sanitization and/or escaping**, wrap in `<code>` tags for example, and use them to replace the placeholders one by one.
-A violation's values are `string|Uri\WhatWg\Url` and an exception's are `string|Uri\WhatWg\Url|Spaze\SecurityTxt\SecurityTxtHost`, the non-string ones being the values
+A violation's and an exception's values are both `string|Uri\WhatWg\Url|Spaze\SecurityTxt\SecurityTxtHost`, the non-string ones being the values
 each knows to be a URL or a host. Neither object has a string form of its own, so do not pass one straight to `implode()`, `htmlspecialchars()` or anything else expecting a
-string: hand it to `Spaze\SecurityTxt\SecurityTxtPrintableValue::render()`, which takes all three and is what this library prints with. Prefer that to calling
+string: hand it to `new Spaze\SecurityTxt\SecurityTxtPrintableValue($value)->render()`, which takes all three and is what this library prints with. Prefer that to calling
 `toUnicodeString()` or `getUnicode()` yourself, because those spell a host whose punycode does not survive decoding as a different host, which is what `render()` is there to
 avoid.
 

@@ -75,8 +75,8 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContactNotHttps' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContactNotUri' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContentNotUtf8' => '()',
-			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContentTypeInvalid' => '(string $uri, ?string $contentType)',
-			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContentTypeWrongCharset' => '(string $uri, string $contentType, ?string $charsetParameter)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContentTypeInvalid' => '(Uri\\WhatWg\\Url $uri, ?string $contentType)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContentTypeWrongCharset' => '(Uri\\WhatWg\\Url $uri, string $contentType, ?string $charsetParameter)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCsafNotHttps' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCsafNotUri' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCsafWrongFile' => '(string $uri)',
@@ -252,7 +252,7 @@ final class SecurityTxtWireContractTest extends TestCase
 				$url = Url::parse($candidate);
 				Assert::notNull($url, "{$class} stores {$candidate}, which is not a URL");
 				assert($url instanceof Url);
-				Assert::same(SecurityTxtPrintableValue::render($url), $candidate, "{$class} stores a URL in a spelling this library does not write");
+				Assert::same(new SecurityTxtPrintableValue($url)->render(), $candidate, "{$class} stores a URL in a spelling this library does not write");
 			}
 			if (is_array($value)) {
 				$this->assertStoredUrlsReadAsTheLibrarySpellsThem($class, $value);

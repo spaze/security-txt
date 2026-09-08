@@ -109,8 +109,8 @@ final readonly class SecurityTxtFetchResult implements JsonSerializable
 			'formatVersion' => SecurityTxtJson::FORMAT_VERSION,
 			// Spelled the way this library spells one, not decoded: `toUnicodeString()` on a host whose punycode does not survive decoding writes a URL naming another host,
 			// which `SecurityTxtJson` then refuses as not a URL this library writes, taking a whole stored result down over a URL nobody stored
-			'constructedUrl' => SecurityTxtPrintableValue::render($this->getConstructedUrl()),
-			'finalUrl' => SecurityTxtPrintableValue::render($this->getFinalUrl()),
+			'constructedUrl' => new SecurityTxtPrintableValue($this->getConstructedUrl())->render(),
+			'finalUrl' => new SecurityTxtPrintableValue($this->getFinalUrl())->render(),
 			'redirects' => array_map(fn(SecurityTxtRedirects $redirects): array => $redirects->toStrings(), $this->getRedirects()),
 			'contents' => $this->getContents(),
 			'isTruncated' => $this->isTruncated(),

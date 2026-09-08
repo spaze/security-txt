@@ -98,7 +98,7 @@ final class SecurityTxtCheckHostCli
 	 * `vsprintf()` only refuses too few values, so composing the two formats relies on each violation bringing exactly as many values as its own format takes. All of them do,
 	 * and a surplus would shift the values of the second half.
 	 *
-	 * @return array{0:literal-string, 1:list<string|Url>}
+	 * @return array{0:literal-string, 1:list<string|Url|SecurityTxtHost>}
 	 */
 	private function getViolationMessage(?int $line, SecurityTxtSpecViolation $violation): array
 	{
