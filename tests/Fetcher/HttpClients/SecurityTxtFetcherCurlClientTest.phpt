@@ -38,13 +38,13 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		$url = new Url('https://example.com/');
-		$ipAddress = $this->dnsProvider->getRecords($url, SecurityTxtHost::fromString('example.com'))->getIpRecord();
+		$ipAddress = $this->dnsProvider->getRecords($url, new SecurityTxtHost(new Url('https://example.com/')))->getIpRecord();
 		if ($ipAddress === null) {
 			Assert::fail("Can't find an IP address for example.com");
 		} else {
 			$response = $client->getResponse(
 				new SecurityTxtFetcherUrl($url, new SecurityTxtRedirects()),
-				SecurityTxtHost::fromString('example.com'),
+				new SecurityTxtHost(new Url('https://example.com/')),
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
 			);
@@ -61,13 +61,13 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		$url = new Url('https://httpbin.org/bytes/31337');
-		$ipAddress = $this->dnsProvider->getRecords($url, SecurityTxtHost::fromString('httpbin.org'))->getIpRecord();
+		$ipAddress = $this->dnsProvider->getRecords($url, new SecurityTxtHost(new Url('https://httpbin.org/')))->getIpRecord();
 		if ($ipAddress === null) {
 			Assert::fail("Can't find an IP address for httpbin.org");
 		} else {
 			$response = $client->getResponse(
 				new SecurityTxtFetcherUrl($url, new SecurityTxtRedirects()),
-				SecurityTxtHost::fromString('httpbin.org'),
+				new SecurityTxtHost(new Url('https://httpbin.org/')),
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
 			);
@@ -82,13 +82,13 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient(maxResponseLength: 100_000);
 		$url = new Url('https://httpbin.org/bytes/31337');
-		$ipAddress = $this->dnsProvider->getRecords($url, SecurityTxtHost::fromString('httpbin.org'))->getIpRecord();
+		$ipAddress = $this->dnsProvider->getRecords($url, new SecurityTxtHost(new Url('https://httpbin.org/')))->getIpRecord();
 		if ($ipAddress === null) {
 			Assert::fail("Can't find an IP address for httpbin.org");
 		} else {
 			$response = $client->getResponse(
 				new SecurityTxtFetcherUrl($url, new SecurityTxtRedirects()),
-				SecurityTxtHost::fromString('httpbin.org'),
+				new SecurityTxtHost(new Url('https://httpbin.org/')),
 				$ipAddress,
 				SecurityTxtIpAddressType::V4,
 			);
@@ -104,7 +104,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://httpbin.org/headers'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('foobar'), '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://httpbin.org/headers'), new SecurityTxtRedirects()), new SecurityTxtHost(new Url('https://foobar/')), '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtConnectedToWrongIpAddressException::class, "Can't open https://httpbin.org/headers, connected to %S% instead of 1.1.1.0 as expected");
 	}
 
@@ -114,7 +114,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 		needsInternet();
 		$client = new SecurityTxtFetcherCurlClient();
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('com.example'), '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), new SecurityTxtRedirects()), new SecurityTxtHost(new Url('https://com.example/')), '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlException::class, "Can't open https://com.example/ using its IPv4 address 1.1.1.0 (%a%)");
 	}
 
@@ -140,7 +140,7 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	{
 		$client = new SecurityTxtFetcherCurlClient($userAgent);
 		Assert::throws(function () use ($client): void {
-			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('com.example'), '1.1.1.0', SecurityTxtIpAddressType::V4);
+			$client->getResponse(new SecurityTxtFetcherUrl(new Url('https://com.example/'), new SecurityTxtRedirects()), new SecurityTxtHost(new Url('https://com.example/')), '1.1.1.0', SecurityTxtIpAddressType::V4);
 		}, SecurityTxtCannotOpenUrlUserAgentInvalidException::class, "Can't open https://com.example/, the specified user agent contains a control character and is invalid");
 	}
 

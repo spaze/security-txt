@@ -16,38 +16,14 @@ require __DIR__ . '/bootstrap.php';
 final class SecurityTxtHostTest extends TestCase
 {
 
-	public function testFromStringAcceptsOnlyTheSerializedForm(): void
+	public function testAHostIsBuiltFromTheUrlThatNamesIt(): void
 	{
-		$host = SecurityTxtHost::fromString('bücher.example');
+		$host = new SecurityTxtHost(new Url('https://bücher.example/'));
 		Assert::same('bücher.example', $host->getUnicode());
 		Assert::same('xn--bcher-kva.example', $host->getAscii());
-		$host = SecurityTxtHost::fromString('example.com');
+		$host = new SecurityTxtHost(new Url('https://example.com/'));
 		Assert::same('example.com', $host->getUnicode());
 		Assert::same('example.com', $host->getAscii());
-	}
-
-
-	public function testFromStringRefusesWhatWouldBeSilentlyRewritten(): void
-	{
-		// Would read back as the IP address 0.0.3.40
-		Assert::throws(function (): void {
-			SecurityTxtHost::fromString('808');
-		}, SecurityTxtCannotParseHostnameException::class);
-		// A valid spelling of a host, but not one getUnicode() ever writes, would read back as bücher.example
-		Assert::throws(function (): void {
-			SecurityTxtHost::fromString('xn--bcher-kva.example');
-		}, SecurityTxtCannotParseHostnameException::class);
-		// Would read back lowercased
-		Assert::throws(function (): void {
-			SecurityTxtHost::fromString('Example.COM');
-		}, SecurityTxtCannotParseHostnameException::class);
-		// A URL, not a host, would read back without the path
-		Assert::throws(function (): void {
-			SecurityTxtHost::fromString('https://example.com/');
-		}, SecurityTxtCannotParseHostnameException::class);
-		Assert::throws(function (): void {
-			SecurityTxtHost::fromString('not a hostname');
-		}, SecurityTxtCannotParseHostnameException::class);
 	}
 
 
@@ -72,10 +48,6 @@ final class SecurityTxtHostTest extends TestCase
 		$opaque = new SecurityTxtHost(new Url('foo://Plain.Example/x'));
 		Assert::same('Plain.Example', $opaque->getUnicode());
 		Assert::same('Plain.Example', $opaque->getAscii());
-		// Still refused as a string, because a string is parsed under HTTPS, where that host reads as `plain.example`
-		Assert::throws(function () use ($opaque): void {
-			SecurityTxtHost::fromString($opaque->getUnicode());
-		}, SecurityTxtCannotParseHostnameException::class);
 	}
 
 
@@ -136,8 +108,8 @@ final class SecurityTxtHostTest extends TestCase
 
 
 	/**
-	 * One host has one name. The two forms are spellings of it, so whichever is written down has to encode back to the same host, and what a host reads as has to be what it can
-	 * be rebuilt from, which is what a stored result depends on.
+	 * One host has one name. The two forms are spellings of it, so whichever is written down settles on the same one. That a name rebuilds the host is asserted
+	 * where the rebuilding lives, in `SecurityTxtJsonTest`.
 	 *
 	 * A name is also never a mix of the two: `Url` serializes a host all decoded or all encoded and has no way to say a mixed one, so a name that mixed them would be a
 	 * spelling no URL on that host could ever read as, which is the disagreement one name per host exists to prevent. Asserted for every host here rather than pinned per
@@ -146,14 +118,13 @@ final class SecurityTxtHostTest extends TestCase
 	 * @param string|null $reads null where the decoder decides the spelling, leaving only the agreement to assert
 	 * @dataProvider getHostSpellingsAndNames
 	 */
-	public function testBothFormsNameTheSameHostAndRebuildIt(string $url, string $ascii, ?string $reads): void
+	public function testBothFormsSettleOnOneNameThatIsNeverAMixOfThem(string $url, string $ascii, ?string $reads): void
 	{
 		$host = new SecurityTxtHost(new Url($url));
 		Assert::same($ascii, $host->getAscii());
 		if ($reads !== null) {
 			Assert::same($reads, $host->getUnicode());
 		}
-		Assert::same($ascii, SecurityTxtHost::fromString($host->getUnicode())->getAscii());
 		$name = $host->getUnicode();
 		Assert::true($name === $ascii || $name === new Url($url)->getUnicodeHost(), "{$name} is neither what the host reads as nor its A-labels");
 	}

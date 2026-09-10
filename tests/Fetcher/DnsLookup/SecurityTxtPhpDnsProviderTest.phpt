@@ -40,11 +40,11 @@ final class SecurityTxtPhpDnsProviderTest extends TestCase
 	{
 		needsInternet();
 		$provider = new SecurityTxtPhpDnsProvider();
-		$records = $provider->getRecords(new Url('https://example.com/'), SecurityTxtHost::fromString('example.com'));
+		$records = $provider->getRecords(new Url('https://example.com/'), new SecurityTxtHost(new Url('https://example.com/')));
 		Assert::true(filter_var($records->getIpRecord(), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false);
 		Assert::true($records->getIpv6Record() === null || filter_var($records->getIpv6Record(), FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false);
 
-		$records = $provider->getRecords(new Url('https://_dmarc.example.com/'), SecurityTxtHost::fromString('_dmarc.example.com'));
+		$records = $provider->getRecords(new Url('https://_dmarc.example.com/'), new SecurityTxtHost(new Url('https://_dmarc.example.com/')));
 		Assert::null($records->getIpRecord());
 		Assert::null($records->getIpv6Record());
 
@@ -52,7 +52,7 @@ final class SecurityTxtPhpDnsProviderTest extends TestCase
 		// A resolver answering NXDOMAIN for a shorter host may give an empty set, not an error.
 		$tooLong = str_repeat('a', 64) . '.example.com';
 		Assert::throws(function () use ($provider, $tooLong) {
-			$provider->getRecords(new Url("https://{$tooLong}/"), SecurityTxtHost::fromString($tooLong));
+			$provider->getRecords(new Url("https://{$tooLong}/"), new SecurityTxtHost(new Url("https://{$tooLong}/")));
 		}, SecurityTxtHostNotFoundException::class, "Can't open https://{$tooLong}/, can't resolve {$tooLong}");
 	}
 

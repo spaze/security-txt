@@ -277,7 +277,7 @@ final readonly class SecurityTxtJson
 			throw new SecurityTxtCannotParseJsonException('host is not set or not a string');
 		}
 		try {
-			$host = SecurityTxtHost::fromString($values['host']);
+			$host = $this->createStoredHost($values['host']);
 		} catch (SecurityTxtCannotParseHostnameException $e) {
 			throw new SecurityTxtCannotParseJsonException('host is not a hostname', $e);
 		}
@@ -531,7 +531,7 @@ final readonly class SecurityTxtJson
 			$key = is_int($key) ? $position++ : $key;
 			$type = $types[$key] ?? null;
 			if ($type === SecurityTxtHost::class && is_string($value)) {
-				$value = SecurityTxtHost::fromString($value);
+				$value = $this->createStoredHost($value);
 			} elseif ($type === Url::class && is_string($value)) {
 				$value = $this->createStoredUrl($value);
 			} elseif ($type === SecurityTxtRedirects::class && is_array($value)) {
@@ -547,6 +547,32 @@ final readonly class SecurityTxtJson
 			$arguments[$key] = $value;
 		}
 		return $arguments;
+	}
+
+
+	/**
+	 * A host out of a stored result, the inverse of the `getUnicode()` that wrote it, refused rather than rewritten for the same reason as a URL: a value that reads back as
+	 * something other than itself, `808` being the IP address `0.0.3.40`, would replay as a host nobody stored. Parsed under HTTPS, like the fetcher fetches, so a host comes
+	 * out the same whether it lived through a check or through JSON.
+	 *
+	 * @throws SecurityTxtCannotParseHostnameException
+	 */
+	private function createStoredHost(string $host): SecurityTxtHost
+	{
+		$url = Url::parse("https://{$host}");
+		if ($url === null) {
+			throw new SecurityTxtCannotParseHostnameException($host);
+		}
+		try {
+			$self = new SecurityTxtHost($url);
+		} catch (SecurityTxtCannotParseHostnameException $e) {
+			// The constructor names the URL it was handed, which is one this method derived; a caller of this one asked about a host and gets told about that host
+			throw new SecurityTxtCannotParseHostnameException($host, $e);
+		}
+		if ($self->getUnicode() !== $host) {
+			throw new SecurityTxtCannotParseHostnameException($host);
+		}
+		return $self;
 	}
 
 

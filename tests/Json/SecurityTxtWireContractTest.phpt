@@ -330,7 +330,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			$name = $type instanceof ReflectionNamedType ? $type->getName() : '';
 			$arguments[] = match (true) {
 				$name === Throwable::class => null,
-				$name === SecurityTxtHost::class => SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"),
+				$name === SecurityTxtHost::class => new SecurityTxtHost(new Url("https://h\u{E1}\u{10D}ky.example/")),
 				// A chain of one, in the spelling a stored result carries, which is what a replay hands back and what a message has to read the same way either side of one
 				$name === SecurityTxtRedirects::class => new SecurityTxtRedirects("https://{$urlHost}/redirected"),
 				$name === Url::class => new Url("https://{$urlHost}/{$parameter->getName()}"),

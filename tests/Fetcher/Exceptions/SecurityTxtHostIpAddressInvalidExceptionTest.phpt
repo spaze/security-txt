@@ -55,7 +55,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 	 */
 	public function testTheCaseAndItsWireValueNameTheSameFamily(SecurityTxtIpAddressType $type, string $ip, string $label): void
 	{
-		$fromCase = new SecurityTxtHostIpAddressInvalidException(SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"), $ip, $type, new Url('https://com.example/'));
+		$fromCase = new SecurityTxtHostIpAddressInvalidException(new SecurityTxtHost(new Url("https://h\u{E1}\u{10D}ky.example/")), $ip, $type, new Url('https://com.example/'));
 		Assert::contains("resolves to an invalid {$label} address", $fromCase->getMessage());
 		Assert::same($type, $fromCase->getIpAddressType());
 
@@ -74,7 +74,7 @@ final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 
 	public function testTheWireCarriesTheCaseValueNotTheCase(): void
 	{
-		$exception = new SecurityTxtHostIpAddressInvalidException(SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"), '2001:DB8::1', SecurityTxtIpAddressType::V6, new Url('https://com.example/'));
+		$exception = new SecurityTxtHostIpAddressInvalidException(new SecurityTxtHost(new Url("https://h\u{E1}\u{10D}ky.example/")), '2001:DB8::1', SecurityTxtIpAddressType::V6, new Url('https://com.example/'));
 		$params = $exception->jsonSerialize()['params'];
 		assert(is_array($params));
 		Assert::same(SecurityTxtIpAddressType::V6->value, $params[2]);
