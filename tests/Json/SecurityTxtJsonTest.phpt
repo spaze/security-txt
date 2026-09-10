@@ -225,7 +225,7 @@ final class SecurityTxtJsonTest extends TestCase
 			// A URL and a host are spelled onto the wire by the base and read back by their declared type, the way a violation the library builds one for is replayed. Both
 			// nullable spellings too, since `getName()` strips the `?` where it matters and a violation naming a URL that may be absent is the natural shape for one
 			Url::class, '?' . Url::class => new Url('https://example.com/security.txt'),
-			SecurityTxtHost::class, '?' . SecurityTxtHost::class => SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example"),
+			SecurityTxtHost::class, '?' . SecurityTxtHost::class => new SecurityTxtHost(new Url("https://h\u{E1}\u{10D}ky.example/")),
 			// Any other object would reach `json_encode()` with nothing public on it and be stored as `{}`, which no violation could be recreated from
 			default => throw new LogicException(sprintf('%s::__construct() has the $%s param of an unsupported type %s', $class, $parameter->getName(), $type)),
 		};
@@ -371,7 +371,7 @@ final class SecurityTxtJsonTest extends TestCase
 	{
 		// A host outside ASCII, because a host reads as itself where a string is encoded, so these are the rows that notice if a replay stops turning the wire's string back
 		// into a host and the same failure starts saying `h%C3%A1%C4%8Dky.example` from a cache and `háčky.example` live
-		$host = SecurityTxtHost::fromString("h\u{E1}\u{10D}ky.example");
+		$host = new SecurityTxtHost(new Url("https://h\u{E1}\u{10D}ky.example/"));
 		return [
 			SecurityTxtHostNotFoundException::class => [
 				new SecurityTxtHostNotFoundException(new Url('https://example.com/.well-known/security.txt'), $host),
@@ -507,7 +507,7 @@ final class SecurityTxtJsonTest extends TestCase
 
 
 	/**
-	 * A host string the wire can carry but `SecurityTxtHost::fromString()` refuses takes the whole stored error down. A scheme WHATWG calls opaque runs no IDNA and its host is
+	 * A host string the wire can carry but the decoder refuses takes the whole stored error down. A scheme WHATWG calls opaque runs no IDNA and its host is
 	 * case sensitive, while a string is parsed back under HTTPS, which folds the case, so the name cannot rebuild the host it was written for. A check cannot reach such a
 	 * host, it fetches over HTTP and HTTPS only, though a caller can build one directly the way this test does; a released 2.x writer stored the raw decode, so its blob for
 	 * a label like `xn--khby` is refused the same way, a cache miss to check again, just like the result-level replay already refuses those. What this pins is the boundary
@@ -537,13 +537,83 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	/**
+	 * @return array<string, array{0:string}>
+	 */
+	public function getHostSpellings(): array
+	{
+		return [
+			'readable' => ["https://h\u{E1}\u{10D}ky.example/"],
+			'the same host in punycode' => ['https://xn--hky-ela4t.example/'],
+			'japanese' => ["https://\u{4F8B}\u{3048}.jp/"],
+			'a label that does not decode reversibly' => ['https://xn--khby.example/'],
+			'one that decodes out of normalization order' => ['https://xn--wuao.example/'],
+			'mixed' => ['https://xn--bcher-kva.xn--khby.example/'],
+			'plain' => ['https://EXAMPLE.com/'],
+			'an IPv4 literal' => ['https://1.1.1.1/'],
+			'an IPv6 literal' => ['https://[::1]/'],
+		];
+	}
+
+
+	/**
+	 * A host reaches storage as the name it reads as and has to come back as the same host. This is the inverse `SecurityTxtHost` used to carry itself, asserted here now
+	 * that the reading back lives on the decoder, and over every spelling rather than the one the wire contract happens to sample.
+	 *
+	 * @dataProvider getHostSpellings
+	 */
+	public function testAStoredHostRebuildsTheHostItNames(string $url): void
+	{
+		$host = new SecurityTxtHost(new Url($url));
+		$stored = new SecurityTxtHostNotFoundException(new Url('https://example.com/'), $host);
+		$decoded = json_decode((string)json_encode(['error' => $stored]), true);
+		assert(is_array($decoded));
+		$replayed = $this->securityTxtJson->createFetcherExceptionFromJsonValues($decoded);
+		Assert::same($stored->getMessage(), $replayed->getMessage());
+		// The message only shows what a host reads as; a host is also the name the network is reached by, and both have to survive
+		$rebuilt = $replayed->getMessageValues()[1];
+		Assert::type(SecurityTxtHost::class, $rebuilt);
+		assert($rebuilt instanceof SecurityTxtHost);
+		Assert::same($host->getUnicode(), $rebuilt->getUnicode());
+		Assert::same($host->getAscii(), $rebuilt->getAscii());
+	}
+
+
+	/**
+	 * @return array<string, array{0:string}>
+	 */
+	public function getHostsTheWireCannotCarry(): array
+	{
+		return [
+			'would read back as the IP address 0.0.3.40' => ['808'],
+			'a valid spelling, but not one getUnicode() writes' => ['xn--bcher-kva.example'],
+			'would read back lowercased' => ['Example.COM'],
+			'a URL, not a host' => ['https://example.com/'],
+			'not a hostname at all' => ['not a hostname'],
+		];
+	}
+
+
+	/**
+	 * A stored host is refused rather than rewritten, so whatever is accepted replays as the host it names. Each of these parses into something, which is why refusing is the
+	 * point: accepted, they would rebuild a host nobody stored and the result would say so with nothing noticing.
+	 *
+	 * @dataProvider getHostsTheWireCannotCarry
+	 */
+	public function testAStoredHostThatWouldBeRewrittenIsRefused(string $host): void
+	{
+		$e = Assert::throws(function () use ($host): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues([
+				'error' => ['class' => SecurityTxtHostNotFoundException::class, 'params' => ['https://example.com/', $host]],
+			]);
+		}, SecurityTxtCannotParseJsonException::class);
+		Assert::type(SecurityTxtCannotParseHostnameException::class, $e?->getPrevious());
+	}
+
+
 	public function testCreateFetcherExceptionFromJsonValuesRefusesAHostItCannotRebuild(): void
 	{
 		$host = new SecurityTxtHost(new Url('foo://Plain.Example/x'));
-		Assert::throws(function () use ($host): void {
-			SecurityTxtHost::fromString($host->getUnicode());
-		}, SecurityTxtCannotParseHostnameException::class);
-
 		$live = new SecurityTxtHostNotFoundException(new Url('https://example.com/'), $host);
 		Assert::contains($host->getUnicode(), $live->getMessage());
 		$encoded = json_encode(['error' => $live]);

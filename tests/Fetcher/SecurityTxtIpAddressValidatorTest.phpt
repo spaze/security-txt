@@ -29,14 +29,16 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 
 
 	/**
-	 * `fromString()` rather than a bare `new`, so a fixture spelled a way production would refuse is refused here too: `808` parses to the host `0.0.3.40` and `Example.COM`
-	 * to `example.com`, and a data row written against the spelling typed here would otherwise assert a message that can never be produced.
+	 * Checked against what was typed, so a fixture spelled a way production would not produce fails here: `808` parses to the host `0.0.3.40` and `Example.COM` to
+	 * `example.com`, and a data row written against the spelling typed here would otherwise assert a message that can never be produced.
 	 *
 	 * @throws SecurityTxtCannotParseHostnameException
 	 */
 	private function host(string $host): SecurityTxtHost
 	{
-		return SecurityTxtHost::fromString($host);
+		$built = new SecurityTxtHost(new Url("https://{$host}/"));
+		Assert::same($host, $built->getUnicode(), "the fixture {$host} is not how this host reads");
+		return $built;
 	}
 
 

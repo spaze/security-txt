@@ -153,10 +153,10 @@ final class SecurityTxtFetcherTest extends TestCase
 		$finalUrl = new Url('https://passed-by-ref.example/');
 		if ($expectedException !== null) {
 			Assert::throws(function () use ($method, $fetcher, $finalUrl): void {
-				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('example.com'), new Url('https://example.com/foo'), &$finalUrl, true, null]);
+				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), new SecurityTxtHost(new Url('https://example.com/')), new Url('https://example.com/foo'), &$finalUrl, true, null]);
 			}, $expectedException);
 		} else {
-			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), SecurityTxtHost::fromString('example.com'), new Url('https://example.com/foo'), &$finalUrl, true, null]);
+			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), new SecurityTxtHost(new Url('https://example.com/')), new Url('https://example.com/foo'), &$finalUrl, true, null]);
 			assert($response instanceof SecurityTxtFetcherResponse);
 			Assert::same($expectedHttpCode, $response->getHttpCode());
 			Assert::same($expectedLocation, $response->getHeader('location'));
@@ -772,7 +772,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, new Url('file://foo/bar'), SecurityTxtHost::fromString('foo'), false, null);
+			$method->invoke($fetcher, new Url('file://foo/bar'), new SecurityTxtHost(new Url('https://foo/')), false, null);
 		}, SecurityTxtUrlUnsupportedSchemeException::class, 'URL file://foo/bar has an unsupported scheme');
 	}
 
@@ -787,7 +787,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		), $this->ipAddressValidator);
 		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		Assert::throws(function () use ($method, $fetcher): void {
-			$method->invoke($fetcher, new Url('https://foo/bar'), SecurityTxtHost::fromString('foo'), false, null);
+			$method->invoke($fetcher, new Url('https://foo/bar'), new SecurityTxtHost(new Url('https://foo/')), false, null);
 		}, SecurityTxtUrlUnsupportedSchemeException::class, 'URL file:///etc/passwd has an unsupported scheme (redirects: https://foo/bar → file:///etc/passwd)');
 	}
 
@@ -841,7 +841,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv4 addresses')), $this->ipAddressValidator);
 		$result = null;
 		Assert::noError(function () use (&$result, $fetcher, $ipAddress): void {
-			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, new Url("https://{$ipAddress}/"), SecurityTxtHost::fromString($ipAddress), false, null);
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, new Url("https://{$ipAddress}/"), new SecurityTxtHost(new Url("https://{$ipAddress}/")), false, null);
 		});
 		assert($result instanceof SecurityTxtFetcherFetchHostResult);
 		Assert::same($ipAddress, $result->getIpAddress());
@@ -855,7 +855,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(new LogicException('Resolver should not be called for IPv6 addresses')), $this->ipAddressValidator);
 		$result = null;
 		Assert::noError(function () use (&$result, $fetcher, $ipv6Address): void {
-			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, new Url("https://[{$ipv6Address}]/"), SecurityTxtHost::fromString("[{$ipv6Address}]"), false, null);
+			$result = (new ReflectionMethod($fetcher, 'fetchUrl'))->invoke($fetcher, new Url("https://[{$ipv6Address}]/"), new SecurityTxtHost(new Url("https://[{$ipv6Address}]/")), false, null);
 		});
 		assert($result instanceof SecurityTxtFetcherFetchHostResult);
 		Assert::same($ipv6Address, $result->getIpAddress());
