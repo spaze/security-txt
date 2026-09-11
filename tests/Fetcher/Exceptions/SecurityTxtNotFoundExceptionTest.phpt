@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
@@ -16,7 +19,6 @@ use Uri\WhatWg\Url;
 
 require __DIR__ . '/../../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtNotFoundExceptionTest extends TestCase
 {
 

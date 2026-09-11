@@ -1,5 +1,8 @@
 <?php
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser\FieldProcessors;
@@ -13,7 +16,6 @@ use Tester\TestCase;
 
 require __DIR__ . '/../../bootstrap.php';
 
-/** @testCase */
 final class BugBountySetFieldValueTest extends TestCase
 {
 

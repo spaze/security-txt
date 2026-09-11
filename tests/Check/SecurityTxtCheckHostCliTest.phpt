@@ -1,6 +1,9 @@
 <?php
-/** @noinspection HttpUrlsUsage */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection HttpUrlsUsage
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Check;
@@ -32,7 +35,6 @@ use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtCheckHostCliTest extends TestCase
 {
 

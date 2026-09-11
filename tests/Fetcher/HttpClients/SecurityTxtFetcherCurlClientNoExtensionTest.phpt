@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
@@ -16,7 +19,6 @@ use function Spaze\SecurityTxt\Test\skipIfExtensionLoaded;
 
 require __DIR__ . '/../../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtFetcherCurlClientNoExtensionTest extends TestCase
 {
 

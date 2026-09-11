@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
@@ -18,8 +21,6 @@ require __DIR__ . '/../../bootstrap.php';
 
 /**
  * The format and the values have to agree on how many placeholders there are, so every exception that lists redirects is built here with none, one and two of them.
- *
- * @testCase
  */
 final class SecurityTxtRedirectsFormatTest extends TestCase
 {

@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
@@ -17,7 +20,6 @@ use ValueError;
 
 require __DIR__ . '/../../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtUrlNotFoundExceptionTest extends TestCase
 {
 

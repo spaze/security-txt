@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
@@ -14,8 +17,6 @@ require __DIR__ . '/../bootstrap.php';
  * A violation says where in the spec it comes from as well as what is wrong, and a consumer renders that, turning `getSpecSection()` into a link to the section of RFC
  * 9116 it names. Nothing inside this library reads any of it, the serialized form stopped carrying it once the decoder was shown to recompute everything from the
  * constructor arguments, so without this they would be exercised by nothing at all.
- *
- * @testCase
  */
 final class SecurityTxtSpecViolationTest extends TestCase
 {

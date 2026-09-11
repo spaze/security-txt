@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
@@ -12,8 +15,6 @@ require __DIR__ . '/../bootstrap.php';
 
 /**
  * The format lists one placeholder per canonical URI and the values have to match it, so the message is built here with none, one and two of them.
- *
- * @testCase
  */
 final class SecurityTxtCanonicalUriMismatchTest extends TestCase
 {
