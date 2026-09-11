@@ -52,6 +52,7 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 	public function testSignClearsignHeader(): void
 	{
 		$gnuPg = new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir());
+		Assert::true($gnuPg->addSignKey('81845AF734473E623BB72216EB871D6296D433D2', 'how do you do fellow kids'));
 		$signature = new SecurityTxtSignature($gnuPg);
 		$signed = $gnuPg->sign('i was zero cool');
 		assert(is_string($signed));
