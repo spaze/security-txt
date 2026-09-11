@@ -1,5 +1,8 @@
 <?php
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Json;
@@ -40,7 +43,6 @@ use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestCase
 {
 

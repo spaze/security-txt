@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
@@ -30,7 +33,6 @@ use Tester\TestCase;
 
 require __DIR__ . '/bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtTest extends TestCase
 {
 

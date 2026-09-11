@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
@@ -21,8 +24,6 @@ require __DIR__ . '/../../bootstrap.php';
 /**
  * The constructor takes only a case now; the wire's int comes back through `SecurityTxtJson`, which turns it into a case before calling, so the gate that refuses a value
  * outside the enum lives there and is reached through a replay.
- *
- * @testCase
  */
 final class SecurityTxtHostIpAddressInvalidExceptionTest extends TestCase
 {

@@ -1,5 +1,8 @@
 <?php
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Signature\Providers;
@@ -14,7 +17,6 @@ use function Spaze\SecurityTxt\Test\gnupgHomeDir;
 
 require __DIR__ . '/../../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 {
 

@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Json;
@@ -37,8 +40,6 @@ require __DIR__ . '/../bootstrap.php';
  * result naming a class it does not have, and `class_exists()` refuses the whole blob. Bumping would be worse, an older decoder would then refuse every result the
  * newer one writes rather than the few that name the new class, and a refused result is a cache miss to check again. Changing a class that already shipped is the break
  * this number is for.
- *
- * @testCase
  */
 final class SecurityTxtWireContractTest extends TestCase
 {

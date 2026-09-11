@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpFullyQualifiedNameUsageInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpFullyQualifiedNameUsageInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
@@ -13,7 +16,6 @@ use Tester\TestCase;
 
 require __DIR__ . '/../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtSplitLinesTest extends TestCase
 {
 

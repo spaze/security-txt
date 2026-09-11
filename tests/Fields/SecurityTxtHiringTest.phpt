@@ -1,5 +1,8 @@
 <?php
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
@@ -9,7 +12,6 @@ use Tester\TestCase;
 
 require __DIR__ . '/../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtHiringTest extends TestCase
 {
 

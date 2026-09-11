@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpDocMissingThrowsInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpDocMissingThrowsInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fields;
@@ -12,7 +15,6 @@ use Tester\TestCase;
 
 require __DIR__ . '/../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtExpiresTest extends TestCase
 {
 

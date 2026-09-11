@@ -1,6 +1,9 @@
 <?php
-/** @noinspection PhpFullyQualifiedNameUsageInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
+/**
+ * @testCase
+ * @noinspection PhpFullyQualifiedNameUsageInspection
+ * @noinspection PhpUnhandledExceptionInspection
+ */
 declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
@@ -12,7 +15,6 @@ use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
-/** @testCase */
 final class SecurityTxtUrlParserTest extends TestCase
 {
 
