@@ -21,8 +21,12 @@ composer require spaze/security-txt
 
 | Version | Requirements                                                                                                                   | Notes                  |
 |---------|--------------------------------------------------------------------------------------------------------------------------------|------------------------|
-| 2.x     | PHP 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures           | Current stable release |
+| 3.x     | PHP 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures           | Current stable release |
+| 2.x     | PHP 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures           | End of life as of 2.2.2, no further releases |
 | 1.x     | PHP 8.3, 8.4, 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures | End of life as of 1.0.1, no further releases |
+
+2.x reached end of life with 2.2.2, which carries every security fix this library had published by then. There will be no further 2.x releases, security or otherwise.
+Nothing holds you on 2.x the way 1.x held people on PHP 8.3: 2.x and 3.x want the same PHP and the same extensions, so only the API is between them.
 
 1.x reached end of life with 1.0.1, which carries every security fix this library had published by then. There will be no further 1.x releases, security or otherwise.
 1.x existed so that PHP 8.3 and 8.4 could be used, so if you cannot upgrade PHP there is no supported version for you.
@@ -162,7 +166,7 @@ A stored result carries a `formatVersion`, and `Spaze\SecurityTxt\Json\SecurityT
 Decoding refuses a result written by a newer version, because it cannot know what the fields mean there, and makes a best effort on an older one or on one stored by a 2.x version, which carries no `formatVersion` at all, but compatibility cannot be guaranteed across refactors or format changes.
 
 When the JSON can't be decoded, the `create*FromJsonValues()` methods throw `Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException`.
-If it's a result you have stored, treat it as a cache miss and check the host again, instead of reporting the error to the user: the stored data was either written by an older version of this library or damaged some other way, and it will not become readable later.
+If it's a result you have stored, treat it as a cache miss and check the host again, instead of reporting the error to the user: the stored data was written by a version of this library that no longer agrees with this one, or damaged some other way. A result refused for carrying a newer `formatVersion` is the one case that can become readable later, once this side is upgraded, and treating it as a cache miss is right for that too.
 
 ## The other methods
 The `Spaze\SecurityTxt\Parser\SecurityTxtParser::parseString()` method returns a `Spaze\SecurityTxt\Parser\SecurityTxtParseStringResult` object.
@@ -296,8 +300,8 @@ In general, you’ll need to follow these steps:
 2. Install this package using Composer.
 3. Run the `checksecuritytxt.php` script.
 
-GitHub Actions' `ubuntu-24.04` runner (also as `ubuntu-latest` at the time of writing) has PHP 8.3 preinstalled, so you can use `checksecuritytxt.php` without installing anything else, the version 1.x of this lib can be used with PHP 8.3.
-Version 2.x requires PHP 8.5 or newer, and would require `ubuntu-26.04` which comes with PHP 8.5. You can also use [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) to install the required PHP version.
+GitHub Actions' `ubuntu-24.04` runner (also as `ubuntu-latest` at the time of writing) has PHP 8.3 preinstalled, which no supported version of this library can use: 1.x ran on PHP 8.3 but reached end of life at 1.0.1, so running `checksecuritytxt.php` with nothing else installed means running a version that gets no fixes.
+3.x needs PHP 8.5 or newer, as 2.x did, so use `ubuntu-26.04`, which comes with PHP 8.5, or [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) to install the required PHP version.
 
 But unfortunately the `gnupg` PHP extension is not available on GitHub runners by default so you won't be able to verify the file signatures with just the GitHub-provided PHP.
 If you want to verify signatures you'll need to use [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) which can also set up the extension.
