@@ -132,8 +132,16 @@ final class SecurityTxtParser
 		$this->initFieldProcessors();
 		$this->lineErrors = $this->lineWarnings = [];
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
+		$fileLocationErrors = [];
 		if ($fileLocation !== null) {
-			$securityTxt->setFileLocation($fileLocation);
+			try {
+				// `AllowInvalidValues` sets the value and then throws for the caller to collect, which this call site used to skip. Only an error is caught because that is all
+				// `setFileLocation()` declares, and a catch for anything it does not is rejected as dead. Nothing checks the other way round: give the setter the warnings callback
+				// `setValue()` also takes and the warning escapes here as silently as the error used to, until checked exceptions are turned on
+				$securityTxt->setFileLocation($fileLocation);
+			} catch (SecurityTxtError $e) {
+				$fileLocationErrors[] = $e->getViolation();
+			}
 		}
 		if (@preg_match('//u', $contents) === false) { // Intentionally silenced
 			$pregError = preg_last_error();
@@ -147,7 +155,7 @@ final class SecurityTxtParser
 				$this->expiresWarningThreshold,
 				$this->lineErrors,
 				$this->lineWarnings,
-				new SecurityTxtValidateResult([new SecurityTxtContentNotUtf8()], []),
+				new SecurityTxtValidateResult([...$fileLocationErrors, new SecurityTxtContentNotUtf8()], []),
 			);
 		}
 		$lines = $this->splitLines->splitLines($contents);
@@ -224,7 +232,8 @@ final class SecurityTxtParser
 			}
 		}
 		ksort($this->lineErrors);
-		$validateResult = $this->validator->validate($securityTxt);
+		$validated = $this->validator->validate($securityTxt);
+		$validateResult = new SecurityTxtValidateResult([...$fileLocationErrors, ...$validated->getErrors()], $validated->getWarnings());
 		$expires = $securityTxt->getExpires();
 		$hasErrors = $this->lineErrors !== [] || $validateResult->getErrors() !== [];
 		$hasWarnings = $this->lineWarnings !== [] || $validateResult->getWarnings() !== [];
