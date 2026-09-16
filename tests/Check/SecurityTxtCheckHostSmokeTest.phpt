@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcher;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressValidator;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
@@ -56,7 +57,7 @@ final class SecurityTxtCheckHostSmokeTest extends TestCase
 		$splitLines = new SecurityTxtSplitLines($splitProvider);
 		$fetcher = new SecurityTxtFetcher(new SecurityTxtFetcherCurlClient(), $urlParser, $splitLines, new SecurityTxtPhpDnsProvider(), new SecurityTxtIpAddressValidator());
 		$signature = new SecurityTxtSignature(new SecurityTxtSignatureGnuPgProvider(gnupgHomeDir()));
-		$parser = new SecurityTxtParser(new SecurityTxtValidator(), $signature, new SecurityTxtExpiresFactory(), $splitLines, $splitProvider);
+		$parser = new SecurityTxtParser(new SecurityTxtValidator(), $signature, new SecurityTxtExpiresFactory(), $splitLines, $splitProvider, new SecurityTxtJsonValueFactory());
 		return new SecurityTxtCheckHost($parser, $fetcher, new SecurityTxtCheckHostResultFactory(), $urlParser);
 	}
 

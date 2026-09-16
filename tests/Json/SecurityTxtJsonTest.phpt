@@ -42,6 +42,7 @@ use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
+use Spaze\SecurityTxt\Violations\SecurityTxtCanonicalUriMismatch;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
@@ -54,6 +55,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistakeReason;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
@@ -295,6 +297,45 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	/**
+	 * `json_encode()` refuses malformed UTF-8, so the one file the parser names `SecurityTxtContentNotUtf8` for could not be stored at all. Bytes and lines, and the
+	 * `SecurityTxtTopLevelDiffers` carrying the same bytes.
+	 */
+	public function testAFetchResultOfAFileThatIsNotUtf8SurvivesStorage(): void
+	{
+		$lines = ["Contact: mailto:security@example.com\n", "Expires: 2030-01-01T00:00:00Z\n", "# Kontakt: Michal \xA9pa\xE8ek\n"]; // Š and č as ISO-8859-2 writes them
+		$url = new Url('https://example.com/.well-known/security.txt');
+		$differs = new SecurityTxtTopLevelDiffers(implode($lines), $lines[0]);
+		$result = new SecurityTxtFetchResult($url, $url, [], implode($lines), false, $lines, [], [$differs]);
+		$encoded = json_encode($result);
+		Assert::true(is_string($encoded), json_last_error_msg());
+		assert(is_string($encoded));
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		// The plain key gone, which is what a reader from before the twin refuses rather than misreads
+		Assert::hasNotKey('contents', $decoded);
+		Assert::same(base64_encode(implode($lines)), $decoded['contentsBase64']);
+		$warnings = $decoded['warnings'];
+		assert(is_array($warnings));
+		$warning = $warnings[0];
+		assert(is_array($warning));
+		Assert::hasNotKey('params', $warning);
+		Assert::same([base64_encode(implode($lines)), base64_encode($lines[0])], $warning['paramsBase64']);
+		$replayed = $this->securityTxtJson->createFetchResultFromJsonValues($decoded);
+		Assert::same(implode($lines), $replayed->getContents());
+		foreach ($lines as $i => $line) {
+			Assert::same($line, $replayed->getLine($i + 1));
+		}
+		Assert::null($replayed->getLine(count($lines) + 1));
+		$replayedWarning = $replayed->getWarnings()[0];
+		Assert::type(SecurityTxtTopLevelDiffers::class, $replayedWarning);
+		assert($replayedWarning instanceof SecurityTxtTopLevelDiffers);
+		Assert::same(implode($lines), $replayedWarning->getWellKnownContents());
+		Assert::same($lines[0], $replayedWarning->getTopLevelContents());
+		Assert::same($encoded, json_encode($replayed));
+	}
+
+
 	public function testCreateFetchResultFromJsonValuesErrors(): void
 	{
 		Assert::throws(function (): void {
@@ -465,6 +506,166 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createCheckHostResultFromJsonValues(['class' => SecurityTxtCheckHostResult::class, 'formatVersion' => SecurityTxtJson::FORMAT_VERSION]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: host is not set or not a string');
+	}
+
+
+	/**
+	 * @return array<string, array{0:string}>
+	 */
+	public function getContentsAStoredResultCarries(): array
+	{
+		return [
+			'a file' => ["Contact: mailto:security@example.com\nExpires: 2030-01-01T00:00:00Z\n"],
+			'a file that is nothing but Base64 alphabet' => ['Expires'],
+			'no file' => [''],
+		];
+	}
+
+
+	/**
+	 * `checkFormatVersion()` lets an older shape through, so a result stored under the plain key reads as it was written, and a consumer keeps stored results for weeks.
+	 *
+	 * @dataProvider getContentsAStoredResultCarries
+	 */
+	public function testCreateFromJsonValuesReadsAShapeFromThePastAsItWasWritten(string $contents): void
+	{
+		// What 3.0.0 wrote, and what 2.x wrote, which carried no version at all
+		foreach ([['formatVersion' => 1], []] as $version) {
+			$stored = $version + [
+				'class' => SecurityTxtFetchResult::class,
+				'constructedUrl' => 'https://example.com/.well-known/security.txt',
+				'finalUrl' => 'https://example.com/.well-known/security.txt',
+				'redirects' => [],
+				'contents' => $contents,
+				'isTruncated' => false,
+				'errors' => [],
+				'warnings' => [],
+			];
+			$replayed = $this->securityTxtJson->createFetchResultFromJsonValues($stored);
+			Assert::same($contents, $replayed->getContents());
+		}
+	}
+
+
+	/**
+	 * @return array<string, array{0:array<string, mixed>, 1:string}>
+	 */
+	public function getContentsTheWireCannotRebuild(): array
+	{
+		return [
+			'neither key' => [[], 'contents is not a string'],
+			'contents not a string' => [['contents' => 303], 'contents is not a string'],
+			'contentsBase64 not a string' => [['contentsBase64' => 303], 'contentsBase64 is neither a string nor an array'],
+			'both keys' => [['contents' => 'Expires', 'contentsBase64' => 'RXhwaXJlcw=='], 'contents and contentsBase64 are both set'],
+			'both keys, the plain one null' => [['contents' => null, 'contentsBase64' => 'RXhwaXJlcw=='], 'contents and contentsBase64 are both set'],
+			'contentsBase64 null' => [['contentsBase64' => null], 'contentsBase64 is neither a string nor an array'],
+			'not Base64' => [['contentsBase64' => 'not Base64!'], 'contentsBase64 is not Base64 as this library writes it'],
+			'Base64 with the padding left off' => [['contentsBase64' => 'qQ'], 'contentsBase64 is not Base64 as this library writes it'],
+			'Base64 with a newline in it' => [['contentsBase64' => "qQ==\n"], 'contentsBase64 is not Base64 as this library writes it'],
+		];
+	}
+
+
+	/**
+	 * Strict `base64_decode()` still takes padding left off and whitespace put in, two spellings for one value, refused like a URL spelled some other way.
+	 *
+	 * @param array<string, mixed> $contents
+	 * @dataProvider getContentsTheWireCannotRebuild
+	 */
+	public function testCreateFetchResultFromJsonValuesRefusesContentsItCannotRebuild(array $contents, string $message): void
+	{
+		Assert::throws(function () use ($contents): void {
+			$this->securityTxtJson->createFetchResultFromJsonValues($contents + [
+				'class' => SecurityTxtFetchResult::class,
+				'formatVersion' => SecurityTxtJson::FORMAT_VERSION,
+				'constructedUrl' => 'https://example.com/.well-known/security.txt',
+				'finalUrl' => 'https://example.com/.well-known/security.txt',
+				'redirects' => [],
+			]);
+		}, SecurityTxtCannotParseJsonException::class, "Cannot parse JSON: {$message}");
+	}
+
+
+	/**
+	 * Either key reads, as either canonical spelling of a URL does: Base64 of a string JSON could write rebuilds the same bytes.
+	 */
+	public function testCreateFetchResultFromJsonValuesReadsBase64AsTheBytesItSpells(): void
+	{
+		foreach (["\xFF", "# Kontakt: Michal \xA9pa\xE8ek\n", 'Contact: mailto:security@example.com', ''] as $bytes) {
+			$replayed = $this->securityTxtJson->createFetchResultFromJsonValues([
+				'class' => SecurityTxtFetchResult::class,
+				'formatVersion' => SecurityTxtJson::FORMAT_VERSION,
+				'constructedUrl' => 'https://example.com/.well-known/security.txt',
+				'finalUrl' => 'https://example.com/.well-known/security.txt',
+				'redirects' => [],
+				'contentsBase64' => base64_encode($bytes),
+				'isTruncated' => false,
+				'errors' => [],
+				'warnings' => [],
+			]);
+			Assert::same($bytes, $replayed->getContents());
+		}
+	}
+
+
+	/**
+	 * The whole list comes back, every string decoded and the rest as it was, at any depth, because that is how it went.
+	 */
+	public function testCreateViolationsFromJsonValuesReadsParamsBase64(): void
+	{
+		$wellKnown = "# Kontakt: Michal \xA9pa\xE8ek\n";
+		$violations = $this->securityTxtJson->createViolationsFromJsonValues([[
+			'class' => SecurityTxtTopLevelDiffers::class,
+			'paramsBase64' => [base64_encode($wellKnown), base64_encode('top-level')],
+		]]);
+		Assert::type(SecurityTxtTopLevelDiffers::class, $violations[0]);
+		assert($violations[0] instanceof SecurityTxtTopLevelDiffers);
+		Assert::same($wellKnown, $violations[0]->getWellKnownContents());
+		Assert::same('top-level', $violations[0]->getTopLevelContents());
+
+		$mismatch = $this->securityTxtJson->createViolationsFromJsonValues([[
+			'class' => SecurityTxtCanonicalUriMismatch::class,
+			'paramsBase64' => [base64_encode("https://example.com/\xFF"), [base64_encode('https://example.com/'), base64_encode('https://example.net/')]],
+		]])[0];
+		Assert::type(SecurityTxtCanonicalUriMismatch::class, $mismatch);
+		// Re-serialized the same, so the strings reached the constructor decoded, at depth too
+		Assert::same(
+			['class' => SecurityTxtCanonicalUriMismatch::class, 'paramsBase64' => [base64_encode("https://example.com/\xFF"), [base64_encode('https://example.com/'), base64_encode('https://example.net/')]]],
+			$mismatch->jsonSerialize(),
+		);
+
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtTopLevelDiffers::class, 'params' => ['a', 'b'], 'paramsBase64' => ['YQ==', 'Yg==']]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: params and paramsBase64 are both set');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtTopLevelDiffers::class, 'params' => null, 'paramsBase64' => ['YQ==', 'Yg==']]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: params and paramsBase64 are both set');
+		Assert::throws(function () use ($wellKnown): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtTopLevelDiffers::class, 'paramsBase64' => [base64_encode($wellKnown), 'top-level']]]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: paramsBase64 is not Base64 as this library writes it');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtTopLevelDiffers::class, 'paramsBase64' => 'YQ==']]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: params is missing or not an array');
+	}
+
+
+	public function testCreateFetcherExceptionFromJsonValuesReadsParamsBase64(): void
+	{
+		$exception = $this->securityTxtJson->createFetcherExceptionFromJsonValues([
+			'error' => ['class' => SecurityTxtCannotParseHostnameException::class, 'paramsBase64' => [base64_encode("https://\xFF.example/")]],
+		]);
+		Assert::type(SecurityTxtCannotParseHostnameException::class, $exception);
+		Assert::same(["https://\xFF.example/"], $exception->getMessageValues());
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues([
+				'error' => ['class' => SecurityTxtCannotParseHostnameException::class, 'params' => ['a'], 'paramsBase64' => ['YQ==']],
+			]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > params and paramsBase64 are both set');
+		Assert::throws(function (): void {
+			$this->securityTxtJson->createFetcherExceptionFromJsonValues([
+				'error' => ['class' => SecurityTxtCannotParseHostnameException::class, 'paramsBase64' => ['not Base64!']],
+			]);
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > paramsBase64 is not Base64 as this library writes it');
 	}
 
 

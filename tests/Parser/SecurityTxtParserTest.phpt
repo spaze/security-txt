@@ -18,6 +18,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
@@ -69,6 +70,7 @@ final class SecurityTxtParserTest extends TestCase
 	private SecurityTxtExpiresFactory $securityTxtExpiresFactory;
 	private SecurityTxtPregSplitProvider $securityTxtPregSplitProvider;
 	private SecurityTxtSplitLines $securityTxtSplitLines;
+	private SecurityTxtJsonValueFactory $securityTxtJsonValueFactory;
 	private SecurityTxtParser $securityTxtParser;
 
 
@@ -80,7 +82,8 @@ final class SecurityTxtParserTest extends TestCase
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$this->securityTxtPregSplitProvider = new SecurityTxtPregSplitProvider();
 		$this->securityTxtSplitLines = new SecurityTxtSplitLines($this->securityTxtPregSplitProvider);
-		$this->securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$this->securityTxtJsonValueFactory = new SecurityTxtJsonValueFactory();
+		$this->securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 	}
 
 
@@ -641,7 +644,7 @@ final class SecurityTxtParserTest extends TestCase
 
 		$signatureProvider = $this->getSignatureProvider(new SecurityTxtError(new SecurityTxtSignatureInvalid()));
 		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
@@ -651,7 +654,7 @@ final class SecurityTxtParserTest extends TestCase
 
 		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
 		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
 		Assert::false($parseResult->hasErrors());
 		Assert::true($parseResult->hasWarnings());
@@ -700,7 +703,7 @@ final class SecurityTxtParserTest extends TestCase
 
 		};
 		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$securityTxtParser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\n\n", 50));
 		Assert::same(1, $signatureProvider->verifyCalls);
 	}
@@ -725,7 +728,7 @@ final class SecurityTxtParserTest extends TestCase
 		EOT . "\n";
 		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
 		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->isValid());
@@ -762,7 +765,7 @@ final class SecurityTxtParserTest extends TestCase
 		EOT . "\n";
 		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
 		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->isValid());
@@ -790,7 +793,7 @@ final class SecurityTxtParserTest extends TestCase
 		EOT . "\n";
 		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
 		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
 		Assert::false($parseResult->hasErrors());
 		// no SecurityTxtUnknownField warning for the Version armor header, only the one thrown by the verify() stub

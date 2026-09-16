@@ -20,6 +20,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressValidator;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
@@ -349,7 +350,8 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
 		$splitLines = new SecurityTxtSplitLines($pregSplitProvider);
 		$ipAddressValidator = new SecurityTxtIpAddressValidator();
-		$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
+		$jsonValueFactory = new SecurityTxtJsonValueFactory();
+		$parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider, $jsonValueFactory);
 		$fetcher = new SecurityTxtFetcher($httpClient, $urlParser, $splitLines, $this->getDnsProvider($dnsRecords ?? new SecurityTxtDnsRecords('1.1.1.0', null)), $ipAddressValidator, 1);
 		$checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 		$checkHost = new SecurityTxtCheckHost($parser, $fetcher, $checkHostResultFactory, $urlParser);

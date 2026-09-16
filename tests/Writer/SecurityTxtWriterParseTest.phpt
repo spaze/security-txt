@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
 use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\Fields\SecurityTxtPreferredLanguages;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureGnuPgProvider;
@@ -44,7 +45,8 @@ final class SecurityTxtWriterParseTest extends TestCase
 		$this->securityTxtExpiresFactory = new SecurityTxtExpiresFactory();
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
 		$securityTxtSplitLines = new SecurityTxtSplitLines($pregSplitProvider);
-		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $securityTxtSplitLines, $pregSplitProvider);
+		$jsonValueFactory = new SecurityTxtJsonValueFactory();
+		$this->securityTxtParser = new SecurityTxtParser($securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $securityTxtSplitLines, $pregSplitProvider, $jsonValueFactory);
 		$this->securityTxtWriter = new SecurityTxtWriter();
 	}
 
