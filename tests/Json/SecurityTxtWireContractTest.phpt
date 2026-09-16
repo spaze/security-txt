@@ -33,7 +33,7 @@ require __DIR__ . '/../bootstrap.php';
 /**
  * A stored result carries a class name and the arguments its constructor was called with, bar an exception's `$previous`, and a decoder replays it by calling that
  * constructor again. So the wire format is not a set of keys, it is these signatures: rename a class, reorder a parameter, add a required one, change what a type means,
- * and a blob written before the change stops being readable while `jsonSerialize()` goes on writing the same two keys, which is what this file is here to notice.
+ * and a blob written before the change stops being readable while `jsonSerialize()` goes on writing the same keys, which is what this file is here to notice.
  *
  * `SecurityTxtJson::FORMAT_VERSION` is what announces that, so a diff touching this list is a decision about bumping it, not a fixture to re-record. Its docblock says when.
  * Adding a class does not bump it, but not because nothing can meet one: the Lambda and the site deploy separately, so a newer writer really can hand an older decoder a
@@ -188,15 +188,23 @@ final class SecurityTxtWireContractTest extends TestCase
 	 * any of it would be a second copy that a reworded message or a changed rule can leave disagreeing with the first, and nothing would ever read it to notice.
 	 *
 	 * Asserted over every class rather than one of each, because `jsonSerialize()` is deliberately not `final`: a subclass writing an extra key harms nothing, the decoder
-	 * reads two and ignores the rest, and taking an overridable public method away from a consumer to save a loop here would not be a trade worth making.
+	 * reads the keys it knows and ignores the rest, and taking an overridable public method away from a consumer to save a loop here would not be a trade worth making.
 	 */
 	public function testTheWireCarriesTheCallAndNothingElse(): void
 	{
+		$base64 = 0;
 		foreach ($this->getReplayableClasses() as $class) {
-			$built = new ReflectionClass($class)->newInstanceArgs($this->getConstructorArguments($class, "h\u{E1}\u{10D}ky.example"));
-			assert($built instanceof SecurityTxtFetcherException || $built instanceof SecurityTxtSpecViolation);
-			Assert::same(['class', 'params'], array_keys($built->jsonSerialize()), "{$class} writes something other than the call");
+			// Once as text, once with a byte JSON cannot write in every string: under `paramsBase64` exactly when JSON could not write the call as it is
+			foreach (['', "\xFF "] as $stringPrefix) {
+				$arguments = $this->getConstructorArguments($class, "h\u{E1}\u{10D}ky.example", $stringPrefix);
+				$built = new ReflectionClass($class)->newInstanceArgs($arguments);
+				assert($built instanceof SecurityTxtFetcherException || $built instanceof SecurityTxtSpecViolation);
+				$key = json_encode($arguments) === false ? 'paramsBase64' : 'params';
+				Assert::same(['class', $key], array_keys($built->jsonSerialize()), "{$class} writes something other than the call");
+				$base64 += $key === 'paramsBase64' ? 1 : 0;
+			}
 		}
+		Assert::true($base64 > 0);
 	}
 
 
@@ -205,12 +213,16 @@ final class SecurityTxtWireContractTest extends TestCase
 		$json = new SecurityTxtJson(new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider()));
 		$checked = 0;
 		// Both ways a host can settle, because the two stringifications a call site could reach for each agree with the settled spelling on one of them: `toUnicodeString()` is
-		// right for a host that decodes reversibly and names another host for one that does not, `toAsciiString()` the other way about. One host proves neither wrong
-		foreach (["h\u{E1}\u{10D}ky.example", 'xn--khby.example'] as $urlHost) {
+		// right for a host that decodes reversibly and names another host for one that does not, `toAsciiString()` the other way about. One host proves neither wrong. And once
+		// with a byte JSON cannot write in every string, which puts the call under `paramsBase64`
+		foreach ([["h\u{E1}\u{10D}ky.example", ''], ['xn--khby.example', ''], ['example.com', "\xFF "]] as [$urlHost, $stringPrefix]) {
 			foreach ($this->getReplayableClasses() as $class) {
-				$built = new ReflectionClass($class)->newInstanceArgs($this->getConstructorArguments($class, $urlHost));
+				$built = new ReflectionClass($class)->newInstanceArgs($this->getConstructorArguments($class, $urlHost, $stringPrefix));
 				assert($built instanceof SecurityTxtFetcherException || $built instanceof SecurityTxtSpecViolation);
-				$wire = json_decode((string)json_encode($built), true);
+				$encoded = json_encode($built);
+				Assert::true(is_string($encoded), "{$class}: " . json_last_error_msg());
+				assert(is_string($encoded));
+				$wire = json_decode($encoded, true);
 				assert(is_array($wire));
 				$replayed = $built instanceof SecurityTxtFetcherException
 					? $json->createFetcherExceptionFromJsonValues(['error' => $wire])
@@ -231,7 +243,7 @@ final class SecurityTxtWireContractTest extends TestCase
 				$checked++;
 			}
 		}
-		Assert::same(count($this->getReplayableClasses()) * 2, $checked);
+		Assert::same(count($this->getReplayableClasses()) * 3, $checked);
 	}
 
 
@@ -306,20 +318,21 @@ final class SecurityTxtWireContractTest extends TestCase
 
 
 	/**
-	 * Values a constructor will accept, by type. The ones that validate their input get theirs by hand.
+	 * Values a constructor will accept, by type. The ones that validate their input get theirs by hand. The prefix goes onto every string a constructor takes as text, inside an
+	 * array too, not onto a field name one validates.
 	 *
 	 * @param class-string $class
 	 * @return list<mixed>
 	 */
-	private function getConstructorArguments(string $class, string $urlHost): array
+	private function getConstructorArguments(string $class, string $urlHost, string $stringPrefix = ''): array
 	{
 		if ($class === SecurityTxtPossibelFieldTypo::class) {
-			return ['Contct', SecurityTxtField::Contact->value, 'Contct: https://example.com/'];
+			return [$stringPrefix . 'Contct', SecurityTxtField::Contact->value, $stringPrefix . 'Contct: https://example.com/'];
 		}
 		if ($class === SecurityTxtNotFoundException::class) {
 			$url = new Url("https://{$urlHost}/.well-known/security.txt");
 			return [
-				[$url->toAsciiString() => ['ip' => '192.0.2.1', 'type' => SecurityTxtIpAddressType::V4->value, 'code' => 404, 'redirects' => [], 'html' => false, 'truncated' => false]],
+				[$url->toAsciiString() => ['ip' => $stringPrefix . '192.0.2.1', 'type' => SecurityTxtIpAddressType::V4->value, 'code' => 404, 'redirects' => [], 'html' => false, 'truncated' => false]],
 				$url,
 			];
 		}
@@ -337,8 +350,8 @@ final class SecurityTxtWireContractTest extends TestCase
 				$name === Url::class => new Url("https://{$urlHost}/{$parameter->getName()}"),
 				is_subclass_of($name, BackedEnum::class) => $name::cases()[0],
 				$name === 'int' => 400 + $position,
-				$name === 'array' => ["https://example.com/{$parameter->getName()}"],
-				default => "https://example.com/{$parameter->getName()}",
+				$name === 'array' => [$stringPrefix . "https://example.com/{$parameter->getName()}"],
+				default => $stringPrefix . "https://example.com/{$parameter->getName()}",
 			};
 		}
 		return $arguments;

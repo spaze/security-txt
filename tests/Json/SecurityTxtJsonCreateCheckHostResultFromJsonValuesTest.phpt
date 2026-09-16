@@ -29,6 +29,7 @@ use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifyResult;
+use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
@@ -72,6 +73,42 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 		Assert::same($expectedResult->getConstructedUrl()->toUnicodeString(), $actualResult->getConstructedUrl()->toUnicodeString());
 		Assert::same($expectedResult->getFinalUrl()->toUnicodeString(), $actualResult->getFinalUrl()->toUnicodeString());
 		Assert::same($encoded, json_encode($actualResult));
+	}
+
+
+	/**
+	 * A stored result for a file that is not UTF-8 is the one naming `SecurityTxtContentNotUtf8`, so it has to survive storage or no cache can hold that violation.
+	 */
+	public function testACheckHostResultOfAFileThatIsNotUtf8SurvivesStorage(): void
+	{
+		$lines = ["Contact: mailto:security@example.com\n", "# Kontakt: Michal \xA9pa\xE8ek\n"]; // Š and č as ISO-8859-2 writes them
+		$url = new Url('https://example.com/.well-known/security.txt');
+		$result = new SecurityTxtCheckHostResult(
+			new SecurityTxtHost(new Url('https://example.com')),
+			new SecurityTxtFetchResult($url, $url, [], implode($lines), false, $lines, [], []),
+			[],
+			[],
+			[],
+			[],
+			[new SecurityTxtContentNotUtf8()],
+			[],
+			new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently),
+			null,
+			null,
+			false,
+			false,
+			null,
+		);
+		$encoded = json_encode($result);
+		Assert::true(is_string($encoded), json_last_error_msg());
+		assert(is_string($encoded));
+		$decoded = json_decode($encoded, true);
+		assert(is_array($decoded));
+		$replayed = $this->securityTxtJson->createCheckHostResultFromJsonValues($decoded);
+		Assert::same(implode($lines), $replayed->getContents());
+		Assert::same($lines[1], $replayed->getFetchResult()->getLine(2));
+		Assert::equal([new SecurityTxtContentNotUtf8()], $replayed->getFileErrors());
+		Assert::same($encoded, json_encode($replayed));
 	}
 
 

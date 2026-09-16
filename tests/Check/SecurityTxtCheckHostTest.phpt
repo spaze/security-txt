@@ -21,6 +21,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressValidator;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
@@ -65,7 +66,8 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$expiresFactory = new SecurityTxtExpiresFactory();
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
 		$this->splitLines = new SecurityTxtSplitLines($pregSplitProvider);
-		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $this->splitLines, $pregSplitProvider);
+		$jsonValueFactory = new SecurityTxtJsonValueFactory();
+		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $this->splitLines, $pregSplitProvider, $jsonValueFactory);
 		$this->ipAddressValidator = new SecurityTxtIpAddressValidator();
 		$this->urlParser = new SecurityTxtUrlParser();
 		$this->checkHostResultFactory = new SecurityTxtCheckHostResultFactory();

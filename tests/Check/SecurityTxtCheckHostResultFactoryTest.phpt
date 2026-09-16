@@ -10,6 +10,7 @@ namespace Spaze\SecurityTxt\Check;
 
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\SecurityTxtParseHostResult;
 use Spaze\SecurityTxt\Parser\SecurityTxtParser;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
@@ -40,7 +41,8 @@ final class SecurityTxtCheckHostResultFactoryTest extends TestCase
 		$expiresFactory = new SecurityTxtExpiresFactory();
 		$pregSplitProvider = new SecurityTxtPregSplitProvider();
 		$splitLines = new SecurityTxtSplitLines($pregSplitProvider);
-		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider);
+		$jsonValueFactory = new SecurityTxtJsonValueFactory();
+		$this->parser = new SecurityTxtParser($validator, $signature, $expiresFactory, $splitLines, $pregSplitProvider, $jsonValueFactory);
 		$this->checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 	}
 
