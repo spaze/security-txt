@@ -38,6 +38,7 @@ use Uri\WhatWg\Url;
 
 final class SecurityTxtFetcher
 {
+	private const int DEFAULT_MAX_ALLOWED_REDIRECTS = 5;
 
 	/** @var array<string, SecurityTxtRedirects> Keyed by the URL a chain started at, which has to be a string; what the chain holds does not */
 	private array $redirects = [];
@@ -54,9 +55,12 @@ final class SecurityTxtFetcher
 	/** @var list<callable(Url): void> */
 	private array $onUrlNotFound = [];
 
+	/** @var non-negative-int */
+	private readonly int $maxAllowedRedirects;
+
 
 	/**
-	 * @param non-negative-int $maxAllowedRedirects
+	 * @param non-negative-int|null $maxAllowedRedirects Pass null to use the built-in default (5)
 	 */
 	public function __construct(
 		private readonly SecurityTxtFetcherHttpClient $httpClient,
@@ -64,8 +68,9 @@ final class SecurityTxtFetcher
 		private readonly SecurityTxtSplitLines $splitLines,
 		private readonly SecurityTxtDnsProvider $dnsLookupProvider,
 		private readonly SecurityTxtIpAddressValidator $ipAddressValidator,
-		private readonly int $maxAllowedRedirects = 5,
+		?int $maxAllowedRedirects = null,
 	) {
+		$this->maxAllowedRedirects = $maxAllowedRedirects ?? self::DEFAULT_MAX_ALLOWED_REDIRECTS;
 		$this->validateMaxAllowedRedirects($this->maxAllowedRedirects);
 	}
 

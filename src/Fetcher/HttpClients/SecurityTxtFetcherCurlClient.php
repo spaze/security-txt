@@ -18,13 +18,27 @@ use Spaze\SecurityTxt\SecurityTxtHost;
 
 final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherHttpClient
 {
+	private const string DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; spaze/security-txt; +https://github.com/spaze/security-txt)';
+	private const int DEFAULT_MAX_RESPONSE_LENGTH = 10_000;
+	private const int DEFAULT_TIMEOUT = 10;
+	private const int DEFAULT_CONNECT_TIMEOUT = 5;
+
+	private string $userAgent;
+	private int $maxResponseLength;
+	private int $timeout;
+	private int $connectTimeout;
+
 
 	public function __construct(
-		private string $userAgent = 'Mozilla/5.0 (compatible; spaze/security-txt; +https://github.com/spaze/security-txt)',
-		private int $maxResponseLength = 10_000,
-		private int $timeout = 10,
-		private int $connectTimeout = 5,
+		?string $userAgent = null,
+		?int $maxResponseLength = null,
+		?int $timeout = null,
+		?int $connectTimeout = null,
 	) {
+		$this->userAgent = $userAgent ?? self::DEFAULT_USER_AGENT;
+		$this->maxResponseLength = $maxResponseLength ?? self::DEFAULT_MAX_RESPONSE_LENGTH;
+		$this->timeout = $timeout ?? self::DEFAULT_TIMEOUT;
+		$this->connectTimeout = $connectTimeout ?? self::DEFAULT_CONNECT_TIMEOUT;
 		if (strlen($this->userAgent) === 0) {
 			throw new LogicException('userAgent must not be an empty string');
 		}
