@@ -232,6 +232,9 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 
 	public function testConnectTimeoutNotGreaterThanTimeout(): void
 	{
+		Assert::noError(function (): void {
+			new SecurityTxtFetcherCurlClient(null, null, null, null);
+		});
 		Assert::throws(function (): void {
 			new SecurityTxtFetcherCurlClient(timeout: 5, connectTimeout: 6);
 		}, LogicException::class, 'connectTimeout must not be greater than timeout (timeout is for the whole transfer, connecting included)');
