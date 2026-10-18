@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## Commands
 
@@ -72,7 +72,7 @@ Tests use [Nette Tester](https://tester.nette.org/) (`.phpt` files). Each test f
 
 When an assertion fails, Tester writes the full actual and expected values to `tests/*/output/FooTest.actual` and `tests/*/output/FooTest.expected` and prints a `diff` command to compare them — use that instead of reading the truncated terminal output. These files are regenerated on every run; do not edit them.
 
-Inline heredoc expected strings in `.phpt` files contain **raw ANSI escape characters** (not `\033[` literals). Text editors and the Edit tool show them as plain `[1;32m` etc., but the bytes are real ESC (0x1b) sequences. Replacing them requires handling the actual bytes — use Python with `ESC = '\033'` and string concatenation rather than text substitution.
+Inline heredoc expected strings in `.phpt` files contain **raw ANSI escape characters** (not `\033[` literals). Text editors and agents' edit tools show them as plain `[1;32m` etc., but the bytes are real ESC (0x1b) sequences. Replacing them requires handling the actual bytes — use Python with `ESC = '\033'` and string concatenation rather than text substitution.
 
 ### Constraints
 
