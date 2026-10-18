@@ -74,6 +74,26 @@ final class SecurityTxtPrintableValueTest extends TestCase
 		}
 	}
 
+
+	/**
+	 * A tab is the one character a string can show as `→`, because a string holding that character has it encoded.
+	 */
+	public function testATabInAStringIsShownAsOneNothingElseCanSpell(): void
+	{
+		$rendered = [];
+		foreach (["Contact:\thttps://example.com/", "a\u{2192}b", 'a\tb', 'a%09b', "a\x0Bb", "a\rb"] as $value) {
+			$rendered[$value] = new SecurityTxtPrintableValue($value)->render();
+		}
+		Assert::same([
+			"Contact:\thttps://example.com/" => 'Contact:→https://example.com/',
+			"a\u{2192}b" => 'a%E2%86%92b',
+			'a\tb' => 'a\tb',
+			'a%09b' => 'a%09b',
+			"a\x0Bb" => 'a%0Bb',
+			"a\rb" => 'a%0Db',
+		], $rendered);
+	}
+
 }
 
 new SecurityTxtPrintableValueTest()->run();

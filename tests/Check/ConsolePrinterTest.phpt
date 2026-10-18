@@ -135,7 +135,7 @@ final class ConsolePrinterTest extends TestCase
 	}
 
 
-	public function testPrinterLeavesNothingButPrintableAsciiInAValue(): void
+	public function testPrinterLeavesNothingButPrintableAsciiOrATabInAValue(): void
 	{
 		$printer = new ConsolePrinter();
 		$value = '';
@@ -144,9 +144,10 @@ final class ConsolePrinterTest extends TestCase
 		}
 		ob_start();
 		$printer->info('%s', $value);
-		$output = ob_get_clean();
+		$output = (string)ob_get_clean();
 		// Every byte there is, not the handful anyone thought to list
-		Assert::match('#^\\[Info\\] [\\x20-\\x7e]+$#', rtrim((string)$output, "\n"));
+		Assert::same(1, substr_count($output, '→'));
+		Assert::match('#^\\[Info\\] [\\x20-\\x7e]+$#', str_replace('→', '', rtrim($output, "\n")));
 	}
 
 
