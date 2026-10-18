@@ -34,6 +34,7 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureMultipleCleartextHeaders;
@@ -171,12 +172,10 @@ final class SecurityTxtParser
 		$inSignatureArmor = false;
 		$afterSignature = false;
 		for ($lineNumber = 1; $lineNumber <= count($lines); $lineNumber++) {
-			$line = trim($lines[$lineNumber - 1]);
+			$lineAsWritten = rtrim($lines[$lineNumber - 1]);
+			$line = ltrim($lineAsWritten);
 			if (!str_ends_with($lines[$lineNumber - 1], "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
-			}
-			if (str_starts_with($line, '#')) {
-				continue;
 			}
 			if (isset($skipSignatureArmorHeaders) && $skipSignatureArmorHeaders) {
 				if ($line === '') {
@@ -208,6 +207,12 @@ final class SecurityTxtParser
 			}
 			if ($signatureChecked && !$afterSignature && $this->signature->isSignatureArmorHeader($line)) {
 				$inSignatureArmor = true;
+				continue;
+			}
+			if ($line !== $lineAsWritten) {
+				$this->lineErrors[$lineNumber][] = new SecurityTxtLineLeadingWhitespace($lineAsWritten);
+			}
+			if (str_starts_with($line, '#')) {
 				continue;
 			}
 			$field = explode(':', $line, 2);

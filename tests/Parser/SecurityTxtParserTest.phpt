@@ -41,6 +41,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
@@ -318,6 +319,64 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::type(SecurityTxtLineNoEol::class, $parseResult->getLineErrors()[2][0]);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	public function testParseStringLineStartingWithWhitespace(): void
+	{
+		$reported = [];
+		foreach ([' Contact: https://example.com/', "\tContact: https://example.com/", "\x0BContact: https://example.com/", "\0Contact: https://example.com/", '  # A comment: with a colon', ' Not a field', " \t ", 'Contact: https://example.com/ '] as $line) {
+			$parseResult = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}");
+			$violations = [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getLineWarnings()[1] ?? []];
+			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations);
+		}
+		Assert::same([
+			' Contact: https://example.com/' => ['The line ( Contact: https://example.com/) starts with whitespace'],
+			"\tContact: https://example.com/" => ['The line (→Contact: https://example.com/) starts with whitespace'],
+			"\x0BContact: https://example.com/" => ['The line (%0BContact: https://example.com/) starts with whitespace'],
+			"\0Contact: https://example.com/" => ['The line (%00Contact: https://example.com/) starts with whitespace'],
+			'  # A comment: with a colon' => ['The line (  # A comment: with a colon) starts with whitespace'],
+			' Not a field' => ['The line ( Not a field) starts with whitespace'],
+			" \t " => [],
+			'Contact: https://example.com/ ' => [],
+		], $reported);
+	}
+
+
+	public function testParseStringLineStartingWithWhitespaceIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString(" Contact: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		Assert::type(SecurityTxtLineLeadingWhitespace::class, $parseResult->getLineErrors()[1][0]);
+		Assert::same('Contact: https://example.com/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+		Assert::false($parseResult->isValid());
+	}
+
+
+	public function testParseStringLineStartingWithWhitespaceInTheSignatureIsNotReported(): void
+	{
+		$expires = new DateTimeImmutable('+2 weeks')->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		 Hash: SHA512
+
+		 Contact: https://example.com/
+		Expires: {$expires}
+		-----BEGIN PGP SIGNATURE-----
+		 Version: GnuPG v2
+
+		 fake
+		-----END PGP SIGNATURE-----
+		EOT . "\n";
+		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$reported = [];
+		foreach ($securityTxtParser->parseString($contents)->getLineErrors() as $lineNumber => $violations) {
+			$reported[$lineNumber] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
+		}
+		Assert::same([4 => [SecurityTxtLineLeadingWhitespace::class]], $reported);
 	}
 
 
