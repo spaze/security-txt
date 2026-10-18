@@ -39,6 +39,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
@@ -446,6 +447,44 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
 		Assert::type(SecurityTxtFieldWrongSpaceAfterColon::class, $parseResult->getLineErrors()[1][0]);
 		Assert::same('Contact: https://example.com/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+		Assert::false($parseResult->isValid());
+	}
+
+
+	public function testParseStringWhitespaceBeforeColon(): void
+	{
+		$reported = [];
+		foreach (['Contact : https://example.com/', "Contact\t: https://example.com/", "Contact\x0B: https://example.com/", 'Contact :https://example.com/', 'X-Foo : bar', 'Contactt : https://example.com/', '# Note : a comment', 'Contact: https://example.com/'] as $line) {
+			$parseResult = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}");
+			$violations = [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getLineWarnings()[1] ?? []];
+			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations);
+		}
+		Assert::same([
+			'Contact : https://example.com/' => ['The line (Contact : https://example.com/) has whitespace between the field name and the colon'],
+			"Contact\t: https://example.com/" => ['The line (Contact→: https://example.com/) has whitespace between the field name and the colon'],
+			"Contact\x0B: https://example.com/" => ['The line (Contact%0B: https://example.com/) has whitespace between the field name and the colon'],
+			'Contact :https://example.com/' => [
+				'The line (Contact :https://example.com/) has whitespace between the field name and the colon',
+				'The line (Contact :https://example.com/) should have one space between the colon and the value',
+			],
+			'X-Foo : bar' => ['The line (X-Foo : bar) has whitespace between the field name and the colon', 'Field X-Foo is unknown'],
+			'Contactt : https://example.com/' => ['The line (Contactt : https://example.com/) has whitespace between the field name and the colon', 'Field Contactt may be a typo, did you mean Contact?'],
+			'# Note : a comment' => [],
+			'Contact: https://example.com/' => [],
+		], $reported);
+	}
+
+
+	public function testParseStringWhitespaceBeforeColonIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Contact :\thttps://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		$correctValues = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation::class, $violation->getCorrectValue()], $parseResult->getLineErrors()[1]);
+		Assert::same([
+			[SecurityTxtFieldWhitespaceBeforeColon::class, 'Contact: https://example.com/'],
+			[SecurityTxtFieldWrongSpaceAfterColon::class, 'Contact: https://example.com/'],
+		], $correctValues);
 		Assert::false($parseResult->isValid());
 	}
 

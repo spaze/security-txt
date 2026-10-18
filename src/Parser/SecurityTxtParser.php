@@ -34,6 +34,7 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
@@ -219,6 +220,11 @@ final class SecurityTxtParser
 			$field = explode(':', $line, 2);
 			if (count($field) !== 2) {
 				continue;
+			}
+			$fieldNameAsWritten = $field[0];
+			$field[0] = rtrim($fieldNameAsWritten);
+			if ($field[0] !== $fieldNameAsWritten) {
+				$this->lineErrors[$lineNumber][] = new SecurityTxtFieldWhitespaceBeforeColon($field[0], $line);
 			}
 			if ($afterSignature) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtFieldNotCoveredBySignature($field[0]);
