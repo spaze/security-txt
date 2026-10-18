@@ -34,6 +34,7 @@ use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
@@ -227,6 +228,9 @@ final class SecurityTxtParser
 			$fieldName = strtolower($field[0]);
 			$fieldValue = trim($field[1]);
 			if (isset($securityTxtFields[$fieldName])) {
+				if ($fieldValue !== '' && !$this->isSpaceAfterColon($securityTxtFields[$fieldName], $field[1])) {
+					$this->lineErrors[$lineNumber][] = new SecurityTxtFieldWrongSpaceAfterColon($field[0], $line);
+				}
 				$this->processField($lineNumber, $fieldValue, $securityTxtFields[$fieldName], $securityTxt);
 			} else {
 				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
@@ -265,6 +269,28 @@ final class SecurityTxtParser
 			$parseResult,
 			$fetchResult,
 		);
+	}
+
+
+	/**
+	 * RFC 9116 gives the fields it defines exactly one space before the value. It does not define the others, `CSAF` for example, so they fall under its
+	 * extension field rule, `field-name fs SP unstructured`, where RFC 5322's `unstructured` may start with more spaces and tabs.
+	 */
+	private function isSpaceAfterColon(SecurityTxtField $field, string $afterColon): bool
+	{
+		$whitespace = substr($afterColon, 0, strlen($afterColon) - strlen(ltrim($afterColon)));
+		return match ($field) {
+			SecurityTxtField::Acknowledgments,
+			SecurityTxtField::Canonical,
+			SecurityTxtField::Contact,
+			SecurityTxtField::Encryption,
+			SecurityTxtField::Expires,
+			SecurityTxtField::Hiring,
+			SecurityTxtField::Policy,
+			SecurityTxtField::PreferredLanguages => $whitespace === ' ',
+			SecurityTxtField::BugBounty,
+			SecurityTxtField::Csaf => str_starts_with($whitespace, ' ') && ltrim($whitespace, " \t") === '',
+		};
 	}
 
 

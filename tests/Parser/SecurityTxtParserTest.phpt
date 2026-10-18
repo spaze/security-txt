@@ -39,6 +39,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
@@ -377,6 +378,75 @@ final class SecurityTxtParserTest extends TestCase
 			$reported[$lineNumber] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
 		}
 		Assert::same([4 => [SecurityTxtLineLeadingWhitespace::class]], $reported);
+	}
+
+
+	public function testParseStringSpaceAfterColon(): void
+	{
+		$reported = [];
+		$expires = 'Expires:  ' . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT);
+		$lines = [
+			'Contact:https://example.com/',
+			"Contact:\thttps://example.com/",
+			'Contact:  https://example.com/',
+			'contact:https://example.com/',
+			'Contact: https://example.com/',
+			'Contact:',
+			'Contact: ',
+			'Acknowledgments:  https://example.com/thanks',
+			'Canonical:  https://example.com/.well-known/security.txt',
+			'Encryption:  https://example.com/key.asc',
+			$expires,
+			'Hiring:  https://example.com/jobs',
+			'Policy:  https://example.com/policy',
+			'Preferred-Languages:  en',
+			'CSAF:https://example.com/provider-metadata.json',
+			"CSAF:\thttps://example.com/provider-metadata.json",
+			"CSAF: \thttps://example.com/provider-metadata.json",
+			"CSAF: \x0Bhttps://example.com/provider-metadata.json",
+			'Bug-Bounty:True',
+			'Bug-Bounty:  True',
+			'X-Foo:bar',
+		];
+		foreach ($lines as $line) {
+			$lineErrors = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}")->getLineErrors();
+			$violations = array_filter($lineErrors[1] ?? [], fn(SecurityTxtSpecViolation $violation): bool => $violation instanceof SecurityTxtFieldWrongSpaceAfterColon);
+			$reported[$line] = array_values(array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations));
+		}
+		Assert::same([
+			'Contact:https://example.com/' => ['The line (Contact:https://example.com/) should have one space between the colon and the value'],
+			"Contact:\thttps://example.com/" => ['The line (Contact:→https://example.com/) should have one space between the colon and the value'],
+			'Contact:  https://example.com/' => ['The line (Contact:  https://example.com/) should have one space between the colon and the value'],
+			'contact:https://example.com/' => ['The line (contact:https://example.com/) should have one space between the colon and the value'],
+			'Contact: https://example.com/' => [],
+			'Contact:' => [],
+			'Contact: ' => [],
+			'Acknowledgments:  https://example.com/thanks' => ['The line (Acknowledgments:  https://example.com/thanks) should have one space between the colon and the value'],
+			'Canonical:  https://example.com/.well-known/security.txt' => ['The line (Canonical:  https://example.com/.well-known/security.txt) should have one space between the colon and the value'],
+			'Encryption:  https://example.com/key.asc' => ['The line (Encryption:  https://example.com/key.asc) should have one space between the colon and the value'],
+			$expires => ["The line ({$expires}) should have one space between the colon and the value"],
+			'Hiring:  https://example.com/jobs' => ['The line (Hiring:  https://example.com/jobs) should have one space between the colon and the value'],
+			'Policy:  https://example.com/policy' => ['The line (Policy:  https://example.com/policy) should have one space between the colon and the value'],
+			'Preferred-Languages:  en' => ['The line (Preferred-Languages:  en) should have one space between the colon and the value'],
+			'CSAF:https://example.com/provider-metadata.json' => ['The line (CSAF:https://example.com/provider-metadata.json) should have one space between the colon and the value'],
+			"CSAF:\thttps://example.com/provider-metadata.json" => ['The line (CSAF:→https://example.com/provider-metadata.json) should have one space between the colon and the value'],
+			"CSAF: \thttps://example.com/provider-metadata.json" => [],
+			"CSAF: \x0Bhttps://example.com/provider-metadata.json" => ['The line (CSAF: %0Bhttps://example.com/provider-metadata.json) should have one space between the colon and the value'],
+			'Bug-Bounty:True' => ['The line (Bug-Bounty:True) should have one space between the colon and the value'],
+			'Bug-Bounty:  True' => [],
+			'X-Foo:bar' => [],
+		], $reported);
+	}
+
+
+	public function testParseStringSpaceAfterColonIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Contact:\thttps://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		Assert::type(SecurityTxtFieldWrongSpaceAfterColon::class, $parseResult->getLineErrors()[1][0]);
+		Assert::same('Contact: https://example.com/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+		Assert::false($parseResult->isValid());
 	}
 
 
