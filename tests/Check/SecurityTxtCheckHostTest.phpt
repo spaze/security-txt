@@ -72,7 +72,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 		$this->urlParser = new SecurityTxtUrlParser();
 		$this->checkHostResultFactory = new SecurityTxtCheckHostResultFactory();
 		$this->validExpires = new DateTimeImmutable('+6 months');
-		$this->validExpiresLine = 'Expires:' . $this->validExpires->format(DATE_RFC3339);
+		$this->validExpiresLine = 'Expires: ' . $this->validExpires->format(DATE_RFC3339);
 	}
 
 

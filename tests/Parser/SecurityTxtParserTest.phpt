@@ -39,9 +39,13 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
@@ -318,6 +322,227 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::type(SecurityTxtLineNoEol::class, $parseResult->getLineErrors()[2][0]);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	public function testParseStringLineStartingWithWhitespace(): void
+	{
+		$reported = [];
+		foreach ([' Contact: https://example.com/', "\tContact: https://example.com/", "\x0BContact: https://example.com/", "\0Contact: https://example.com/", '  # A comment: with a colon', ' Not a field', " \t ", 'Contact: https://example.com/ '] as $line) {
+			$parseResult = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}");
+			$violations = [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getLineWarnings()[1] ?? []];
+			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations);
+		}
+		Assert::same([
+			' Contact: https://example.com/' => ['The line ( Contact: https://example.com/) starts with whitespace'],
+			"\tContact: https://example.com/" => ['The line (→Contact: https://example.com/) starts with whitespace'],
+			"\x0BContact: https://example.com/" => ['The line (%0BContact: https://example.com/) starts with whitespace'],
+			"\0Contact: https://example.com/" => ['The line (%00Contact: https://example.com/) starts with whitespace'],
+			'  # A comment: with a colon' => ['The line (  # A comment: with a colon) starts with whitespace'],
+			' Not a field' => ['The line ( Not a field) starts with whitespace'],
+			" \t " => [],
+			'Contact: https://example.com/ ' => [],
+		], $reported);
+	}
+
+
+	public function testParseStringLineStartingWithWhitespaceIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString(" Contact: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		Assert::type(SecurityTxtLineLeadingWhitespace::class, $parseResult->getLineErrors()[1][0]);
+		Assert::same('Contact: https://example.com/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+		Assert::false($parseResult->isValid());
+	}
+
+
+	public function testParseStringWhitespaceOnTheSignatureFramingIsNotReported(): void
+	{
+		$expires = new DateTimeImmutable('+2 weeks')->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----\x0B
+		 Hash: SHA512\x0B
+
+		 Contact: https://example.com/
+		Expires: {$expires}\x0B
+		-----BEGIN PGP SIGNATURE-----\x0B
+		 Version: GnuPG v2\x0B
+
+		 fake\x0B
+		-----END PGP SIGNATURE-----\x0B
+		# After the signature\x0B
+		EOT . "\n";
+		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
+		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$reported = [];
+		foreach ($securityTxtParser->parseString($contents)->getLineErrors() as $lineNumber => $violations) {
+			$reported[$lineNumber] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
+		}
+		Assert::same([4 => [SecurityTxtLineLeadingWhitespace::class], 5 => [SecurityTxtLineWrongEol::class], 11 => [SecurityTxtLineWrongEol::class]], $reported);
+	}
+
+
+	public function testParseStringLineEndingWithWrongWhitespace(): void
+	{
+		$reported = [];
+		$lines = [
+			"\x0B",
+			"\0",
+			" \x0B ",
+			" \t",
+			"X-Foo: bar\x0B",
+			"# A comment\0",
+			"Contact: https://example.com/\r\r",
+			"Contact: https://example.com/\r",
+			"Contact: https://example.com/ \t",
+			" Contact: https://example.com/\x0B",
+		];
+		foreach ($lines as $line) {
+			$parseResult = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}");
+			$violations = [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getLineWarnings()[1] ?? []];
+			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations);
+		}
+		Assert::same([
+			"\x0B" => ['The line (%0B) ends with whitespace other than spaces and tabs'],
+			"\0" => ['The line (%00) ends with whitespace other than spaces and tabs'],
+			" \x0B " => ['The line ( %0B ) ends with whitespace other than spaces and tabs'],
+			" \t" => [],
+			"X-Foo: bar\x0B" => ['The line (X-Foo: bar%0B) ends with whitespace other than spaces and tabs', 'Field X-Foo is unknown'],
+			"# A comment\0" => ['The line (# A comment%00) ends with whitespace other than spaces and tabs'],
+			"Contact: https://example.com/\r\r" => ['The line (Contact: https://example.com/%0D) ends with whitespace other than spaces and tabs'],
+			"Contact: https://example.com/\r" => [],
+			"Contact: https://example.com/ \t" => [],
+			" Contact: https://example.com/\x0B" => [
+				'The line ( Contact: https://example.com/) starts with whitespace',
+				'The line ( Contact: https://example.com/%0B) ends with whitespace other than spaces and tabs',
+			],
+		], $reported);
+		$lastLine = $this->securityTxtParser->parseString("{$this->getValidContents()}Contact: https://example.com/\x0B")->getLineErrors()[3] ?? [];
+		Assert::same([SecurityTxtLineNoEol::class, SecurityTxtLineWrongEol::class], array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $lastLine));
+		Assert::null($this->securityTxtParser->parseString("\x0B\n{$this->getValidContents()}")->getLineErrors()[1][0]->getCorrectValue());
+	}
+
+
+	public function testParseStringLineEndingWithWrongWhitespaceIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString(" Contact: https://example.com/\x0B\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		$correctValues = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation::class, $violation->getCorrectValue()], $parseResult->getLineErrors()[1]);
+		Assert::same([
+			[SecurityTxtLineLeadingWhitespace::class, 'Contact: https://example.com/'],
+			[SecurityTxtLineWrongEol::class, 'Contact: https://example.com/'],
+		], $correctValues);
+		Assert::false($parseResult->isValid());
+	}
+
+
+	public function testParseStringSpaceAfterColon(): void
+	{
+		$reported = [];
+		$expires = 'Expires:  ' . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT);
+		$lines = [
+			'Contact:https://example.com/',
+			"Contact:\thttps://example.com/",
+			'Contact:  https://example.com/',
+			'contact:https://example.com/',
+			'Contact: https://example.com/',
+			'Contact:',
+			'Contact: ',
+			'Acknowledgments:  https://example.com/thanks',
+			'Canonical:  https://example.com/.well-known/security.txt',
+			'Encryption:  https://example.com/key.asc',
+			$expires,
+			'Hiring:  https://example.com/jobs',
+			'Policy:  https://example.com/policy',
+			'Preferred-Languages:  en',
+			'CSAF:https://example.com/provider-metadata.json',
+			"CSAF:\thttps://example.com/provider-metadata.json",
+			"CSAF: \thttps://example.com/provider-metadata.json",
+			"CSAF: \x0Bhttps://example.com/provider-metadata.json",
+			'Bug-Bounty:True',
+			'Bug-Bounty:  True',
+			'X-Foo:bar',
+		];
+		foreach ($lines as $line) {
+			$lineErrors = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}")->getLineErrors();
+			$violations = array_filter($lineErrors[1] ?? [], fn(SecurityTxtSpecViolation $violation): bool => $violation instanceof SecurityTxtFieldWrongSpaceAfterColon);
+			$reported[$line] = array_values(array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations));
+		}
+		Assert::same([
+			'Contact:https://example.com/' => ['The line (Contact:https://example.com/) should have one space between the colon and the value'],
+			"Contact:\thttps://example.com/" => ['The line (Contact:→https://example.com/) should have one space between the colon and the value'],
+			'Contact:  https://example.com/' => ['The line (Contact:  https://example.com/) should have one space between the colon and the value'],
+			'contact:https://example.com/' => ['The line (contact:https://example.com/) should have one space between the colon and the value'],
+			'Contact: https://example.com/' => [],
+			'Contact:' => [],
+			'Contact: ' => [],
+			'Acknowledgments:  https://example.com/thanks' => ['The line (Acknowledgments:  https://example.com/thanks) should have one space between the colon and the value'],
+			'Canonical:  https://example.com/.well-known/security.txt' => ['The line (Canonical:  https://example.com/.well-known/security.txt) should have one space between the colon and the value'],
+			'Encryption:  https://example.com/key.asc' => ['The line (Encryption:  https://example.com/key.asc) should have one space between the colon and the value'],
+			$expires => ["The line ({$expires}) should have one space between the colon and the value"],
+			'Hiring:  https://example.com/jobs' => ['The line (Hiring:  https://example.com/jobs) should have one space between the colon and the value'],
+			'Policy:  https://example.com/policy' => ['The line (Policy:  https://example.com/policy) should have one space between the colon and the value'],
+			'Preferred-Languages:  en' => ['The line (Preferred-Languages:  en) should have one space between the colon and the value'],
+			'CSAF:https://example.com/provider-metadata.json' => ['The line (CSAF:https://example.com/provider-metadata.json) should have one space between the colon and the value'],
+			"CSAF:\thttps://example.com/provider-metadata.json" => ['The line (CSAF:→https://example.com/provider-metadata.json) should have one space between the colon and the value'],
+			"CSAF: \thttps://example.com/provider-metadata.json" => [],
+			"CSAF: \x0Bhttps://example.com/provider-metadata.json" => ['The line (CSAF: %0Bhttps://example.com/provider-metadata.json) should have one space between the colon and the value'],
+			'Bug-Bounty:True' => ['The line (Bug-Bounty:True) should have one space between the colon and the value'],
+			'Bug-Bounty:  True' => [],
+			'X-Foo:bar' => [],
+		], $reported);
+	}
+
+
+	public function testParseStringSpaceAfterColonIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Contact:\thttps://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		Assert::type(SecurityTxtFieldWrongSpaceAfterColon::class, $parseResult->getLineErrors()[1][0]);
+		Assert::same('Contact: https://example.com/', $parseResult->getLineErrors()[1][0]->getCorrectValue());
+		Assert::false($parseResult->isValid());
+	}
+
+
+	public function testParseStringWhitespaceBeforeColon(): void
+	{
+		$reported = [];
+		foreach (['Contact : https://example.com/', "Contact\t: https://example.com/", "Contact\x0B: https://example.com/", 'Contact :https://example.com/', 'X-Foo : bar', 'Contactt : https://example.com/', '# Note : a comment', 'Contact: https://example.com/'] as $line) {
+			$parseResult = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}");
+			$violations = [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getLineWarnings()[1] ?? []];
+			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations);
+		}
+		Assert::same([
+			'Contact : https://example.com/' => ['The line (Contact : https://example.com/) has whitespace between the field name and the colon'],
+			"Contact\t: https://example.com/" => ['The line (Contact→: https://example.com/) has whitespace between the field name and the colon'],
+			"Contact\x0B: https://example.com/" => ['The line (Contact%0B: https://example.com/) has whitespace between the field name and the colon'],
+			'Contact :https://example.com/' => [
+				'The line (Contact :https://example.com/) has whitespace between the field name and the colon',
+				'The line (Contact :https://example.com/) should have one space between the colon and the value',
+			],
+			'X-Foo : bar' => ['The line (X-Foo : bar) has whitespace between the field name and the colon', 'Field X-Foo is unknown'],
+			'Contactt : https://example.com/' => ['The line (Contactt : https://example.com/) has whitespace between the field name and the colon', 'Field Contactt may be a typo, did you mean Contact?'],
+			'# Note : a comment' => [],
+			'Contact: https://example.com/' => [],
+		], $reported);
+	}
+
+
+	public function testParseStringWhitespaceBeforeColonIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Contact :\thttps://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		$correctValues = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation::class, $violation->getCorrectValue()], $parseResult->getLineErrors()[1]);
+		Assert::same([
+			[SecurityTxtFieldWhitespaceBeforeColon::class, 'Contact: https://example.com/'],
+			[SecurityTxtFieldWrongSpaceAfterColon::class, 'Contact: https://example.com/'],
+		], $correctValues);
+		Assert::false($parseResult->isValid());
 	}
 
 
