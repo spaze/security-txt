@@ -97,6 +97,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtHiringNotUri' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineLeadingWhitespace' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNoEol' => '(string $line)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineWrongEol' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtMultipleBugBounty' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtMultipleExpires' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtMultiplePreferredLanguages' => '()',
