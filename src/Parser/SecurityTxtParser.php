@@ -38,6 +38,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureMultipleCleartextHeaders;
@@ -175,10 +176,16 @@ final class SecurityTxtParser
 		$inSignatureArmor = false;
 		$afterSignature = false;
 		for ($lineNumber = 1; $lineNumber <= count($lines); $lineNumber++) {
-			$lineAsWritten = rtrim($lines[$lineNumber - 1]);
+			$rawLine = $lines[$lineNumber - 1];
+			// A NUL is reported and then removed, so nothing a line is handed to has to cope with one, while the signature is still verified over the file as served
+			if (str_contains($rawLine, "\0")) {
+				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNulByte(rtrim($rawLine, "\r\n"));
+				$rawLine = str_replace("\0", '', $rawLine);
+			}
+			$lineAsWritten = rtrim($rawLine);
 			$line = ltrim($lineAsWritten);
-			$lineWithoutEol = str_ends_with($lines[$lineNumber - 1], "\r\n") ? substr($lines[$lineNumber - 1], 0, -2) : rtrim($lines[$lineNumber - 1], "\n");
-			if (!str_ends_with($lines[$lineNumber - 1], "\n")) {
+			$lineWithoutEol = str_ends_with($rawLine, "\r\n") ? substr($rawLine, 0, -2) : rtrim($rawLine, "\n");
+			if (!str_ends_with($rawLine, "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
 			}
 			if (isset($skipSignatureArmorHeaders) && $skipSignatureArmorHeaders) {
