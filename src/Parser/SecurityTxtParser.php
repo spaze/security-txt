@@ -33,7 +33,6 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
-use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
@@ -41,7 +40,6 @@ use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
-use Spaze\SecurityTxt\Violations\SecurityTxtSignatureMultipleCleartextHeaders;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
 
@@ -171,8 +169,8 @@ final class SecurityTxtParser
 			}, SecurityTxtField::cases()),
 			SecurityTxtField::cases(),
 		);
-		$signatureChecked = false;
-		$fieldsBeforeSignature = [];
+		$signatureLineNumber = null;
+		$skipSignatureArmorHeaders = false;
 		$inSignatureArmor = false;
 		$afterSignature = false;
 		for ($lineNumber = 1; $lineNumber <= count($lines); $lineNumber++) {
@@ -182,13 +180,18 @@ final class SecurityTxtParser
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNulByte(rtrim($rawLine, "\r\n"));
 				$rawLine = str_replace("\0", '', $rawLine);
 			}
+			// The verifier removes the dash escape from a signed line before it checks the signature, so the line is read without it too
+			$dashEscaped = $signatureLineNumber !== null && !$skipSignatureArmorHeaders && !$inSignatureArmor && !$afterSignature && str_starts_with($rawLine, '- ');
+			if ($dashEscaped) {
+				$rawLine = substr($rawLine, 2);
+			}
 			$lineAsWritten = rtrim($rawLine);
 			$line = ltrim($lineAsWritten);
 			$lineWithoutEol = str_ends_with($rawLine, "\r\n") ? substr($rawLine, 0, -2) : rtrim($rawLine, "\n");
 			if (!str_ends_with($rawLine, "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
 			}
-			if (isset($skipSignatureArmorHeaders) && $skipSignatureArmorHeaders) {
+			if ($skipSignatureArmorHeaders) {
 				if ($line === '') {
 					$skipSignatureArmorHeaders = false;
 				}
@@ -196,27 +199,19 @@ final class SecurityTxtParser
 			}
 			if ($inSignatureArmor) {
 				// The lines between the signature armor header and tail are the signature, not fields
-				if ($this->signature->isSignatureArmorTail($line)) {
+				if ($this->signature->isSignatureArmorTail($lineAsWritten)) {
 					$inSignatureArmor = false;
 					$afterSignature = true;
 				}
 				continue;
 			}
-			if ($this->signature->isClearsignHeader($line)) {
-				if (!$signatureChecked) {
-					$securityTxt = $this->checkSignature($lineNumber, $contents, $securityTxt);
-					$signatureChecked = true;
-					// Fields before the header can only be reported once the file turns out to be signed
-					foreach ($fieldsBeforeSignature as $fieldLineNumber => $fieldBeforeSignature) {
-						$this->lineErrors[$fieldLineNumber][] = new SecurityTxtFieldNotCoveredBySignature($fieldBeforeSignature);
-					}
-				} else {
-					$this->lineErrors[$lineNumber][] = new SecurityTxtSignatureMultipleCleartextHeaders();
-				}
+			// After the first header, a line with whitespace before what looks like framing is signed text to the verifier
+			if (!$dashEscaped && $this->signature->isClearsignHeader($signatureLineNumber === null ? $line : $lineAsWritten)) {
+				$signatureLineNumber ??= $lineNumber;
 				$skipSignatureArmorHeaders = true;
 				continue;
 			}
-			if ($signatureChecked && !$afterSignature && $this->signature->isSignatureArmorHeader($line)) {
+			if ($signatureLineNumber !== null && !$afterSignature && !$dashEscaped && $this->signature->isSignatureArmorHeader($lineAsWritten)) {
 				$inSignatureArmor = true;
 				continue;
 			}
@@ -238,11 +233,6 @@ final class SecurityTxtParser
 			if ($field[0] !== $fieldNameAsWritten) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtFieldWhitespaceBeforeColon($field[0], $line);
 			}
-			if ($afterSignature) {
-				$this->lineErrors[$lineNumber][] = new SecurityTxtFieldNotCoveredBySignature($field[0]);
-			} elseif (!$signatureChecked) {
-				$fieldsBeforeSignature[$lineNumber] = $field[0];
-			}
 			$fieldName = strtolower($field[0]);
 			$fieldValue = trim($field[1]);
 			if (isset($securityTxtFields[$fieldName])) {
@@ -259,7 +249,17 @@ final class SecurityTxtParser
 				}
 			}
 		}
+		if ($signatureLineNumber !== null) {
+			$formatViolation = $this->signature->getFormatViolation($lines);
+			foreach ($formatViolation as $formatLineNumber => $violation) {
+				$this->lineErrors[$formatLineNumber][] = $violation;
+			}
+			if ($formatViolation === []) {
+				$securityTxt = $this->checkSignature($signatureLineNumber, $contents, $securityTxt);
+			}
+		}
 		ksort($this->lineErrors);
+		ksort($this->lineWarnings);
 		$validated = $this->validator->validate($securityTxt);
 		$validateResult = new SecurityTxtValidateResult([...$fileLocationErrors, ...$validated->getErrors()], $validated->getWarnings());
 		$expires = $securityTxt->getExpires();

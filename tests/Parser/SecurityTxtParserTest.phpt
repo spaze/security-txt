@@ -8,6 +8,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Parser;
 
+use Closure;
 use DateTime;
 use DateTimeImmutable;
 use Override;
@@ -16,8 +17,11 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
+use Spaze\SecurityTxt\Fields\SecurityTxtContact;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
+use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
@@ -38,7 +42,6 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
-use Spaze\SecurityTxt\Violations\SecurityTxtFieldNotCoveredBySignature;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
@@ -54,10 +57,9 @@ use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
-use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
-use Spaze\SecurityTxt\Violations\SecurityTxtSignatureMultipleCleartextHeaders;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignedFileMalformed;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
@@ -190,40 +192,24 @@ final class SecurityTxtParserTest extends TestCase
 
 	public function testParseStringSignatureIsVerifiedOverTheFileAsServed(): void
 	{
-		$signatureProvider = new class implements SecurityTxtSignatureProvider {
-
-			public ?string $verified = null;
-
-
-			#[Override]
-			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
-			{
-				return true;
-			}
-
-
-			#[Override]
-			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
-			{
-				return new SecurityTxtSignatureErrorInfo(false, 0, 'Unspecified source', 'Success');
-			}
+		$verified = [];
+		$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+			$verified[] = $text;
+		});
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$contents = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\nContact: https://exa\x00mple.com/\n-----BEGIN PGP SIGNATURE-----\n\niAEE\n-----END PGP SIGNATURE-----\n";
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::same([$contents], $verified);
+		Assert::same([4 => [SecurityTxtLineNulByte::class]], array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations), $parseResult->getLineErrors()));
+	}
 
 
-			#[Override]
-			public function sign(string $text): false|string
-			{
-				return false;
-			}
-
-
-			#[Override]
-			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
-			{
-				$this->verified = $text;
-				throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
-			}
-
-		};
+	public function testParseStringNulByteOnTheSignatureFramingIsReported(): void
+	{
+		$verified = [];
+		$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+			$verified[] = $text;
+		});
 		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$contents = "-----BEGIN PGP SIGNED\x00 MESSAGE-----\nHash: SHA\x00512\n\x00\nContact: https://exa\x00mple.com/\n-----BEGIN PGP\x00 SIGNATURE-----\nComment: c\n\nfake\x00\n-----END PGP\x00 SIGNATURE-----\nHiring: https://example.com/\n";
 		$parseResult = $securityTxtParser->parseString($contents);
@@ -231,16 +217,15 @@ final class SecurityTxtParserTest extends TestCase
 		foreach ($parseResult->getLineErrors() as $lineNumber => $violations) {
 			$reported[$lineNumber] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
 		}
-		Assert::same($contents, $signatureProvider->verified);
+		Assert::same([], $verified);
 		Assert::same([
-			1 => [SecurityTxtLineNulByte::class],
+			1 => [SecurityTxtLineNulByte::class, SecurityTxtSignedFileMalformed::class],
 			2 => [SecurityTxtLineNulByte::class],
 			3 => [SecurityTxtLineNulByte::class],
 			4 => [SecurityTxtLineNulByte::class],
 			5 => [SecurityTxtLineNulByte::class],
 			8 => [SecurityTxtLineNulByte::class],
 			9 => [SecurityTxtLineNulByte::class],
-			10 => [SecurityTxtFieldNotCoveredBySignature::class],
 		], $reported);
 		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
 	}
@@ -489,7 +474,7 @@ final class SecurityTxtParserTest extends TestCase
 		foreach ($securityTxtParser->parseString($contents)->getLineErrors() as $lineNumber => $violations) {
 			$reported[$lineNumber] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
 		}
-		Assert::same([4 => [SecurityTxtLineLeadingWhitespace::class], 5 => [SecurityTxtLineWrongEol::class], 11 => [SecurityTxtLineWrongEol::class]], $reported);
+		Assert::same([1 => [SecurityTxtSignedFileMalformed::class], 4 => [SecurityTxtLineLeadingWhitespace::class], 5 => [SecurityTxtLineWrongEol::class], 11 => [SecurityTxtLineWrongEol::class]], $reported);
 	}
 
 
@@ -950,10 +935,10 @@ final class SecurityTxtParserTest extends TestCase
 		-----END PGP SIGNATURE-----
 		EOT . "\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::false($parseResult->hasErrors());
-		Assert::true($parseResult->hasWarnings());
-		Assert::count(1, $parseResult->getLineWarnings());
-		Assert::type(SecurityTxtSignatureCannotVerify::class, $parseResult->getLineWarnings()[1][0]);
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::count(1, $parseResult->getLineErrors());
+		Assert::same('The file is not signed as one whole message, the signed file breaks at the line (yes, but), so the signature is not verified', $parseResult->getLineErrors()[8][0]->getMessage());
+		Assert::null($parseResult->getSecurityTxt()->getSignatureVerifyResult());
 	}
 
 
@@ -968,7 +953,8 @@ final class SecurityTxtParserTest extends TestCase
 		Expires: {$expires}
 		Canonical: https://foo.bar.example/
 		-----BEGIN PGP SIGNATURE-----
-		yes, but
+
+		iAEE
 		-----END PGP SIGNATURE-----
 		EOT . "\n";
 
@@ -994,48 +980,16 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
-	public function testParseStringVerifiesTheSignatureOnceOnly(): void
+	public function testParseStringDoesNotVerifyMoreThanOneSignedMessage(): void
 	{
-		// A file may carry one cleartext signature, so a second header is malformed input, not a second thing to verify.
-		// verify() is handed the whole file every time, so repeating it burns time proportional to the file for each header.
-		$signatureProvider = new class implements SecurityTxtSignatureProvider {
-
-			public int $verifyCalls = 0;
-
-
-			#[Override]
-			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
-			{
-				return true;
-			}
-
-
-			#[Override]
-			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
-			{
-				return new SecurityTxtSignatureErrorInfo(false, 0, 'Unspecified source', 'Success');
-			}
-
-
-			#[Override]
-			public function sign(string $text): false|string
-			{
-				return false;
-			}
-
-
-			#[Override]
-			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
-			{
-				$this->verifyCalls++;
-				throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
-			}
-
-		};
-		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
-		$securityTxtParser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\n\n", 50));
-		Assert::same(1, $signatureProvider->verifyCalls);
+		$verified = [];
+		$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+			$verified[] = $text;
+		});
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$parseResult = $securityTxtParser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\nContact: https://example.com/\n-----BEGIN PGP SIGNATURE-----\n\niAEE\n-----END PGP SIGNATURE-----\n", 50));
+		Assert::same([], $verified);
+		Assert::same([9], array_keys($parseResult->getLineErrors()));
 	}
 
 
@@ -1056,17 +1010,17 @@ final class SecurityTxtParserTest extends TestCase
 		-----END PGP SIGNATURE-----
 		Contact: https://after.example/
 		EOT . "\n";
-		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
-		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$verified = [];
+		$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+			$verified[] = $text;
+		});
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
-		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->isValid());
-		Assert::count(2, $parseResult->getLineErrors());
-		Assert::type(SecurityTxtFieldNotCoveredBySignature::class, $parseResult->getLineErrors()[1][0]);
-		Assert::same(['Contact'], $parseResult->getLineErrors()[1][0]->getMessageValues());
-		Assert::type(SecurityTxtFieldNotCoveredBySignature::class, $parseResult->getLineErrors()[12][0]);
-		// the fields are still parsed, the errors are what makes the file invalid
+		Assert::same([1], array_keys($parseResult->getLineErrors()));
+		Assert::type(SecurityTxtSignedFileMalformed::class, $parseResult->getLineErrors()[1][0]);
+		Assert::same([], $verified);
+		Assert::null($parseResult->getSecurityTxt()->getSignatureVerifyResult());
 		$contacts = $parseResult->getSecurityTxt()->getContact();
 		Assert::count(3, $contacts);
 		Assert::same('https://before.example/', $contacts[0]->getUri());
@@ -1093,15 +1047,17 @@ final class SecurityTxtParserTest extends TestCase
 
 		Contact: https://attacker.example/
 		EOT . "\n";
-		$signatureProvider = $this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()));
-		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
-		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$verified = [];
+		$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+			$verified[] = $text;
+		});
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
-		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->isValid());
-		Assert::count(2, $parseResult->getLineErrors());
-		Assert::type(SecurityTxtSignatureMultipleCleartextHeaders::class, $parseResult->getLineErrors()[10][0]);
-		Assert::type(SecurityTxtFieldNotCoveredBySignature::class, $parseResult->getLineErrors()[13][0]);
+		Assert::same([10], array_keys($parseResult->getLineErrors()));
+		Assert::type(SecurityTxtSignedFileMalformed::class, $parseResult->getLineErrors()[10][0]);
+		Assert::same([], $verified);
+		Assert::null($parseResult->getSecurityTxt()->getSignatureVerifyResult());
 	}
 
 
@@ -1125,13 +1081,276 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtSignature = new SecurityTxtSignature($signatureProvider);
 		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, $securityTxtSignature, $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
-		Assert::false($parseResult->hasErrors());
-		// no SecurityTxtUnknownField warning for the Version armor header, only the one thrown by the verify() stub
-		Assert::count(1, $parseResult->getLineWarnings());
-		Assert::type(SecurityTxtSignatureExtensionNotLoaded::class, $parseResult->getLineWarnings()[1][0]);
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::same([10], array_keys($parseResult->getLineErrors()));
+		Assert::type(SecurityTxtSignedFileMalformed::class, $parseResult->getLineErrors()[10][0]);
 		$contacts = $parseResult->getSecurityTxt()->getContact();
 		Assert::count(1, $contacts);
 		Assert::same('https://example.com/', $contacts[0]->getUri());
+	}
+
+
+	/**
+	 * Each file is one of the variants of a signed file, keyed by what it is, and only one that is a whole signed message reaches the verifier
+	 */
+	public function testParseStringSignedFileFormat(): void
+	{
+		$expires = new DateTimeImmutable('+2 weeks')->format(SecurityTxtExpires::FORMAT);
+		$header = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n";
+		$text = "Contact: https://example.com/\nExpires: {$expires}\n";
+		$signature = "-----BEGIN PGP SIGNATURE-----\n\niAEE\n=AAAA\n-----END PGP SIGNATURE-----\n";
+		$packets = fn(string $packets): string => str_replace("iAEE\n", chunk_split(base64_encode($packets), 64, "\n"), $signature);
+		$long = base64_encode("\x88\x3A" . str_repeat("\x00", 58));
+		$files = [
+			'signed' => $header . $text . $signature,
+			'signed with CRLF' => str_replace("\n", "\r\n", $header . $text . $signature),
+			'signed with an armor header' => $header . $text . str_replace("-----\n\n", "-----\nVersion: GnuPG v2\n\n", $signature),
+			'signed with two hash algorithms' => str_replace('SHA512', 'SHA256,SHA512', $header) . $text . $signature,
+			'signed with dash escaped lines' => $header . $text . "- -- dashes\n- Hiring: https://example.com/jobs\n" . $signature,
+			'a comment before the header' => "# Hi\n" . $header . $text . $signature,
+			'a field before the header' => "Contact: https://before.example/\n" . $header . $text . $signature,
+			'an empty line after the signature' => $header . $text . $signature . "\n",
+			'a field after the signature' => $header . $text . $signature . "Contact: https://after.example/\n",
+			'a second signed message' => $header . $text . $signature . $header . $text . $signature,
+			'other OpenPGP data before the header' => "-----BEGIN PGP MESSAGE-----\n\nowE=\n-----END PGP MESSAGE-----\n" . $header . $text . $signature,
+			'the header with a space after it' => str_replace("MESSAGE-----\n", "MESSAGE----- \n", $header) . $text . $signature,
+			'the header with a space before it' => ' ' . $header . $text . $signature,
+			'no hash header' => "-----BEGIN PGP SIGNED MESSAGE-----\n\n" . $text . $signature,
+			'a comment header' => "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\nComment: x\n\n" . $text . $signature,
+			'a dash line not escaped' => $header . $text . "-----END PGP SIGNATURE-----\nContact: https://injected.example/\n" . $signature,
+			'not Base64 in the signature' => $header . $text . str_replace('iAEE', 'yes, but', $signature),
+			'no signature data' => $header . $text . str_replace("iAEE\n=AAAA\n", '', $signature),
+			'a compressed packet in the signature' => $header . $text . str_replace('iAEE', 'oAEB', $signature),
+			'a signature packet of indeterminate length' => $header . $text . $packets("\x8B" . str_repeat("\x00", 8)),
+			'a signature packet then a compressed one' => $header . $text . $packets("\x88\x01\x04\xA0\x01\x01"),
+			'a partial body length' => $header . $text . $packets("\xC2\xE1\x88\x00"),
+			'the shortest partial body length' => $header . $text . $packets("\xC2\xE0\x00" . str_repeat("\x00", 8384)),
+			'the longest partial body length' => $header . $text . $packets("\xC2\xFE\x00\x00\x00\x00"),
+			'a packet one byte short' => $header . $text . $packets("\x88\x02\x04"),
+			'a packet header cut short' => $header . $text . $packets("\x88\x00\xC2"),
+			'not a packet header' => $header . $text . $packets("\x08\x00"),
+			'old format two octet length' => $header . $text . $packets("\x89\x01\x00" . str_repeat("\x00", 256)),
+			'old format four octet length' => $header . $text . $packets("\x8A\x00\x00\x00\x01\x04"),
+			'new format one octet length' => $header . $text . $packets("\xC2\xBF" . str_repeat("\x00", 191)),
+			'new format two octet length' => $header . $text . $packets("\xC2\xC0\x00" . str_repeat("\x00", 192)),
+			'new format longest two octet length' => $header . $text . $packets("\xC2\xDF\xFF" . str_repeat("\x00", 8383)),
+			'new format five octet length' => $header . $text . $packets("\xC2\xFF\x00\x00\x00\x01\x04"),
+			'two signature packets' => $header . $text . $packets("\x88\x01\x04\x88\x01\x04"),
+			'a 76 character Base64 line' => $header . $text . str_replace('iAEE', base64_encode("\x88\x37" . str_repeat("\x00", 55)), $signature),
+			'a 77 character Base64 line' => $header . $text . str_replace('iAEE', substr($long, 0, 77) . "\n" . substr($long, 77), $signature),
+			'Base64 after the padding' => $header . $text . str_replace("iAEE\n", "iAE=\nAAAA\n", $signature),
+			'a stray Base64 character' => $header . $text . str_replace('iAEE', 'iAEEi', $signature),
+			'whitespace on the line after the hash header' => str_replace("SHA512\n\n", "SHA512\n \n", $header) . $text . $signature,
+			'whitespace on the line after the armor header' => $header . $text . str_replace("SIGNATURE-----\n\n", "SIGNATURE-----\n \n", $signature),
+			'more after the hash algorithm' => str_replace('SHA512', 'SHA512 x', $header) . $text . $signature,
+			'a line starting with one dash' => $header . $text . "-x\n" . $signature,
+			'an armor header without a space' => $header . $text . str_replace("-----\n\n", "-----\nVersion:x\n\n", $signature),
+			'Base64 after the checksum' => $header . $text . str_replace("=AAAA\n", "=AAAA\niAEE\n", $signature),
+			'two checksums' => $header . $text . str_replace("=AAAA\n", "=AAAA\n=AAAA\n", $signature),
+			'a checksum alone' => $header . $text . str_replace("iAEE\n", '', $signature),
+			'the file ends after the hash header' => "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n",
+			'a literal packet in the signature' => $header . $text . str_replace('iAEE', 'ywFi', $signature),
+			'no signature tail' => $header . $text . str_replace("-----END PGP SIGNATURE-----\n", '', $signature),
+		];
+		$reported = [];
+		foreach ($files as $name => $contents) {
+			$verified = [];
+			$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+				$verified[] = $text;
+			});
+			$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+			$parseResult = $securityTxtParser->parseString($contents);
+			$errors = [];
+			foreach ($parseResult->getLineErrors() as $lineNumber => $violations) {
+				$errors[$lineNumber] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
+			}
+			$reported[$name] = [$errors, $verified !== [], $parseResult->getSecurityTxt()->getSignatureVerifyResult() !== null];
+		}
+		$malformed = SecurityTxtSignedFileMalformed::class;
+		$invalid = SecurityTxtSignatureInvalid::class;
+		Assert::same([
+			'signed' => [[], true, true],
+			'signed with CRLF' => [[], true, true],
+			'signed with an armor header' => [[], true, true],
+			'signed with two hash algorithms' => [[], true, true],
+			'signed with dash escaped lines' => [[], true, true],
+			'a comment before the header' => [[1 => [$malformed]], false, false],
+			'a field before the header' => [[1 => [$malformed]], false, false],
+			'an empty line after the signature' => [[11 => [$malformed]], false, false],
+			'a field after the signature' => [[11 => [$malformed]], false, false],
+			'a second signed message' => [[11 => [$malformed], 15 => [SecurityTxtMultipleExpires::class]], false, false],
+			'other OpenPGP data before the header' => [[1 => [$malformed]], false, false],
+			'the header with a space after it' => [[1 => [$malformed]], false, false],
+			'the header with a space before it' => [[1 => [$malformed]], false, false],
+			'no hash header' => [[2 => [$malformed]], false, false],
+			'a comment header' => [[3 => [$malformed]], false, false],
+			'a dash line not escaped' => [[6 => [$malformed]], false, false],
+			'not Base64 in the signature' => [[8 => [$malformed]], false, false],
+			'no signature data' => [[6 => [$invalid]], false, false],
+			'a compressed packet in the signature' => [[6 => [$invalid]], false, false],
+			'a signature packet of indeterminate length' => [[6 => [$invalid]], false, false],
+			'a signature packet then a compressed one' => [[6 => [$invalid]], false, false],
+			'a partial body length' => [[6 => [$invalid]], false, false],
+			'the shortest partial body length' => [[6 => [$invalid]], false, false],
+			'the longest partial body length' => [[6 => [$invalid]], false, false],
+			'a packet one byte short' => [[6 => [$invalid]], false, false],
+			'a packet header cut short' => [[6 => [$invalid]], false, false],
+			'not a packet header' => [[6 => [$invalid]], false, false],
+			'old format two octet length' => [[], true, true],
+			'old format four octet length' => [[], true, true],
+			'new format one octet length' => [[], true, true],
+			'new format two octet length' => [[], true, true],
+			'new format longest two octet length' => [[], true, true],
+			'new format five octet length' => [[], true, true],
+			'two signature packets' => [[], true, true],
+			'a 76 character Base64 line' => [[], true, true],
+			'a 77 character Base64 line' => [[8 => [$malformed]], false, false],
+			'Base64 after the padding' => [[9 => [$malformed]], false, false],
+			'a stray Base64 character' => [[6 => [$invalid]], false, false],
+			'whitespace on the line after the hash header' => [[3 => [$malformed]], false, false],
+			'whitespace on the line after the armor header' => [[7 => [$malformed]], false, false],
+			'more after the hash algorithm' => [[2 => [$malformed]], false, false],
+			'a line starting with one dash' => [[6 => [$malformed]], false, false],
+			'an armor header without a space' => [[7 => [$malformed]], false, false],
+			'Base64 after the checksum' => [[10 => [$malformed]], false, false],
+			'two checksums' => [[10 => [$malformed]], false, false],
+			'a checksum alone' => [[8 => [$malformed]], false, false],
+			'the file ends after the hash header' => [[2 => [$malformed]], false, false],
+			'a literal packet in the signature' => [[6 => [$invalid]], false, false],
+			'no signature tail' => [[9 => [$malformed]], false, false],
+		], $reported);
+	}
+
+
+	public function testParseStringSignedFileDashEscapedLineIsRead(): void
+	{
+		$contents = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n- Contact: https://example.com/\n- -----BEGIN PGP SIGNATURE-----\nHiring: https://example.com/jobs\n- -----BEGIN PGP SIGNED MESSAGE-----\nPolicy: https://example.com/policy\n-----BEGIN PGP SIGNATURE-----\n\niAEE\n-----END PGP SIGNATURE-----\n";
+		$verified = [];
+		$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+			$verified[] = $text;
+		});
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::same([$contents], $verified);
+		Assert::same(['https://example.com/'], array_map(fn(SecurityTxtContact $contact): string => $contact->getUri(), $parseResult->getSecurityTxt()->getContact()));
+		Assert::same(['https://example.com/jobs'], array_map(fn(SecurityTxtHiring $hiring): string => $hiring->getUri(), $parseResult->getSecurityTxt()->getHiring()));
+		Assert::same(['https://example.com/policy'], array_map(fn(SecurityTxtPolicy $policy): string => $policy->getUri(), $parseResult->getSecurityTxt()->getPolicy()));
+		Assert::same([], $parseResult->getLineErrors());
+		Assert::notNull($parseResult->getSecurityTxt()->getSignatureVerifyResult());
+	}
+
+
+	public function testParseStringFramingLookalikeInSignedTextIsText(): void
+	{
+		$expires = new DateTimeImmutable('+2 weeks')->format(SecurityTxtExpires::FORMAT);
+		$contents = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\nContact: https://example.com/\nExpires: {$expires}\n -----BEGIN PGP SIGNATURE-----\n -----END PGP SIGNATURE-----\nHiring: https://example.com/jobs\n -----BEGIN PGP SIGNED MESSAGE-----\nPolicy: https://example.com/policy\n-----BEGIN PGP SIGNATURE-----\n\niAEE\n-----END PGP SIGNATURE-----\n";
+		$verified = [];
+		$signatureProvider = $this->getGoodSignatureProvider(function (string $text) use (&$verified): void {
+			$verified[] = $text;
+		});
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::same([$contents], $verified);
+		Assert::same([6 => [SecurityTxtLineLeadingWhitespace::class], 7 => [SecurityTxtLineLeadingWhitespace::class], 9 => [SecurityTxtLineLeadingWhitespace::class]], array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations), $parseResult->getLineErrors()));
+		Assert::same(['https://example.com/jobs'], array_map(fn(SecurityTxtHiring $hiring): string => $hiring->getUri(), $parseResult->getSecurityTxt()->getHiring()));
+		Assert::same(['https://example.com/policy'], array_map(fn(SecurityTxtPolicy $policy): string => $policy->getUri(), $parseResult->getSecurityTxt()->getPolicy()));
+	}
+
+
+	public function testParseStringFramingLookalikeInTheSignatureIsSignature(): void
+	{
+		$expires = new DateTimeImmutable('+2 weeks')->format(SecurityTxtExpires::FORMAT);
+		$contents = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\nContact: https://example.com/\nExpires: {$expires}\n-----BEGIN PGP SIGNATURE-----\n\n -----END PGP SIGNATURE-----\nHiring: https://example.com/jobs\niAEE\n-----END PGP SIGNATURE-----\n";
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()))), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$parseResult = $securityTxtParser->parseString($contents);
+		Assert::same([8 => [SecurityTxtSignedFileMalformed::class]], array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations), $parseResult->getLineErrors()));
+		Assert::same([], $parseResult->getSecurityTxt()->getHiring());
+	}
+
+
+	public function testParseStringDashEscapeIsRemovedOnlyInTheSignedText(): void
+	{
+		$expires = new DateTimeImmutable('+2 weeks')->format(SecurityTxtExpires::FORMAT);
+		$block = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\nContact: https://example.com/\nExpires: {$expires}\n-----BEGIN PGP SIGNATURE-----\n\niAEE\n-----END PGP SIGNATURE-----\n";
+		$dash = "- Contact: https://dash.example/\n";
+		$files = [
+			'unsigned' => $dash . "Contact: https://example.com/\nExpires: {$expires}\n",
+			'before the header' => $dash . $block,
+			'in the hash header section' => str_replace("Hash: SHA512\n", "Hash: SHA512\n- \n" . $dash, $block),
+			'in the signed text' => str_replace("Contact: https://example.com/\n", "Contact: https://example.com/\n" . $dash, $block),
+			'in the armor' => str_replace("iAEE\n", "- -----END PGP SIGNATURE-----\nContact: https://dash.example/\niAEE\n", $block),
+			'after the signature' => $block . $dash,
+		];
+		$contacts = [];
+		foreach ($files as $name => $contents) {
+			$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()))), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+			$contacts[$name] = array_map(fn(SecurityTxtContact $contact): string => $contact->getUri(), $securityTxtParser->parseString($contents)->getSecurityTxt()->getContact());
+		}
+		Assert::same([
+			'unsigned' => ['https://example.com/'],
+			'before the header' => ['https://example.com/'],
+			'in the hash header section' => ['https://example.com/'],
+			'in the signed text' => ['https://example.com/', 'https://dash.example/'],
+			'in the armor' => ['https://example.com/'],
+			'after the signature' => ['https://example.com/'],
+		], $contacts);
+	}
+
+
+	public function testParseStringSignatureWarningIsSortedWithTheOthers(): void
+	{
+		$expires = new DateTimeImmutable('+2 weeks')->format(SecurityTxtExpires::FORMAT);
+		$contents = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\nContact: https://example.com/\nX-Foo: bar\nExpires: {$expires}\n-----BEGIN PGP SIGNATURE-----\n\niAEE\n-----END PGP SIGNATURE-----\n";
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($this->getSignatureProvider(new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded()))), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		Assert::same([1, 5], array_keys($securityTxtParser->parseString($contents)->getLineWarnings()));
+	}
+
+
+	/**
+	 * @param Closure(string): void $onVerify Called with every text the provider is asked to verify
+	 */
+	private function getGoodSignatureProvider(Closure $onVerify): SecurityTxtSignatureProvider
+	{
+		return new readonly class ($onVerify) implements SecurityTxtSignatureProvider {
+
+			/**
+			 * @param Closure(string): void $onVerify
+			 */
+			public function __construct(
+				private Closure $onVerify,
+			) {
+			}
+
+
+			#[Override]
+			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
+			{
+				return true;
+			}
+
+
+			#[Override]
+			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
+			{
+				return new SecurityTxtSignatureErrorInfo(false, 0, 'Unspecified source', 'Success');
+			}
+
+
+			#[Override]
+			public function sign(string $text): false|string
+			{
+				return false;
+			}
+
+
+			#[Override]
+			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
+			{
+				($this->onVerify)($text);
+				return new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_GREEN | GNUPG_SIGSUM_VALID, 'AF6E1775E311FF78E911E7DC7F879001A9C8F50A', 1767225600);
+			}
+
+		};
 	}
 
 
