@@ -45,6 +45,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
@@ -133,6 +134,115 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::true($parseResult->hasErrors());
 		Assert::true($parseResult->hasWarnings());
 		Assert::type(SecurityTxtExpiresTooLong::class, $parseResult->getLineWarnings()[1][0]);
+	}
+
+
+	public function testParseStringLineWithNulByte(): void
+	{
+		$reported = [];
+		$lines = [
+			"Expires: x\0y",
+			"Expires: x\0\0y",
+			"Expires: 2030-01-01T00:00:00.000Z\0garbage",
+			"Expires : 2030-01-01\0T00:00:00+00:00",
+			"\0",
+			"\0Contact: https://example.com/",
+			"# A comment\0",
+			"Cont\0act: https://example.com/",
+			"Contact: https://example.com/\0\r",
+		];
+		foreach ($lines as $line) {
+			$lineErrors = $this->securityTxtParser->parseString("{$line}\n")->getLineErrors();
+			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $lineErrors[1] ?? []);
+		}
+		Assert::same([
+			"Expires: x\0y" => ['The line (Expires: x%00y) contains a NUL byte', 'The format of the value of the Expires field is wrong'],
+			"Expires: x\0\0y" => ['The line (Expires: x%00%00y) contains a NUL byte', 'The format of the value of the Expires field is wrong'],
+			"Expires: 2030-01-01T00:00:00.000Z\0garbage" => ['The line (Expires: 2030-01-01T00:00:00.000Z%00garbage) contains a NUL byte', 'The format of the value of the Expires field is wrong'],
+			"Expires : 2030-01-01\0T00:00:00+00:00" => [
+				'The line (Expires : 2030-01-01%00T00:00:00+00:00) contains a NUL byte',
+				'The line (Expires : 2030-01-01T00:00:00+00:00) has whitespace between the field name and the colon',
+			],
+			"\0" => ['The line (%00) contains a NUL byte'],
+			"\0Contact: https://example.com/" => ['The line (%00Contact: https://example.com/) contains a NUL byte'],
+			"# A comment\0" => ['The line (# A comment%00) contains a NUL byte'],
+			"Cont\0act: https://example.com/" => ['The line (Cont%00act: https://example.com/) contains a NUL byte'],
+			"Contact: https://example.com/\0\r" => ['The line (Contact: https://example.com/%00) contains a NUL byte'],
+		], $reported);
+	}
+
+
+	public function testParseStringLineWithNulByteIsStillParsed(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString(" Cont\0act: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::count(1, $parseResult->getSecurityTxt()->getContact());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		$correctValues = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation::class, $violation->getCorrectValue()], $parseResult->getLineErrors()[1]);
+		Assert::same([
+			[SecurityTxtLineNulByte::class, 'Contact: https://example.com/'],
+			[SecurityTxtLineLeadingWhitespace::class, 'Contact: https://example.com/'],
+		], $correctValues);
+		Assert::null($this->securityTxtParser->parseString("\0\n")->getLineErrors()[1][0]->getCorrectValue());
+		Assert::same('Contact: https://example.com/', $this->securityTxtParser->parseString("Contact: https://example.com/ \0\n")->getLineErrors()[1][0]->getCorrectValue());
+		Assert::false($parseResult->isValid());
+	}
+
+
+	public function testParseStringSignatureIsVerifiedOverTheFileAsServed(): void
+	{
+		$signatureProvider = new class implements SecurityTxtSignatureProvider {
+
+			public ?string $verified = null;
+
+
+			#[Override]
+			public function addSignKey(string $fingerprint, #[SensitiveParameter] string $passphrase = ''): bool
+			{
+				return true;
+			}
+
+
+			#[Override]
+			public function getErrorInfo(): SecurityTxtSignatureErrorInfo
+			{
+				return new SecurityTxtSignatureErrorInfo(false, 0, 'Unspecified source', 'Success');
+			}
+
+
+			#[Override]
+			public function sign(string $text): false|string
+			{
+				return false;
+			}
+
+
+			#[Override]
+			public function verify(string $text): SecurityTxtSignatureVerifySignatureInfo
+			{
+				$this->verified = $text;
+				throw new SecurityTxtWarning(new SecurityTxtSignatureExtensionNotLoaded());
+			}
+
+		};
+		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
+		$contents = "-----BEGIN PGP SIGNED\x00 MESSAGE-----\nHash: SHA\x00512\n\x00\nContact: https://exa\x00mple.com/\n-----BEGIN PGP\x00 SIGNATURE-----\nComment: c\n\nfake\x00\n-----END PGP\x00 SIGNATURE-----\nHiring: https://example.com/\n";
+		$parseResult = $securityTxtParser->parseString($contents);
+		$reported = [];
+		foreach ($parseResult->getLineErrors() as $lineNumber => $violations) {
+			$reported[$lineNumber] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
+		}
+		Assert::same($contents, $signatureProvider->verified);
+		Assert::same([
+			1 => [SecurityTxtLineNulByte::class],
+			2 => [SecurityTxtLineNulByte::class],
+			3 => [SecurityTxtLineNulByte::class],
+			4 => [SecurityTxtLineNulByte::class],
+			5 => [SecurityTxtLineNulByte::class],
+			8 => [SecurityTxtLineNulByte::class],
+			9 => [SecurityTxtLineNulByte::class],
+			10 => [SecurityTxtFieldNotCoveredBySignature::class],
+		], $reported);
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
 	}
 
 
@@ -328,7 +438,7 @@ final class SecurityTxtParserTest extends TestCase
 	public function testParseStringLineStartingWithWhitespace(): void
 	{
 		$reported = [];
-		foreach ([' Contact: https://example.com/', "\tContact: https://example.com/", "\x0BContact: https://example.com/", "\0Contact: https://example.com/", '  # A comment: with a colon', ' Not a field', " \t ", 'Contact: https://example.com/ '] as $line) {
+		foreach ([' Contact: https://example.com/', "\tContact: https://example.com/", "\x0BContact: https://example.com/", '  # A comment: with a colon', ' Not a field', " \t ", 'Contact: https://example.com/ '] as $line) {
 			$parseResult = $this->securityTxtParser->parseString("{$line}\n{$this->getValidContents()}");
 			$violations = [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getLineWarnings()[1] ?? []];
 			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), $violations);
@@ -337,7 +447,6 @@ final class SecurityTxtParserTest extends TestCase
 			' Contact: https://example.com/' => ['The line ( Contact: https://example.com/) starts with whitespace'],
 			"\tContact: https://example.com/" => ['The line (→Contact: https://example.com/) starts with whitespace'],
 			"\x0BContact: https://example.com/" => ['The line (%0BContact: https://example.com/) starts with whitespace'],
-			"\0Contact: https://example.com/" => ['The line (%00Contact: https://example.com/) starts with whitespace'],
 			'  # A comment: with a colon' => ['The line (  # A comment: with a colon) starts with whitespace'],
 			' Not a field' => ['The line ( Not a field) starts with whitespace'],
 			" \t " => [],
@@ -389,11 +498,9 @@ final class SecurityTxtParserTest extends TestCase
 		$reported = [];
 		$lines = [
 			"\x0B",
-			"\0",
 			" \x0B ",
 			" \t",
 			"X-Foo: bar\x0B",
-			"# A comment\0",
 			"Contact: https://example.com/\r\r",
 			"Contact: https://example.com/\r",
 			"Contact: https://example.com/ \t",
@@ -406,11 +513,9 @@ final class SecurityTxtParserTest extends TestCase
 		}
 		Assert::same([
 			"\x0B" => ['The line (%0B) ends with whitespace other than spaces and tabs'],
-			"\0" => ['The line (%00) ends with whitespace other than spaces and tabs'],
 			" \x0B " => ['The line ( %0B ) ends with whitespace other than spaces and tabs'],
 			" \t" => [],
 			"X-Foo: bar\x0B" => ['The line (X-Foo: bar%0B) ends with whitespace other than spaces and tabs', 'Field X-Foo is unknown'],
-			"# A comment\0" => ['The line (# A comment%00) ends with whitespace other than spaces and tabs'],
 			"Contact: https://example.com/\r\r" => ['The line (Contact: https://example.com/%0D) ends with whitespace other than spaces and tabs'],
 			"Contact: https://example.com/\r" => [],
 			"Contact: https://example.com/ \t" => [],
