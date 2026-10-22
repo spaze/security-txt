@@ -63,6 +63,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoLocationHeaderException' => '(Uri\\WhatWg\\Url $url, int $httpCode, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNotFoundException' => '(array $securityTxtUrls, Uri\\WhatWg\\Url $wellKnownUrl, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtOnlyIpv6HostButIpv6DisabledException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ipv6, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtRedirectUrlTooLongException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, int $maxLength, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtTooManyRedirectsException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, int $maxAllowed, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlNotFoundException' => '(Uri\\WhatWg\\Url $url, int $code, string $ipAddress, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtUrlUnsupportedSchemeException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?Throwable $previous = NULL)',

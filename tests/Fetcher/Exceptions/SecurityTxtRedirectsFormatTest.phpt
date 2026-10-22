@@ -10,6 +10,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectUrlTooLongException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
@@ -67,6 +68,14 @@ final class SecurityTxtRedirectsFormatTest extends TestCase
 		$redirects = new SecurityTxtRedirects('https://2.example/');
 		Assert::same($redirects, new SecurityTxtTooManyRedirectsException(new Url('https://1.example/'), $redirects, 5)->getRedirects());
 		Assert::same("Can't read https://1.example/, too many redirects, max allowed is 5 (redirects: https://2.example/ → https://3.example/, the last one not loaded)", new SecurityTxtTooManyRedirectsException(new Url('https://1.example/'), new SecurityTxtRedirects('https://2.example/', 'https://3.example/'), 5)->getMessage());
+	}
+
+
+	public function testRedirectUrlTooLong(): void
+	{
+		Assert::same("Can't read https://1.example/, it redirects to a URL longer than 1000 characters", new SecurityTxtRedirectUrlTooLongException(new Url('https://1.example/'), new SecurityTxtRedirects(), 1000)->getMessage());
+		Assert::same("Can't read https://1.example/, it redirects to a URL longer than 42 characters (redirects: https://2.example/)", new SecurityTxtRedirectUrlTooLongException(new Url('https://1.example/'), new SecurityTxtRedirects('https://2.example/'), 42)->getMessage());
+		Assert::same("Can't read https://1.example/, it redirects to a URL longer than 1000 characters (redirects: https://2.example/ → https://3.example/)", new SecurityTxtRedirectUrlTooLongException(new Url('https://1.example/'), new SecurityTxtRedirects('https://2.example/', 'https://3.example/'), 1000)->getMessage());
 	}
 
 }

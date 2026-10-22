@@ -20,6 +20,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicExcept
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectUrlTooLongException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
@@ -703,6 +704,107 @@ final class SecurityTxtFetcherTest extends TestCase
 		assert($e instanceof SecurityTxtUrlUnsupportedSchemeException);
 		// The chain records where a redirect led rather than the header that said so, and an escape in the host is resolved out of it without losing the host
 		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://xn--a.example/'], $e->getRedirects()->toStrings());
+	}
+
+
+	/**
+	 * The header is measured before it is parsed, a character that may be percent-encoded as three and a relative one with the path it is resolved against, and the URL is
+	 * refused before it is requested or handed to a callback. Before PHP 8.5.8 the last rows are where process memory would have gone, and `.` and `..` segments can cut it
+	 * short of any length checked after parsing.
+	 */
+	public function testARedirectToALongUrlIsNotFollowed(): void
+	{
+		$locations = [
+			'a path of 1000 characters' => '/' . str_repeat('a', 999),
+			'a path of 1001 characters' => '/' . str_repeat('a', 1000),
+			'a path starting with a backslash counted as 1000 characters, the backslash as three' => '\\' . str_repeat('a', 997),
+			'a path and a query counted as 1000 characters, the question mark as three' => '/s?' . str_repeat('a', 995),
+			'a path and a query counted as 1001 characters' => '/s?' . str_repeat('a', 996),
+			'a relative path of 1000 characters with the base path' => str_repeat('a', 975),
+			'a relative path of 1001 characters with the base path' => str_repeat('a', 976),
+			'a path of 1000 characters once percent-encoded' => '/' . str_repeat('{', 333),
+			'a path of 1003 characters once percent-encoded' => '/' . str_repeat('{', 334),
+			'another host with a path of 1001 characters' => 'https://other.example/' . str_repeat('a', 1000),
+			'an unsupported scheme with a path of 1001 characters' => 'ftp://other.example/' . str_repeat('a', 1000),
+			'dot segments cutting a path back' => '/b/' . str_repeat('a', 1017) . '{' . str_repeat('/..', 333) . '/x',
+			'a long fragment after a dot segment' => '/a/.#' . str_repeat('b', 1100),
+			'a path PHP before 8.5.8 fills with process memory' => '/' . str_repeat('a', 1022) . '{',
+		];
+		$requested = [];
+		foreach ($locations as $name => $location) {
+			$paths = [];
+			$httpClient = new class ($location, function (string $url) use (&$paths): void {
+				$paths[] = strlen(new Url($url)->getPath());
+			}) implements SecurityTxtFetcherHttpClient {
+
+				private int $requests = 0;
+
+
+				/**
+				 * @param Closure(string): void $observe
+				 */
+				public function __construct(private readonly string $location, private readonly Closure $observe)
+				{
+				}
+
+
+				#[Override]
+				public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+				{
+					($this->observe)($url->getUrl()->toAsciiString());
+					return $this->requests++ === 0
+						? new SecurityTxtFetcherResponse(301, ['location' => $this->location], '', false, $ipAddress, $ipAddressType)
+						: new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+				}
+
+			};
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$redirected = [];
+			$fetcher->addOnRedirect(function (Url $url, Url $destination) use (&$redirected): void {
+				$redirected[] = strlen($destination->getPath());
+			});
+			$exception = Assert::throws(function () use ($fetcher): void {
+				$fetcher->fetch(new Url('https://start.example/'));
+			}, SecurityTxtFetcherException::class);
+			assert($exception instanceof SecurityTxtFetcherException);
+			$requested[$name] = [$exception::class, $paths, $redirected];
+		}
+		Assert::same([
+			'a path of 1000 characters' => [SecurityTxtNotFoundException::class, [25, 1000, 13], [1000]],
+			'a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a path starting with a backslash counted as 1000 characters, the backslash as three' => [SecurityTxtNotFoundException::class, [25, 998, 13], [998]],
+			'a path and a query counted as 1000 characters, the question mark as three' => [SecurityTxtNotFoundException::class, [25, 2, 13], [2]],
+			'a path and a query counted as 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a relative path of 1000 characters with the base path' => [SecurityTxtNotFoundException::class, [25, 988, 13], [988]],
+			'a relative path of 1001 characters with the base path' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a path of 1000 characters once percent-encoded' => [SecurityTxtNotFoundException::class, [25, 1000, 13], [1000]],
+			'a path of 1003 characters once percent-encoded' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'another host with a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'an unsupported scheme with a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'dot segments cutting a path back' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a long fragment after a dot segment' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a path PHP before 8.5.8 fills with process memory' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+		], $requested);
+	}
+
+
+	public function testARedirectToALongUrlAfterAnotherNamesTheChain(): void
+	{
+		$httpClient = $this->getHttpClient(
+			new SecurityTxtFetcherResponse(301, ['location' => '/one/security.txt'], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(301, ['location' => '/' . str_repeat('a', 1000)], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$exception = Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'));
+		}, SecurityTxtRedirectUrlTooLongException::class);
+		assert($exception instanceof SecurityTxtRedirectUrlTooLongException);
+		Assert::same(
+			"Can't read https://start.example/one/security.txt, it redirects to a URL longer than 1000 characters (redirects: https://start.example/.well-known/security.txt → https://start.example/one/security.txt)",
+			$exception->getMessage(),
+		);
+		Assert::same('https://start.example/one/security.txt', $exception->getUrl()?->toAsciiString());
+		Assert::same(['https://start.example/.well-known/security.txt', 'https://start.example/one/security.txt'], $exception->getRedirects()->toStrings());
 	}
 
 
