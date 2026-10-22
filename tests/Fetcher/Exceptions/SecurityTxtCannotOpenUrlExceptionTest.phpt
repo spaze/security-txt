@@ -45,7 +45,7 @@ final class SecurityTxtCannotOpenUrlExceptionTest extends TestCase
 		$exception = new SecurityTxtCannotOpenUrlException(new Url('https://com.example/'), $redirects, '2001:DB8::1', SecurityTxtIpAddressType::V6, 'Could not connect to server');
 		Assert::same("Can't open https://com.example/ (redirects: https://redir1.example/ → https://redir2.example/) using its IPv6 address 2001:DB8::1 (Could not connect to server)", $exception->getMessage());
 
-		// A URL is parsed before it ever reaches here, and parsing percent encodes a control character, so what a host sends cannot survive into the message or the values
+		// A URL is parsed before it ever reaches here, and parsing percent-encodes a control character, so what a host sends cannot survive into the message or the values
 		$exception = new SecurityTxtCannotOpenUrlException(new Url("https://evil.example/\x1b[2K"), new SecurityTxtRedirects());
 		Assert::same("Can't open https://evil.example/%1B[2K", $exception->getMessage());
 		$value = $exception->getMessageValues()[0];

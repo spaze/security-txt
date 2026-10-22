@@ -1411,7 +1411,7 @@ final class SecurityTxtParserTest extends TestCase
 
 	/**
 	 * Where a file was found is reported at the host it was fetched from. Decoded instead, a file on `xn--khby.example` is reported at `ؤ.example`, which resolves to
-	 * `xn--jgb.example`, and `SecurityTxtSpecViolation::asUrl()` cannot read that spelling back either, so it prints percent encoded beside a host that reads.
+	 * `xn--jgb.example`, and `SecurityTxtSpecViolation::asUrl()` cannot read that spelling back either, so it prints percent-encoded beside a host that reads.
 	 */
 	public function testTheFileIsReportedAtTheHostItWasFetchedFrom(): void
 	{

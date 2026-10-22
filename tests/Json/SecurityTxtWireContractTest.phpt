@@ -233,7 +233,7 @@ final class SecurityTxtWireContractTest extends TestCase
 					? $json->createFetcherExceptionFromJsonValues(['error' => $wire])
 					: $json->createViolationsFromJsonValues([$wire])[0];
 				Assert::same($built::class, $replayed::class);
-				// A URL reaches an exception as a `Url` and reads as itself. Stringified into the values instead it comes out one of two other ways, percent encoded if the
+				// A URL reaches an exception as a `Url` and reads as itself. Stringified into the values instead it comes out one of two other ways, percent-encoded if the
 				// readable spelling was passed or as an A-label if the wire one was, and both put a URL beside a host that reads, which is the seam this pins shut
 				foreach (['h%C3%A1%C4%8Dky.example', 'xn--hky-ela4t.example'] as $spelling) {
 					Assert::notContains($spelling, $built->getMessage(), "{$class} spells a URL {$spelling} where a host beside it reads");

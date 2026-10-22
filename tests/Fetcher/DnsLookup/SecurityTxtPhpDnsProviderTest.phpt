@@ -22,7 +22,7 @@ final class SecurityTxtPhpDnsProviderTest extends TestCase
 {
 
 	/**
-	 * The failure this provider raises names the host as it reads rather than percent encoded, which only a host outside ASCII can show. The over-long label makes the lookup
+	 * The failure this provider raises names the host as it reads rather than percent-encoded, which only a host outside ASCII can show. The over-long label makes the lookup
 	 * fail before a packet is sent, so unlike the assertion in `testGetRecords()` this one needs no resolver and runs in the ordinary suite, which is the only place this throw
 	 * is exercised at all.
 	 *

@@ -23,7 +23,7 @@ final readonly class SecurityTxtPrintableValue
 
 
 	/**
-	 * A `Url` and a `SecurityTxtHost` exist only because they parsed, and parsing rejects a host with a control character in it and percent encodes everything after the host, so
+	 * A `Url` and a `SecurityTxtHost` exist only because they parsed, and parsing rejects a host with a control character in it and percent-encodes everything after the host, so
 	 * there is nothing left in one to encode and it is printed as it reads. Anything else is a string this library cannot vouch for, and is encoded down to printable ASCII,
 	 * a tab to `TAB`.
 	 */
