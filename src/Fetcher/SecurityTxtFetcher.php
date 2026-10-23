@@ -18,6 +18,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectLoopException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectUrlTooLongException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
@@ -84,6 +85,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
@@ -120,6 +122,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
@@ -166,6 +169,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
@@ -376,6 +380,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtUrlNotFoundException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
@@ -398,9 +403,14 @@ final class SecurityTxtFetcher
 			}
 			$locationUrl = $this->urlParser->getRedirectUrl($location, $url);
 			$this->callOnCallback($this->onRedirect, $url, $locationUrl);
+			$visited = $this->isVisited($locationUrl, $originalUrl, $this->redirects[$originalUrlString] ?? new SecurityTxtRedirects());
 			// Where the redirect led rather than the header that said so: a `Location` can be relative, or spell a host in punycode, and this is a record of the URLs a check
 			// went to and not of what a server typed
 			$this->redirects[$originalUrlString] = ($this->redirects[$originalUrlString] ?? new SecurityTxtRedirects())->withRedirect($locationUrl);
+			// Before the count, so the hop that closes a loop is called a loop even when it is also one too many
+			if ($visited) {
+				throw new SecurityTxtRedirectLoopException($url, $this->getRedirects($originalUrl));
+			}
 			if ($this->redirects[$originalUrlString]->count() > $maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url, $this->getRedirects($originalUrl), $maxAllowedRedirects);
 			}
@@ -428,6 +438,22 @@ final class SecurityTxtFetcher
 		$encoded = preg_match_all('~[^A-Za-z0-9._\~!$&\'()*+,;=:@/%-]~', $location);
 		// Should the match fail, every character counts as encoded, the bound has to stay one
 		return strlen($base) + strlen($location) + 2 * ($encoded === false ? strlen($location) : $encoded);
+	}
+
+
+	/**
+	 * Compared as it is going to be fetched, settled, because parsing leaves the case of a letter a percent escape uncovers in a host, and `equals()` ignores the fragment, which
+	 * never reaches the server. A method of its own, so the parsed chain is gone before the next hop recurses.
+	 */
+	private function isVisited(Url $locationUrl, Url $originalUrl, SecurityTxtRedirects $redirects): bool
+	{
+		$settledUrl = Url::parse($locationUrl->toAsciiString()) ?? $locationUrl;
+		foreach ([$originalUrl, ...array_filter(array_map(Url::parse(...), $redirects->toStrings()))] as $visitedUrl) {
+			if ($visitedUrl->equals($settledUrl)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 
