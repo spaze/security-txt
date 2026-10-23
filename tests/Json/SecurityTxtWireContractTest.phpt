@@ -111,6 +111,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtPreferredLanguagesEmpty' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtPreferredLanguagesSeparatorNotComma' => '(array $wrongSeparators, array $languages)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtPreferredLanguagesWrongLanguageTags' => '(array $wrongLanguages)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtRedirectNotHttps' => '(Uri\\WhatWg\\Url $url, Uri\\WhatWg\\Url $redirect)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignatureCannotVerify' => '(string $message, string $code, string $source, string $libraryMessage)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignatureExtensionNotLoaded' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignatureInvalid' => '()',

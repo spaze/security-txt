@@ -30,6 +30,7 @@ use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtRedirectNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
@@ -283,6 +284,16 @@ final class SecurityTxtFetcher
 			$contents = $wellKnownContents;
 		}
 		$this->callOnCallback($this->onFinalUrl, $result->getFinalUrl());
+
+		// The last hop is the final URL, and the file location check is what reports that one
+		$redirects = $this->redirects[new SecurityTxtPrintableValue($result->getUrl())->render()] ?? new SecurityTxtRedirects();
+		foreach (array_slice($redirects->toStrings(), 0, -1) as $redirect) {
+			$redirectUrl = Url::parse($redirect);
+			if ($redirectUrl !== null && $redirectUrl->getScheme() === 'http') {
+				$errors[] = new SecurityTxtRedirectNotHttps($result->getUrl(), $redirectUrl);
+				break;
+			}
+		}
 
 		$contentTypeHeader = $result->getContentType();
 		// The URL that answered, not the one the check was built from: a header comes from a response, and after a redirect that response is somewhere else

@@ -31,7 +31,10 @@ use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxtContentType;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtRedirectNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
@@ -459,6 +462,63 @@ final class SecurityTxtFetcherTest extends TestCase
 			'two redirects, the second to HTTP' => ['http://two.example/b', ['http://two.example/b'], ['https://start.example/security.txt']],
 			'a redirect to a host with an escaped capital' => ['https://two.example/b', ['https://two.example/b'], ['https://start.example/security.txt']],
 			'two redirects to a URL that is not found' => [null, [], ['https://two.example/b', 'https://start.example/security.txt']],
+		], $reported);
+	}
+
+
+	/**
+	 * A redirect sent over plain HTTP can be changed to point anywhere, so a chain that passes through one is an error even when it ends at HTTPS. A chain that ends at
+	 * HTTP is the file location check's to report, and only the chain of the location whose file is used counts.
+	 */
+	public function testARedirectThroughHttpIsAnError(): void
+	{
+		$redirect = fn(string $location): SecurityTxtFetcherResponse => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$start = 'https://start.example/.well-known/security.txt';
+		$chains = [
+			'HTTPS all the way' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $file],
+			'through HTTP and back to HTTPS' => [$start => $redirect('http://one.example/a'), 'http://one.example/a' => $redirect('https://two.example/b'), 'https://two.example/b' => $file],
+			'through HTTP twice' => [
+				$start => $redirect('http://one.example/a'),
+				'http://one.example/a' => $redirect('http://two.example/b'),
+				'http://two.example/b' => $redirect('https://three.example/c'),
+				'https://three.example/c' => $file,
+			],
+			'through HTTP after an HTTPS hop' => [
+				$start => $redirect('https://one.example/a'),
+				'https://one.example/a' => $redirect('http://two.example/b'),
+				'http://two.example/b' => $redirect('https://three.example/c'),
+				'https://three.example/c' => $file,
+			],
+			'to HTTP, and served there' => [$start => $redirect('http://one.example/a'), 'http://one.example/a' => $file],
+			'through HTTP at the top-level location, which is used' => [
+				'https://start.example/security.txt' => $redirect('http://one.example/a'),
+				'http://one.example/a' => $redirect('https://two.example/b'),
+				'https://two.example/b' => $file,
+			],
+			'through HTTP at the location not used' => [
+				$start => $file,
+				'https://start.example/security.txt' => $redirect('http://one.example/a'),
+				'http://one.example/a' => $redirect('https://start.example/.well-known/security.txt'),
+			],
+		];
+		$reported = [];
+		foreach ($chains as $name => $responses) {
+			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$errors = $fetcher->fetch(new Url('https://start.example/'))->getErrors();
+			$reported[$name] = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation::class, $violation->getMessage()], $errors);
+		}
+		Assert::same([
+			'HTTPS all the way' => [],
+			'through HTTP and back to HTTPS' => [[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/.well-known/security.txt go through http://one.example/a, which does not use HTTPS']],
+			'through HTTP twice' => [[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/.well-known/security.txt go through http://one.example/a, which does not use HTTPS']],
+			'through HTTP after an HTTPS hop' => [[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/.well-known/security.txt go through http://two.example/b, which does not use HTTPS']],
+			'to HTTP, and served there' => [],
+			'through HTTP at the top-level location, which is used' => [
+				[SecurityTxtTopLevelPathOnly::class, "security.txt wasn't found under the /.well-known/ path"],
+				[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/security.txt go through http://one.example/a, which does not use HTTPS'],
+			],
+			'through HTTP at the location not used' => [],
 		], $reported);
 	}
 
