@@ -402,7 +402,7 @@ final class SecurityTxtFetcher
 			// went to and not of what a server typed
 			$this->redirects[$originalUrlString] = ($this->redirects[$originalUrlString] ?? new SecurityTxtRedirects())->withRedirect($locationUrl);
 			if ($this->redirects[$originalUrlString]->count() > $maxAllowedRedirects) {
-				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrlString], $maxAllowedRedirects);
+				throw new SecurityTxtTooManyRedirectsException($url, $this->getRedirects($originalUrl), $maxAllowedRedirects);
 			}
 			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as
 			// a hostname that will not parse, losing the redirect chain that says where the host sent us. Settling comes after it for the same reason

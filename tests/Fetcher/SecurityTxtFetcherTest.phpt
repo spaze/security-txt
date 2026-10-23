@@ -984,7 +984,8 @@ final class SecurityTxtFetcherTest extends TestCase
 			'https://com.example/.well-known/security.txt -> https://com.example/one/security.txt',
 			'https://com.example/one/security.txt -> https://com.example/two/security.txt',
 		], $onRedirects);
-		Assert::same(['https://com.example/one/security.txt', 'https://com.example/two/security.txt'], $exception->getRedirects()->toStrings());
+		// The chain starts where the check started, like the chain any other exception carries
+		Assert::same(['https://com.example/.well-known/security.txt', 'https://com.example/one/security.txt', 'https://com.example/two/security.txt'], $exception->getRedirects()->toStrings());
 
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 0);
@@ -1049,7 +1050,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 5);
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetch(new Url('https://example.com'), maxAllowedRedirects: 0);
-		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (redirects: https://redir.example/, the last one not loaded)");
+		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (redirects: https://example.com/.well-known/security.txt → https://redir.example/, the last one not loaded)");
 	}
 
 
