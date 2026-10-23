@@ -144,6 +144,7 @@ The file is fetched from hosts you don't control, so the fetcher is restrictive 
 DNS resolution is handled by `SecurityTxtPhpDnsProvider`, which uses PHP's built-in `dns_get_record()`. This function has no timeout parameter, the system DNS timeout applies.
 If you need explicit DNS timeout control, or would like to use for example DNS-over-HTTPS, you can add a custom provider, which implements the `SecurityTxtDnsProvider` interface,
 and then pass it to `SecurityTxtFetcher` in the `$dnsLookupProvider` parameter.
+A provider reports a host that does not resolve by throwing `SecurityTxtHostNotFoundException` with the URL and host it was given, passing any exception it wraps by name, `previous: $e`; the fetcher adds the redirects that led to the host.
 
 ## Signature verification
 This library verifies that the signature is a valid OpenPGP cleartext signature, but cannot verify whether the signing key is trustworthy, for example when the key is not in local keyring etc. As the [`security.txt` RFC](https://www.rfc-editor.org/rfc/rfc9116#name-digital-signature) puts it:

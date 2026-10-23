@@ -76,6 +76,19 @@ abstract class SecurityTxtFetcherException extends Exception implements JsonSeri
 
 
 	/**
+	 * The params with the chain added last when there is one: an exception that took the chain later in its life stores it only then, so the same failure without a redirect
+	 * is still the call an older version of this library can replay.
+	 *
+	 * @param list<scalar|null|Url|SecurityTxtHost|SecurityTxtRedirects|array<array-key, scalar|array<array-key, scalar|list<string>>>> $params
+	 * @return list<scalar|null|Url|SecurityTxtHost|SecurityTxtRedirects|array<array-key, scalar|array<array-key, scalar|list<string>>>>
+	 */
+	protected function withRedirectsParam(array $params, SecurityTxtRedirects $redirects): array
+	{
+		return $redirects->count() > 0 ? [...$params, $redirects] : $params;
+	}
+
+
+	/**
 	 * @return list<string|Url|SecurityTxtHost>
 	 */
 	public function getMessageValues(): array

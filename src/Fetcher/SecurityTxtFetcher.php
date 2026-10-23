@@ -201,12 +201,17 @@ final class SecurityTxtFetcher
 			}
 		}
 		if ($ipRecord === null && $ipv6Record === null) {
-			$dnsRecords = $this->dnsLookupProvider->getRecords($url->getUrl(), $host);
+			try {
+				$dnsRecords = $this->dnsLookupProvider->getRecords($url->getUrl(), $host);
+			} catch (SecurityTxtHostNotFoundException $e) {
+				// The provider is asked about one URL and knows nothing of the redirects that led there, which are what makes a host nobody typed make sense
+				throw new SecurityTxtHostNotFoundException($url->getUrl(), $host, $url->getRedirects(), $e);
+			}
 			$ipRecord = $dnsRecords->getIpRecord();
 			$ipv6Record = $dnsRecords->getIpv6Record();
 		}
 		if ($noIpv6 && $ipv6Record !== null && $ipRecord === null) {
-			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl());
+			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl(), $url->getRedirects());
 		}
 		if (!$noIpv6 && $ipv6Record !== null) {
 			$ipAddress = $ipv6Record;
@@ -216,9 +221,9 @@ final class SecurityTxtFetcher
 			$ipAddressType = SecurityTxtIpAddressType::V4;
 		}
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
-			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host);
+			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host, $url->getRedirects());
 		}
-		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl());
+		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl(), $url->getRedirects());
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
@@ -394,7 +399,7 @@ final class SecurityTxtFetcher
 		}
 		$location = $response->getHeader('Location');
 		if ($location === null) {
-			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
+			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode(), $this->getRedirects($originalUrl));
 		} else {
 			$originalUrlString = new SecurityTxtPrintableValue($originalUrl)->render();
 			// A URL this long is suspicious for a security.txt, and it is refused before the header is parsed, see the method

@@ -13,7 +13,13 @@ use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
@@ -55,14 +61,14 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlUserAgentInvalidException' => '(Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotParseHostnameException' => '(string $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtConnectedToWrongIpAddressException' => '(string $expectedIpAddress, string $connectedToIpAddress, Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressInvalidException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotPublicException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressInvalidException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects = \\Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects::__set_state(array(   \'urls\' =>   array (  ),)), ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects = \\Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects::__set_state(array(   \'urls\' =>   array (  ),)), ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostIpAddressNotPublicException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ip, Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects = \\Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects::__set_state(array(   \'urls\' =>   array (  ),)), ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtHostNotFoundException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\SecurityTxtHost $host, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects = \\Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects::__set_state(array(   \'urls\' =>   array (  ),)), ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoHttpCodeException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoLocationHeaderException' => '(Uri\\WhatWg\\Url $url, int $httpCode, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNoLocationHeaderException' => '(Uri\\WhatWg\\Url $url, int $httpCode, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects = \\Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects::__set_state(array(   \'urls\' =>   array (  ),)), ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtNotFoundException' => '(array $securityTxtUrls, Uri\\WhatWg\\Url $wellKnownUrl, ?Throwable $previous = NULL)',
-			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtOnlyIpv6HostButIpv6DisabledException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ipv6, Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtOnlyIpv6HostButIpv6DisabledException' => '(Spaze\\SecurityTxt\\SecurityTxtHost $host, string $ipv6, Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects = \\Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects::__set_state(array(   \'urls\' =>   array (  ),)), ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtRedirectLoopException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtRedirectUrlTooLongException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, int $maxLength, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtTooManyRedirectsException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, int $maxAllowed, ?Throwable $previous = NULL)',
@@ -362,6 +368,40 @@ final class SecurityTxtWireContractTest extends TestCase
 			};
 		}
 		return $arguments;
+	}
+
+
+	/**
+	 * The exceptions that took the redirect chain after they had shipped store it only when there is one, so the same failure without a redirect is still a call the
+	 * version before can replay.
+	 */
+	public function testALateChainIsStoredOnlyWhenThereIsOne(): void
+	{
+		$url = new Url('https://example.com/');
+		$host = new SecurityTxtHost($url);
+		$redirects = new SecurityTxtRedirects('https://a.example/');
+		$build = [
+			SecurityTxtHostNotFoundException::class => fn(SecurityTxtRedirects $redirects): SecurityTxtFetcherException => new SecurityTxtHostNotFoundException($url, $host, $redirects),
+			SecurityTxtHostIpAddressNotFoundException::class => fn(SecurityTxtRedirects $redirects): SecurityTxtFetcherException => new SecurityTxtHostIpAddressNotFoundException($url, $host, $redirects),
+			SecurityTxtHostIpAddressNotPublicException::class => fn(SecurityTxtRedirects $redirects): SecurityTxtFetcherException => new SecurityTxtHostIpAddressNotPublicException($host, '127.0.0.1', $url, $redirects),
+			SecurityTxtHostIpAddressInvalidException::class => fn(SecurityTxtRedirects $redirects): SecurityTxtFetcherException => new SecurityTxtHostIpAddressInvalidException($host, '1.2.3.4', SecurityTxtIpAddressType::V6, $url, $redirects),
+			SecurityTxtOnlyIpv6HostButIpv6DisabledException::class => fn(SecurityTxtRedirects $redirects): SecurityTxtFetcherException => new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, '2001:db8::1', $url, $redirects),
+			SecurityTxtNoLocationHeaderException::class => fn(SecurityTxtRedirects $redirects): SecurityTxtFetcherException => new SecurityTxtNoLocationHeaderException($url, 302, $redirects),
+		];
+		$stored = [];
+		foreach ($build as $class => $exception) {
+			$without = $exception(new SecurityTxtRedirects())->jsonSerialize()['params'];
+			$with = $exception($redirects)->jsonSerialize()['params'];
+			$stored[$class] = [is_array($without) ? count($without) : null, is_array($with) ? end($with) : null];
+		}
+		Assert::same([
+			SecurityTxtHostNotFoundException::class => [2, ['https://a.example/']],
+			SecurityTxtHostIpAddressNotFoundException::class => [2, ['https://a.example/']],
+			SecurityTxtHostIpAddressNotPublicException::class => [3, ['https://a.example/']],
+			SecurityTxtHostIpAddressInvalidException::class => [4, ['https://a.example/']],
+			SecurityTxtOnlyIpv6HostButIpv6DisabledException::class => [3, ['https://a.example/']],
+			SecurityTxtNoLocationHeaderException::class => [2, ['https://a.example/']],
+		], $stored);
 	}
 
 

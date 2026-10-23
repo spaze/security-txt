@@ -15,8 +15,10 @@ use ReflectionMethod;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
@@ -1153,7 +1155,80 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $dnsProvider, $this->ipAddressValidator);
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetch(new Url('https://example.com/'));
-		}, SecurityTxtHostIpAddressNotPublicException::class, 'Host example.net resolves to a non-public IP address 127.0.0.1');
+		}, SecurityTxtHostIpAddressNotPublicException::class, 'Host example.net resolves to a non-public IP address 127.0.0.1 (redirects: https://example.com/.well-known/security.txt → https://example.net/foo)');
+	}
+
+
+	/**
+	 * A redirect is how a check reaches a host the caller never named, a missing slash turning `https://example.cz/.well-known/` into the host `example.cz.well-known` for
+	 * one, so whatever goes wrong with that host is reported with the chain that led to it. The DNS provider is asked about one URL and is not told the chain.
+	 */
+	public function testAHostReachedByRedirectNamesTheChain(): void
+	{
+		$hosts = [
+			'a host that does not resolve' => [null, false],
+			'a host with no address' => [new SecurityTxtDnsRecords(null, null), false],
+			'a host with only an IPv6 address, IPv6 disabled' => [new SecurityTxtDnsRecords(null, '2001:db8::1'), true],
+			'a host with an invalid address' => [new SecurityTxtDnsRecords(null, '1.2.3.4'), false],
+			'a host with a non-public address' => [new SecurityTxtDnsRecords('127.0.0.1', null), false],
+			'a host with a NAT64 address of a non-public one' => [new SecurityTxtDnsRecords(null, '64:ff9b::7f00:1'), false],
+			'a host with a NAT64 local-use address' => [new SecurityTxtDnsRecords(null, '64:ff9b:1::a9fe:a9fe'), false],
+		];
+		$reported = [];
+		foreach ($hosts as $name => [$records, $noIpv6]) {
+			$httpClient = $this->getRoutedHttpClient([
+				'https://start.example/.well-known/security.txt' => new SecurityTxtFetcherResponse(301, ['location' => 'https://elsewhere.example.well-known/security.txt'], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			]);
+			$dnsProvider = new class ($records) implements SecurityTxtDnsProvider {
+
+				public function __construct(private readonly ?SecurityTxtDnsRecords $records)
+				{
+				}
+
+
+				#[Override]
+				public function getRecords(Url $url, SecurityTxtHost $host): SecurityTxtDnsRecords
+				{
+					if ($host->getAscii() === 'start.example') {
+						return new SecurityTxtDnsRecords('1.1.1.0', null);
+					}
+					return $this->records ?? throw new SecurityTxtHostNotFoundException($url, $host);
+				}
+
+			};
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $dnsProvider, $this->ipAddressValidator);
+			$exception = Assert::throws(function () use ($fetcher, $noIpv6): void {
+				$fetcher->fetch(new Url('https://start.example/'), noIpv6: $noIpv6);
+			}, SecurityTxtFetcherException::class);
+			assert($exception instanceof SecurityTxtFetcherException);
+			$reported[$name] = [$exception::class, $exception->getRedirects()->toStrings(), $exception->getPrevious() === null ? null : $exception->getPrevious()::class];
+		}
+		$chain = ['https://start.example/.well-known/security.txt', 'https://elsewhere.example.well-known/security.txt'];
+		Assert::same([
+			// The provider's own exception is kept as the previous one
+			'a host that does not resolve' => [SecurityTxtHostNotFoundException::class, $chain, SecurityTxtHostNotFoundException::class],
+			'a host with no address' => [SecurityTxtHostIpAddressNotFoundException::class, $chain, null],
+			'a host with only an IPv6 address, IPv6 disabled' => [SecurityTxtOnlyIpv6HostButIpv6DisabledException::class, $chain, null],
+			'a host with an invalid address' => [SecurityTxtHostIpAddressInvalidException::class, $chain, null],
+			'a host with a non-public address' => [SecurityTxtHostIpAddressNotPublicException::class, $chain, null],
+			'a host with a NAT64 address of a non-public one' => [SecurityTxtHostIpAddressNotPublicException::class, $chain, null],
+			'a host with a NAT64 local-use address' => [SecurityTxtHostIpAddressNotPublicException::class, $chain, null],
+		], $reported);
+	}
+
+
+	public function testARedirectWithoutLocationNamesTheChain(): void
+	{
+		$httpClient = $this->getRoutedHttpClient([
+			'https://start.example/.well-known/security.txt' => new SecurityTxtFetcherResponse(301, ['location' => 'https://one.example/a'], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'https://one.example/a' => new SecurityTxtFetcherResponse(302, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		]);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$exception = Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'));
+		}, SecurityTxtNoLocationHeaderException::class, 'HTTP response with code 302 is missing a Location header when fetching https://one.example/a (redirects: https://start.example/.well-known/security.txt → https://one.example/a)');
+		assert($exception instanceof SecurityTxtNoLocationHeaderException);
+		Assert::same(['https://start.example/.well-known/security.txt', 'https://one.example/a'], $exception->getRedirects()->toStrings());
 	}
 
 
