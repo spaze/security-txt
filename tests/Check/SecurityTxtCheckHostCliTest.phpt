@@ -98,7 +98,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		$output = ob_get_clean();
 		$expected = "[Info] Parsing security.txt for \u{4F8B}\u{3048}.jp\n"
 			. "[Info] Using https://\u{4F8B}\u{3048}.jp/.well-known/security.txt\n"
-			// The correct value is there to be copied into a file, so it has to read as a URL, percent encoded it would be neither readable nor usable
+			// The correct value is there to be copied into a file, so it has to read as a URL, percent-encoded it would be neither readable nor usable
 			. "[Error] on line 1: If the Contact field indicates a web URI, then it must begin with \"https://\""
 			. " (How to fix: Make sure the Contact field points to an https:// URI, e.g. https://\u{4F8B}\u{3048}.jp/contact)\n"
 			// A URL among the message values reads as itself with the ASCII host alongside, which is what composing the formats is for

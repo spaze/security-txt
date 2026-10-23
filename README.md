@@ -25,6 +25,11 @@ composer require spaze/security-txt
 | 2.x     | PHP 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures           | End of life as of 2.2.2, no further releases |
 | 1.x     | PHP 8.3, 8.4, 8.5<br/>+ optional curl extension to fetch from remote hosts<br/>+ optional gnupg extension to verify signatures | End of life as of 1.0.1, no further releases |
 
+Use PHP 8.5.8 or newer. Before 8.5.8, `Uri\WhatWg\Url` can return a URL whose path starts with up to a kilobyte of leftover memory of the PHP process instead of what was written there.
+It happens when the path reaches 1023 bytes while being parsed and contains one of `"` `<` `>` `[` `]` `^` `` ` `` `{` `|` `}` or a non-ASCII character.
+The fetcher does not follow a redirect to a URL that long, see [Fetching restrictions](#fetching-restrictions), but other code parsing URLs on such PHP is still exposed.
+PHP fixed it in 8.5.8 without a CVE, so a distribution that backports only CVE fixes can still ship the bug under an older version number, as Ubuntu 26.04 does with its PHP 8.5.4.
+
 2.x reached end of life with 2.2.2, which carries every security fix this library had published by then. There will be no further 2.x releases, security or otherwise.
 Nothing holds you on 2.x the way 1.x held people on PHP 8.3: 2.x and 3.x want the same PHP and the same extensions, so only the API is between them.
 
@@ -130,6 +135,7 @@ The file is fetched from hosts you don't control, so the fetcher is restrictive 
 - Fetching always starts at `https://`, whatever scheme you pass in, and any username, password, query and fragment are removed from the URL first.
 - Only `http://` and `https://` are followed, a redirect anywhere else throws `SecurityTxtUrlUnsupportedSchemeException`.
 - Redirects are followed by the library, not by curl, at most 5 by default. Every target goes through the same checks as the original URL.
+- A redirect to a URL longer than 1000 characters is not followed and throws `SecurityTxtRedirectUrlTooLongException`. No `security.txt` needs one, and before PHP 8.5.8 parsing one could put leftover memory of the PHP process into its path, so the `Location` header is measured before it is parsed, and generously: every character that may be percent-encoded counts as three, and a relative one counts with the path it is resolved against.
 - The host is resolved by the library and each address is validated before connecting: private and reserved ranges are rejected, only publicly routable addresses are used. IPv6 addresses are also checked for NAT64, because those embed an IPv4 address the range check can't see: an address with the RFC 6052 well-known prefix (`64:ff9b::/96`) is rejected when the IPv4 it embeds is not public, and the RFC 8215 local-use prefix (`64:ff9b:1::/48`) is rejected as a whole.
 - curl then connects to that validated address, and the response is rejected with `SecurityTxtConnectedToWrongIpAddressException` when it turns out to have talked to a different one.
 - The certificate and the hostname are verified, and the connection times out after 5 seconds, the whole transfer after 10, both configurable, see [Timeouts](#timeouts).
@@ -306,7 +312,8 @@ In general, you’ll need to follow these steps:
 3. Run the `checksecuritytxt.php` script.
 
 GitHub Actions' `ubuntu-24.04` runner (also as `ubuntu-latest` at the time of writing) has PHP 8.3 preinstalled, which no supported version of this library can use: 1.x ran on PHP 8.3 but reached end of life at 1.0.1, so running `checksecuritytxt.php` with nothing else installed means running a version that gets no fixes.
-3.x needs PHP 8.5 or newer, as 2.x did, so use `ubuntu-26.04`, which comes with PHP 8.5, or [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) to install the required PHP version.
+3.x needs PHP 8.5 or newer, as 2.x did, and 8.5.8 or newer is recommended, see [Requirements and supported versions](#requirements-and-supported-versions).
+`ubuntu-26.04` comes with PHP 8.5.4, so use [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) to install a newer one.
 
 But unfortunately the `gnupg` PHP extension is not available on GitHub runners by default so you won't be able to verify the file signatures with just the GitHub-provided PHP.
 If you want to verify signatures you'll need to use [the `setup-php` GitHub action](https://github.com/marketplace/actions/setup-php-action) which can also set up the extension.
@@ -317,7 +324,7 @@ You can use my own checks as a template or for inspiration; see [the `securitytx
 The messages in the exceptions as thrown by this library do not contain any sensitive information and are safe to display to the user using the `getMessage()` method.
 The same goes for the messages of the violations in `SecurityTxtCheckHostResult`, whose `getMessage()` and `getHowToFix()` behave the same way.
 The server-supplied values quoted in them are encoded down to printable ASCII first, with a tab shown as `→`, so a server can't move a terminal's cursor, colour its own text to read like a result, or reverse what follows it with a bidirectional override.
-A value the library knows to be a URL is the exception: it exists only because it parsed, and parsing refuses a host with a control character in it and percent encodes everything after the host, so it is quoted as it reads, internationalized domains included.
+A value the library knows to be a URL is the exception: it exists only because it parsed, and parsing refuses a host with a control character in it and percent-encodes everything after the host, so it is quoted as it reads, internationalized domains included.
 Reading as it is written is the point of that exception, so such a URL keeps whatever script its host is written in: a right-to-left host reorders neutral text around it the way any right-to-left text does, and a host that reads like another one reads like it here too, which no certificate covers for a URL the library never fetches, such as one from a `Canonical` or `Contact` field.
 That covers what a checked host sends, and a result rebuilt from serialized JSON too: the message formats exist only in code, selected by the class name and, for the one violation with a variable reason, by an enum case value, so the JSON can pick a format but cannot supply one, and the values it does supply are encoded the same way.
 `checksecuritytxt.php` prints a violation's values through the very same rule, so what it shows and what a violation's `getMessage()` returns agree.

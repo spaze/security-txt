@@ -128,7 +128,7 @@ final class SecurityTxtIpAddressValidatorTest extends TestCase
 
 
 	/**
-	 * Both of these name the host, and both took it as a string until now, so an internationalized one was percent encoded here while the same host read as itself in every
+	 * Both of these name the host, and both took it as a string until now, so an internationalized one was percent-encoded here while the same host read as itself in every
 	 * other fetch failure. The address is what these are about, but the host is what a reader recognises.
 	 *
 	 * @param class-string<SecurityTxtFetcherException> $class
