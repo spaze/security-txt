@@ -390,7 +390,6 @@ final class SecurityTxtFetcher
 			// Where the redirect led rather than the header that said so: a `Location` can be relative, or spell a host in punycode, and this is a record of the URLs a check
 			// went to and not of what a server typed
 			$this->redirects[$originalUrlString] = ($this->redirects[$originalUrlString] ?? new SecurityTxtRedirects())->withRedirect($locationUrl);
-			$finalUrl = $locationUrl;
 			if ($this->redirects[$originalUrlString]->count() > $maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrlString], $maxAllowedRedirects);
 			}
@@ -398,7 +397,9 @@ final class SecurityTxtFetcher
 			// a hostname that will not parse, losing the redirect chain that says where the host sent us. Settling comes after it for the same reason
 			$fetcherUrl = new SecurityTxtFetcherUrl($locationUrl, $this->getRedirects($originalUrl));
 			$settledUrl = $this->urlParser->normalize($fetcherUrl->getUrl());
-			return $this->getResponse(new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl)), new SecurityTxtHost($settledUrl), $originalUrl, $settledUrl, $noIpv6, $maxAllowedRedirects);
+			// The caller's reference, passed on, so after any number of hops it ends as the URL that answered
+			$finalUrl = $settledUrl;
+			return $this->getResponse(new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl)), new SecurityTxtHost($settledUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 	}
 

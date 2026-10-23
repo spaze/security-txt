@@ -394,6 +394,76 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
+	 * Answers by URL, a 404 for anything not listed, so a test can lay out a whole redirect chain.
+	 *
+	 * @param array<string, SecurityTxtFetcherResponse> $responses Keyed by the ASCII URL requested
+	 */
+	private function getRoutedHttpClient(array $responses): SecurityTxtFetcherHttpClient
+	{
+		return new class ($responses) implements SecurityTxtFetcherHttpClient {
+
+			/**
+			 * @param array<string, SecurityTxtFetcherResponse> $responses
+			 */
+			public function __construct(private readonly array $responses)
+			{
+			}
+
+
+			#[Override]
+			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+			{
+				return $this->responses[$url->getUrl()->toAsciiString()] ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+			}
+
+		};
+	}
+
+
+	/**
+	 * The final URL is where the file was read, so it decides whether the file came over HTTPS and what `Canonical` is compared with. It has to be the last hop as fetched,
+	 * whatever the number of hops, and settled like every other URL a check goes to.
+	 */
+	public function testTheFinalUrlIsTheLastHop(): void
+	{
+		$redirect = fn(string $location): SecurityTxtFetcherResponse => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$start = 'https://start.example/.well-known/security.txt';
+		$chains = [
+			'one redirect' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $file],
+			'two redirects' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('https://two.example/b'), 'https://two.example/b' => $file],
+			'two redirects, the second to HTTP' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('http://two.example/b'), 'http://two.example/b' => $file],
+			'a redirect to a host with an escaped capital' => [$start => $redirect('https://tw%4F.example/b'), 'https://two.example/b' => $file],
+			'two redirects to a URL that is not found' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('https://two.example/b')],
+		];
+		$reported = [];
+		foreach ($chains as $name => $responses) {
+			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$onFinalUrl = $onUrlNotFound = [];
+			$fetcher->addOnFinalUrl(function (Url $url) use (&$onFinalUrl): void {
+				$onFinalUrl[] = $url->toAsciiString();
+			});
+			$fetcher->addOnUrlNotFound(function (Url $url) use (&$onUrlNotFound): void {
+				$onUrlNotFound[] = $url->toAsciiString();
+			});
+			try {
+				$finalUrl = $fetcher->fetch(new Url('https://start.example/'))->getFinalUrl()->toAsciiString();
+			} catch (SecurityTxtNotFoundException) {
+				$finalUrl = null;
+			}
+			$reported[$name] = [$finalUrl, $onFinalUrl, $onUrlNotFound];
+		}
+		Assert::same([
+			'one redirect' => ['https://one.example/a', ['https://one.example/a'], ['https://start.example/security.txt']],
+			'two redirects' => ['https://two.example/b', ['https://two.example/b'], ['https://start.example/security.txt']],
+			'two redirects, the second to HTTP' => ['http://two.example/b', ['http://two.example/b'], ['https://start.example/security.txt']],
+			'a redirect to a host with an escaped capital' => ['https://two.example/b', ['https://two.example/b'], ['https://start.example/security.txt']],
+			'two redirects to a URL that is not found' => [null, [], ['https://two.example/b', 'https://start.example/security.txt']],
+		], $reported);
+	}
+
+
+	/**
 	 * The header a content type violation reports came from the response, and after a redirect that response is at the final URL, not the one the check was built from. Naming
 	 * the constructed one puts a URL in the message that never sent the header, one line under the callback that says where the file was actually read.
 	 */
