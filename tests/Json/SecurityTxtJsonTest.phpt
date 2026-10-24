@@ -224,7 +224,7 @@ final class SecurityTxtJsonTest extends TestCase
 		}
 		return match ($type) {
 			'string', '?string' => $string,
-			'int' => 303,
+			'int', '?int' => 303,
 			'array' => [$string],
 			// A URL and a host are spelled onto the wire by the base and read back by their declared type, the way a violation the library builds one for is replayed. Both
 			// nullable spellings too, since `getName()` strips the `?` where it matters and a violation naming a URL that may be absent is the natural shape for one

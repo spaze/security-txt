@@ -151,6 +151,36 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 	}
 
 
+	public function testCheckVerboseNamesTheCodeOfALocationWithoutAFile(): void
+	{
+		$cases = [
+			'verbose, 403' => [403, true],
+			'verbose, 404' => [404, true],
+			'verbose, 410' => [410, true],
+			'not verbose, 403' => [403, false],
+		];
+		$printed = [];
+		foreach ($cases as $name => [$code, $verbose]) {
+			$httpClient = $this->getHttpClient(
+				new SecurityTxtFetcherResponse($code, [], 'blocked', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+				new SecurityTxtFetcherResponse(404, [], 'yeah nah', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			);
+			ob_start();
+			$this->getCheckHostCli($httpClient)->check(new Url('https://example.com'), null, true, $verbose, true, true, true, false, 'Help I need some<body>');
+			$output = ob_get_clean();
+			assert(is_string($output));
+			// Only what is said about the /.well-known/ location answering, not the error that ends the check
+			$printed[$name] = array_values(array_filter(explode("\n", $output), fn(string $line): bool => str_contains($line, 'Not found') || str_contains($line, 'answered with')));
+		}
+		Assert::same([
+			'verbose, 403' => ["\e[1;90m[Info]\e[0m \e[1mhttps://example.com/.well-known/security.txt\e[0m answered with HTTP code 403", "\e[1;90m[Info]\e[0m Not found \e[1mhttps://example.com/security.txt\e[0m"],
+			'verbose, 404' => ["\e[1;90m[Info]\e[0m Not found \e[1mhttps://example.com/.well-known/security.txt\e[0m", "\e[1;90m[Info]\e[0m Not found \e[1mhttps://example.com/security.txt\e[0m"],
+			'verbose, 410' => ["\e[1;90m[Info]\e[0m Not found \e[1mhttps://example.com/.well-known/security.txt\e[0m", "\e[1;90m[Info]\e[0m Not found \e[1mhttps://example.com/security.txt\e[0m"],
+			'not verbose, 403' => [],
+		], $printed);
+	}
+
+
 	public function testCheckExpiresSoonStrictMode(): void
 	{
 		$expires = (new DateTimeImmutable('+5 days 10 minutes'))->format(DATE_RFC3339);

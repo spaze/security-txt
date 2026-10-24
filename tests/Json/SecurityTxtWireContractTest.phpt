@@ -125,7 +125,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignedButNoCanonical' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignedFileMalformed' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtTopLevelDiffers' => '(string $wellKnownContents, string $topLevelContents)',
-			'Spaze\\SecurityTxt\\Violations\\SecurityTxtTopLevelPathOnly' => '()',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtTopLevelPathOnly' => '(?int $wellKnownHttpCode = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtUnknownField' => '(string $fieldName, string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtWellKnownPathOnly' => '()',
 		];

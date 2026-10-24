@@ -210,15 +210,16 @@ final class SecurityTxtCheckHostTest extends TestCase
 
 	public function testCheckHostNotFound(): void
 	{
-		$checkHost = $this->getCheckHost(404, [], 'not found');
-		$onUrlNotFoundCalled = false;
-		$checkHost->addOnUrlNotFound(function () use (&$onUrlNotFoundCalled): void {
-			$onUrlNotFoundCalled = true;
+		$checkHost = $this->getCheckHost(410, [], 'gone');
+		$notFound = [];
+		$checkHost->addOnUrlNotFound(function (Url $url, int $httpCode) use (&$notFound): void {
+			$notFound[] = "{$httpCode} {$url->toAsciiString()}";
 		});
 		Assert::throws(function () use ($checkHost): void {
 			$checkHost->check(new Url('https://example.com'));
 		}, SecurityTxtNotFoundException::class);
-		Assert::true($onUrlNotFoundCalled);
+		// The code is passed on as the location answered it
+		Assert::same(['410 https://example.com/.well-known/security.txt', '410 https://example.com/security.txt'], $notFound);
 	}
 
 

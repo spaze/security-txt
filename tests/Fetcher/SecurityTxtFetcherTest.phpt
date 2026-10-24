@@ -496,6 +496,48 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
+	 * A firewall or a bot protection answering for /.well-known/security.txt is a different fix than a file in the wrong place, so the error says what that location answered
+	 * when it was an error other than one saying there is no file there. The callback for a location without a file is told the code too.
+	 */
+	public function testOnlyTheTopLevelFileSaysWhatTheWellKnownLocationAnswered(): void
+	{
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$answers = [
+			'404' => new SecurityTxtFetcherResponse(404, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'410' => new SecurityTxtFetcherResponse(410, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'400' => new SecurityTxtFetcherResponse(400, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'403' => new SecurityTxtFetcherResponse(403, ['content-type' => 'text/html'], '<html><body>Blocked</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'500' => new SecurityTxtFetcherResponse(500, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'an HTML page with 200' => new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<html><body>Not here</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		];
+		$reported = [];
+		foreach ($answers as $name => $answer) {
+			$responses = ['https://start.example/.well-known/security.txt' => $answer, 'https://start.example/security.txt' => $file];
+			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$notFound = [];
+			$fetcher->addOnUrlNotFound(function (Url $url, int $httpCode) use (&$notFound): void {
+				$notFound[] = "{$httpCode} {$url->toAsciiString()}";
+			});
+			$errors = $fetcher->fetch(new Url('https://start.example/'))->getErrors();
+			$reported[$name] = [array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation->getMessage(), $violation->getHowToFix()], $errors), $notFound];
+		}
+		$notFound = ["security.txt wasn't found under the /.well-known/ path", 'Move the security.txt file from the top-level location under the /.well-known/ path and redirect /security.txt to /.well-known/security.txt'];
+		$answered = fn(int $code): array => [
+			"/.well-known/security.txt answered with HTTP code {$code}, only the top-level security.txt was found",
+			'Make /.well-known/security.txt available to everyone, a firewall or a bot protection may be what answers instead, and redirect /security.txt to it',
+		];
+		Assert::same([
+			'404' => [[$notFound], ['404 https://start.example/.well-known/security.txt']],
+			'410' => [[$notFound], ['410 https://start.example/.well-known/security.txt']],
+			'400' => [[$answered(400)], ['400 https://start.example/.well-known/security.txt']],
+			'403' => [[$answered(403)], ['403 https://start.example/.well-known/security.txt']],
+			'500' => [[$answered(500)], ['500 https://start.example/.well-known/security.txt']],
+			'an HTML page with 200' => [[$notFound], []],
+		], $reported);
+	}
+
+
+	/**
 	 * The final URL is where the file was read, so it decides whether the file came over HTTPS and what `Canonical` is compared with. It has to be the last hop as fetched,
 	 * whatever the number of hops, and settled like every other URL a check goes to.
 	 */

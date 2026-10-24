@@ -40,7 +40,7 @@ final class SecurityTxtCheckHost
 	/** @var list<callable(Url, Url): void> */
 	private array $onRedirect = [];
 
-	/** @var list<callable(Url): void> */
+	/** @var list<callable(Url, int): void> */
 	private array $onUrlNotFound = [];
 
 	/** @var list<callable(positive-int, DateTimeImmutable): void> */
@@ -171,8 +171,8 @@ final class SecurityTxtCheckHost
 			},
 		);
 		$this->fetcher->addOnUrlNotFound(
-			function (Url $url): void {
-				$this->callOnCallback($this->onUrlNotFound, $url);
+			function (Url $url, int $httpCode): void {
+				$this->callOnCallback($this->onUrlNotFound, $url, $httpCode);
 			},
 		);
 	}
@@ -226,7 +226,7 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(Url $url): void $onUrlNotFound
+	 * @param callable(Url $url, int $httpCode): void $onUrlNotFound
 	 */
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{

@@ -57,7 +57,7 @@ final class SecurityTxtFetcher
 	/** @var list<callable(Url, Url): void> */
 	private array $onRedirect = [];
 
-	/** @var list<callable(Url): void> */
+	/** @var list<callable(Url, int): void> */
 	private array $onUrlNotFound = [];
 
 	/** @var non-negative-int */
@@ -158,7 +158,7 @@ final class SecurityTxtFetcher
 			$ipAddressType = $response->getIpAddressType();
 			$httpCode = $response->getHttpCode();
 		} catch (SecurityTxtUrlNotFoundException $e) {
-			$this->callOnCallback($this->onUrlNotFound, $finalUrl);
+			$this->callOnCallback($this->onUrlNotFound, $finalUrl, $e->getCode());
 			$response = null;
 			$ipAddress = $e->getIpAddress();
 			$ipAddressType = $e->getIpAddressType();
@@ -271,7 +271,9 @@ final class SecurityTxtFetcher
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} elseif ($topLevel instanceof SecurityTxtFetcherFetchHostResult && $topLevelContents !== null) {
-			$errors[] = new SecurityTxtTopLevelPathOnly();
+			// A code other than one saying there is no file there, a 403 from a firewall say, is what needs fixing more than where the file is
+			$wellKnownHttpCode = $wellKnown instanceof SecurityTxtFetcherFetchHostResult ? $wellKnown->getHttpCode() : null;
+			$errors[] = new SecurityTxtTopLevelPathOnly($wellKnownHttpCode !== null && $wellKnownHttpCode >= 400 && $wellKnownHttpCode !== 404 && $wellKnownHttpCode !== 410 ? $wellKnownHttpCode : null);
 			$result = $topLevel;
 			$contents = $topLevelContents;
 		} else {
@@ -345,7 +347,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param list<callable> $onCallbacks
 	 */
-	private function callOnCallback(array $onCallbacks, Url ...$params): void
+	private function callOnCallback(array $onCallbacks, Url|int ...$params): void
 	{
 		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
@@ -381,7 +383,7 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @param callable(Url $url): void $onUrlNotFound
+	 * @param callable(Url $url, int $httpCode): void $onUrlNotFound
 	 */
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
