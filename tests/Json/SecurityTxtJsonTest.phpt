@@ -17,6 +17,7 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use Spaze\SecurityTxt\Check\Exceptions\SecurityTxtCannotParseJsonException;
 use Spaze\SecurityTxt\Check\SecurityTxtCheckHostResult;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlContentEncodingException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
@@ -209,9 +210,9 @@ final class SecurityTxtJsonTest extends TestCase
 
 
 	/**
-	 * @return string|int|list<string>|BackedEnum|Url|SecurityTxtHost
+	 * @return string|int|list<string>|BackedEnum|Url|SecurityTxtHost|SecurityTxtFetcherException
 	 */
-	private function getConstructorParamValue(string $class, ReflectionParameter $parameter): string|int|array|BackedEnum|Url|SecurityTxtHost
+	private function getConstructorParamValue(string $class, ReflectionParameter $parameter): string|int|array|BackedEnum|Url|SecurityTxtHost|SecurityTxtFetcherException
 	{
 		// A field name is used for all strings because some violations read the value as a field name, and the constructor doesn't say which ones
 		$string = SecurityTxtField::Contact->value;
@@ -230,6 +231,14 @@ final class SecurityTxtJsonTest extends TestCase
 			// nullable spellings too, since `getName()` strips the `?` where it matters and a violation naming a URL that may be absent is the natural shape for one
 			Url::class, '?' . Url::class => new Url('https://example.com/security.txt'),
 			SecurityTxtHost::class, '?' . SecurityTxtHost::class => new SecurityTxtHost(new Url("https://h\u{E1}\u{10D}ky.example/")),
+			// An exception is stored as the class and the call that built it, and comes back as itself, its URLs and host reading the same either side
+			'?' . SecurityTxtFetcherException::class => new SecurityTxtCannotOpenUrlContentEncodingException(
+				new Url("https://h\u{E1}\u{10D}ky.example/security.txt"),
+				new SecurityTxtRedirects('https://example.com/security.txt'),
+				'192.0.2.1',
+				SecurityTxtIpAddressType::V4,
+				"\xFF gzip",
+			),
 			// Any other object would reach `json_encode()` with nothing public on it and be stored as `{}`, which no violation could be recreated from
 			default => throw new LogicException(sprintf('%s::__construct() has the $%s param of an unsupported type %s', $class, $parameter->getName(), $type)),
 		};
@@ -245,7 +254,11 @@ final class SecurityTxtJsonTest extends TestCase
 		assert(is_string($encoded));
 		$decoded = json_decode($encoded, true);
 		assert(is_array($decoded));
-		Assert::equal([$violation], $this->securityTxtJson->createViolationsFromJsonValues(array_values($decoded)));
+		$replayed = $this->securityTxtJson->createViolationsFromJsonValues(array_values($decoded));
+		// Compared by what it stores and says, which is everything a violation answers: one that carries an exception gets one the decoder built, with its own file, line and
+		// trace, so the objects themselves cannot be equal
+		Assert::same($encoded, json_encode($replayed));
+		Assert::same([$violation->getMessage(), $violation->getHowToFix()], [$replayed[0]->getMessage(), $replayed[0]->getHowToFix()]);
 	}
 
 
@@ -666,6 +679,35 @@ final class SecurityTxtJsonTest extends TestCase
 				'error' => ['class' => SecurityTxtCannotParseHostnameException::class, 'paramsBase64' => ['not Base64!']],
 			]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > paramsBase64 is not Base64 as this library writes it');
+	}
+
+
+	/**
+	 * An exception a violation carries is refused the way the one a result failed with is, but with its keys named as they are stored, without an `error` key around them.
+	 */
+	public function testCreateViolationsFromJsonValuesRefusesAnExceptionItCannotRebuild(): void
+	{
+		$exceptions = [
+			'no class' => ['params' => []],
+			'not an exception' => ['class' => DateInterval::class, 'params' => []],
+			'no params' => ['class' => SecurityTxtCannotParseHostnameException::class],
+			'both keys' => ['class' => SecurityTxtCannotParseHostnameException::class, 'params' => ['a'], 'paramsBase64' => ['YQ==']],
+			'not Base64' => ['class' => SecurityTxtCannotParseHostnameException::class, 'paramsBase64' => ['not Base64!']],
+		];
+		$refused = [];
+		foreach ($exceptions as $name => $exception) {
+			$e = Assert::throws(function () use ($exception): void {
+				$this->securityTxtJson->createViolationsFromJsonValues([['class' => SecurityTxtTopLevelPathOnly::class, 'params' => [null, $exception]]]);
+			}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtTopLevelPathOnly::class);
+			$refused[$name] = $e?->getPrevious()?->getMessage();
+		}
+		Assert::same([
+			'no class' => 'Cannot parse JSON: class is missing, not a string or not an existing class',
+			'not an exception' => sprintf('Cannot parse JSON: The exception class %s is not a subclass of %s', DateInterval::class, SecurityTxtFetcherException::class),
+			'no params' => 'Cannot parse JSON: params is missing or not an array',
+			'both keys' => 'Cannot parse JSON: params and paramsBase64 are both set',
+			'not Base64' => 'Cannot parse JSON: paramsBase64 is not Base64 as this library writes it',
+		], $refused);
 	}
 
 

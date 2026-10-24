@@ -142,6 +142,13 @@ final class SecurityTxtCheckHostCli
 				}
 			},
 		);
+		$this->checkHost->addOnUrlFailed(
+			function (SecurityTxtFetcherException $exception): void {
+				if ($this->verbose) {
+					$this->consolePrinter->info($exception->getMessageFormat(), ...$exception->getMessageValues());
+				}
+			},
+		);
 		$this->checkHost->addOnFinalUrl(
 			function (Url $url): void {
 				$this->consolePrinter->info('Using <b>%s</b>', $url);

@@ -12,6 +12,7 @@ use BackedEnum;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlContentEncodingException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
@@ -126,9 +127,9 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignedButNoCanonical' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignedFileMalformed' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtTopLevelDiffers' => '(string $wellKnownContents, string $topLevelContents)',
-			'Spaze\\SecurityTxt\\Violations\\SecurityTxtTopLevelPathOnly' => '(?int $wellKnownHttpCode = NULL)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtTopLevelPathOnly' => '(?int $wellKnownHttpCode = NULL, ?Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtFetcherException $wellKnownException = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtUnknownField' => '(string $fieldName, string $line)',
-			'Spaze\\SecurityTxt\\Violations\\SecurityTxtWellKnownPathOnly' => '()',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtWellKnownPathOnly' => '(?Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtFetcherException $topLevelException = NULL)',
 		];
 	}
 
@@ -362,6 +363,14 @@ final class SecurityTxtWireContractTest extends TestCase
 				// A chain of one, in the spelling a stored result carries, which is what a replay hands back and what a message has to read the same way either side of one
 				$name === SecurityTxtRedirects::class => new SecurityTxtRedirects("https://{$urlHost}/redirected"),
 				$name === Url::class => new Url("https://{$urlHost}/{$parameter->getName()}"),
+				// One that carries text, so the call it is stored as goes under `paramsBase64` inside the one around it, too
+				$name === SecurityTxtFetcherException::class => new SecurityTxtCannotOpenUrlContentEncodingException(
+					new Url("https://{$urlHost}/{$parameter->getName()}"),
+					new SecurityTxtRedirects("https://{$urlHost}/redirected"),
+					'192.0.2.1',
+					SecurityTxtIpAddressType::V4,
+					$stringPrefix . 'gzip',
+				),
 				is_subclass_of($name, BackedEnum::class) => $name::cases()[0],
 				$name === 'int' => 400 + $position,
 				$name === 'array' => [$stringPrefix . "https://example.com/{$parameter->getName()}"],

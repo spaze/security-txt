@@ -61,6 +61,9 @@ final class SecurityTxtFetcher
 	/** @var list<callable(Url, int): void> */
 	private array $onUrlNotFound = [];
 
+	/** @var list<callable(SecurityTxtFetcherException): void> */
+	private array $onUrlFailed = [];
+
 	/** @var non-negative-int */
 	private readonly int $maxAllowedRedirects;
 
@@ -262,9 +265,12 @@ final class SecurityTxtFetcher
 		$wellKnownContents = $wellKnown instanceof SecurityTxtFetcherException || $wellKnown->isRegularHtmlPage() || $wellKnown->isTruncated() ? null : $wellKnown->getContents();
 		$topLevelContents = $topLevel instanceof SecurityTxtFetcherException || $topLevel->isRegularHtmlPage() || $topLevel->isTruncated() ? null : $topLevel->getContents();
 		if ($wellKnown instanceof SecurityTxtFetcherFetchHostResult && $wellKnownContents !== null) {
+			if ($topLevel instanceof SecurityTxtFetcherException) {
+				$this->callOnCallback($this->onUrlFailed, $topLevel);
+			}
 			if ($topLevel instanceof SecurityTxtFetcherException || $topLevelContents === null) {
 				if ($requireTopLevelLocation) {
-					$warnings[] = new SecurityTxtWellKnownPathOnly();
+					$warnings[] = new SecurityTxtWellKnownPathOnly($topLevel instanceof SecurityTxtFetcherException ? $topLevel : null);
 				}
 			} elseif ($wellKnownContents !== $topLevelContents) {
 				// `equals()` ignores the fragment unless told otherwise, and a host picks the fragment of a final URL through its `Location` header
@@ -275,9 +281,15 @@ final class SecurityTxtFetcher
 			$result = $wellKnown;
 			$contents = $wellKnownContents;
 		} elseif ($topLevel instanceof SecurityTxtFetcherFetchHostResult && $topLevelContents !== null) {
+			if ($wellKnown instanceof SecurityTxtFetcherException) {
+				$this->callOnCallback($this->onUrlFailed, $wellKnown);
+			}
 			// A code other than one saying there is no file there, a 403 from a firewall say, is what needs fixing more than where the file is
 			$wellKnownHttpCode = $wellKnown instanceof SecurityTxtFetcherFetchHostResult ? $wellKnown->getHttpCode() : null;
-			$errors[] = new SecurityTxtTopLevelPathOnly($wellKnownHttpCode !== null && $wellKnownHttpCode >= 400 && $wellKnownHttpCode !== 404 && $wellKnownHttpCode !== 410 ? $wellKnownHttpCode : null);
+			$errors[] = new SecurityTxtTopLevelPathOnly(
+				$wellKnownHttpCode !== null && $wellKnownHttpCode >= 400 && $wellKnownHttpCode !== 404 && $wellKnownHttpCode !== 410 ? $wellKnownHttpCode : null,
+				$wellKnown instanceof SecurityTxtFetcherException ? $wellKnown : null,
+			);
 			$result = $topLevel;
 			$contents = $topLevelContents;
 		} else {
@@ -351,7 +363,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param list<callable> $onCallbacks
 	 */
-	private function callOnCallback(array $onCallbacks, Url|int ...$params): void
+	private function callOnCallback(array $onCallbacks, Url|int|SecurityTxtFetcherException ...$params): void
 	{
 		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
@@ -392,6 +404,17 @@ final class SecurityTxtFetcher
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
 		$this->onUrlNotFound[] = $onUrlNotFound;
+	}
+
+
+	/**
+	 * Called only when the file at the other location is used, a failure that leaves no file anywhere is thrown instead
+	 *
+	 * @param callable(SecurityTxtFetcherException $exception): void $onUrlFailed
+	 */
+	public function addOnUrlFailed(callable $onUrlFailed): void
+	{
+		$this->onUrlFailed[] = $onUrlFailed;
 	}
 
 

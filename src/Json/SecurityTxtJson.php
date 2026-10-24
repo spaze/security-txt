@@ -465,20 +465,28 @@ final readonly class SecurityTxtJson
 	 */
 	public function createFetcherExceptionFromJsonValues(array $values): SecurityTxtFetcherException
 	{
-		if (
-			!isset($values['error'])
-			|| !is_array($values['error'])
-			|| !isset($values['error']['class'])
-			|| !is_string($values['error']['class'])
-			|| !class_exists($values['error']['class'])
-		) {
+		if (!isset($values['error']) || !is_array($values['error'])) {
 			throw new SecurityTxtCannotParseJsonException('error > class is missing, not a string or not an existing class');
 		}
-		$params = $this->createStoredEntry($values['error'], 'params', 'error > ');
-		if (!is_array($params)) {
-			throw new SecurityTxtCannotParseJsonException('error > params is missing or not an array');
+		return $this->createFetcherException($values['error'], 'error > ');
+	}
+
+
+	/**
+	 * @param array<array-key, mixed> $error
+	 * @param string $path What precedes a key in a message, `error > ` for the exception a result failed with, nothing for one a violation carries in its params
+	 * @throws SecurityTxtCannotParseJsonException
+	 */
+	private function createFetcherException(array $error, string $path): SecurityTxtFetcherException
+	{
+		if (!isset($error['class']) || !is_string($error['class']) || !class_exists($error['class'])) {
+			throw new SecurityTxtCannotParseJsonException("{$path}class is missing, not a string or not an existing class");
 		}
-		$class = $values['error']['class'];
+		$params = $this->createStoredEntry($error, 'params', $path);
+		if (!is_array($params)) {
+			throw new SecurityTxtCannotParseJsonException("{$path}params is missing or not an array");
+		}
+		$class = $error['class'];
 		if (!is_subclass_of($class, SecurityTxtFetcherException::class)) {
 			throw new SecurityTxtCannotParseJsonException(sprintf('The exception class %s is not a subclass of %s', $class, SecurityTxtFetcherException::class));
 		}
@@ -589,6 +597,8 @@ final readonly class SecurityTxtJson
 				$value = new SecurityTxtRedirects(...$value);
 			} elseif ($type !== null && is_subclass_of($type, BackedEnum::class) && (is_int($value) || is_string($value))) {
 				$value = $type::from($value);
+			} elseif ($type !== null && is_a($type, SecurityTxtFetcherException::class, true) && is_array($value)) {
+				$value = $this->createFetcherException($value, '');
 			}
 			$arguments[$key] = $value;
 		}

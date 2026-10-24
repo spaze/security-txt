@@ -442,7 +442,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	/**
 	 * A location that fails, by a redirect loop or a transfer that does not complete, has no file there, so the file at the other location is what gets checked. Without a
 	 * file anywhere the failure is what gets reported, the /.well-known/ one's first, since RFC 9116 has that location used and the top-level one only for legacy
-	 * compatibility.
+	 * compatibility. The callback for a failure is called only when it is swallowed, a thrown one reports itself.
 	 */
 	public function testAFailingLocationHasNoFileThere(): void
 	{
@@ -466,9 +466,13 @@ final class SecurityTxtFetcherTest extends TestCase
 			'a /.well-known/ redirect loop and nothing at the top level' => [[$wellKnown => $redirect($wellKnown)], false],
 			'both locations in a redirect loop' => [[$wellKnown => $redirect($wellKnown), $topLevel => $redirect($topLevel)], false],
 		];
-		$reported = [];
+		$reported = $messages = $failed = [];
 		foreach ($locations as $name => [$responses, $requireTopLevelLocation]) {
 			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$failed[$name] = [];
+			$fetcher->addOnUrlFailed(function (SecurityTxtFetcherException $e) use (&$failed, $name): void {
+				$failed[$name][] = [$e::class, $e->getUrl()?->toAsciiString()];
+			});
 			try {
 				$result = $fetcher->fetch(new Url('https://start.example/'), $requireTopLevelLocation);
 				$reported[$name] = [
@@ -476,6 +480,7 @@ final class SecurityTxtFetcherTest extends TestCase
 					array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $result->getErrors()),
 					array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $result->getWarnings()),
 				];
+				$messages[$name] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), [...$result->getErrors(), ...$result->getWarnings()]);
 			} catch (SecurityTxtFetcherException $e) {
 				$reported[$name] = [$e::class, $e->getUrl()?->toAsciiString()];
 			}
@@ -492,6 +497,25 @@ final class SecurityTxtFetcherTest extends TestCase
 			'a /.well-known/ redirect loop and nothing at the top level' => [SecurityTxtRedirectLoopException::class, $wellKnown],
 			'both locations in a redirect loop' => [SecurityTxtRedirectLoopException::class, $wellKnown],
 		], $reported);
+		// The violation for a location that has no file says why, when it was a failure
+		Assert::same([
+			"security.txt wasn't found under the /.well-known/ path: Can't read {$wellKnown}, the redirects go in a loop (redirects: {$wellKnown} → {$wellKnown})",
+		], $messages['a /.well-known/ redirect loop and the file at the top level'] ?? null);
+		Assert::same([
+			"security.txt not found at the top-level path: Can't read {$topLevel}, the redirects go in a loop (redirects: {$topLevel} → {$topLevel})",
+		], $messages['a top-level redirect loop, the top-level location required'] ?? null);
+		Assert::same([
+			'a top-level redirect loop' => [[SecurityTxtRedirectLoopException::class, $topLevel]],
+			'a top-level transfer that fails' => [[SecurityTxtCannotOpenUrlException::class, $topLevel]],
+			'a top-level connection to the wrong address' => [[SecurityTxtConnectedToWrongIpAddressException::class, $topLevel]],
+			'a top-level redirect loop, the top-level location required' => [[SecurityTxtRedirectLoopException::class, $topLevel]],
+			'a top-level redirect loop and no file at all' => [],
+			'a top-level redirect loop and an HTML page at /.well-known/' => [],
+			'a top-level redirect loop and a truncated file at /.well-known/' => [],
+			'a /.well-known/ redirect loop and the file at the top level' => [[SecurityTxtRedirectLoopException::class, $wellKnown]],
+			'a /.well-known/ redirect loop and nothing at the top level' => [],
+			'both locations in a redirect loop' => [],
+		], $failed);
 	}
 
 

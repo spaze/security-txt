@@ -3,15 +3,23 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+
 final class SecurityTxtTopLevelPathOnly extends SecurityTxtSpecViolation
 {
 
 	/**
 	 * @param int|null $wellKnownHttpCode What the /.well-known/ location answered with, when that was an error other than one saying there is no file there
+	 * @param SecurityTxtFetcherException|null $wellKnownException Why the /.well-known/ location could not be read at all
 	 */
-	public function __construct(?int $wellKnownHttpCode = null)
+	public function __construct(?int $wellKnownHttpCode = null, ?SecurityTxtFetcherException $wellKnownException = null)
 	{
-		if ($wellKnownHttpCode === null) {
+		if ($wellKnownException !== null) {
+			$format = "%s wasn't found under the %s path: " . $wellKnownException->getMessageFormat();
+			$values = ['security.txt', '/.well-known/', ...$wellKnownException->getMessageValues()];
+			$howToFixFormat = 'Fix what keeps %s from being read, and redirect %s to it';
+			$howToFixValues = ['/.well-known/security.txt', '/security.txt'];
+		} elseif ($wellKnownHttpCode === null) {
 			$format = "%s wasn't found under the %s path";
 			$values = ['security.txt', '/.well-known/'];
 			$howToFixFormat = 'Move the %s file from the top-level location under the %s path and redirect %s to %s';
