@@ -56,6 +56,7 @@ final class SecurityTxtWireContractTest extends TestCase
 	private function getContract(): array
 	{
 		return [
+			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlContentEncodingException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, string $ipAddress, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType, string $contentEncoding, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlException' => '(Uri\\WhatWg\\Url $url, Spaze\\SecurityTxt\\Fetcher\\SecurityTxtRedirects $redirects, ?string $ipAddress = NULL, ?Spaze\\SecurityTxt\\Fetcher\\SecurityTxtIpAddressType $ipAddressType = NULL, ?string $error = NULL, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlExtensionNotLoadedException' => '(Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',
 			'Spaze\\SecurityTxt\\Fetcher\\Exceptions\\SecurityTxtCannotOpenUrlUserAgentInvalidException' => '(Uri\\WhatWg\\Url $url, ?Throwable $previous = NULL)',

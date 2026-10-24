@@ -5,6 +5,7 @@ namespace Spaze\SecurityTxt\Fetcher;
 
 use LogicException;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlContentEncodingException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
@@ -83,6 +84,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
@@ -136,6 +138,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtNoHttpCodeException
@@ -182,6 +185,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtUrlNotFoundException
 	 * @throws SecurityTxtHostIpAddressNotFoundException
@@ -394,6 +398,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 * @throws SecurityTxtHostIpAddressInvalidException

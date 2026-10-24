@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlContentEncodingException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
@@ -95,6 +96,7 @@ final class SecurityTxtCheckHost
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException

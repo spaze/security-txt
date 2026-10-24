@@ -197,6 +197,37 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	}
 
 
+	/**
+	 * curl reports a body it can't decode and a `Transfer-Encoding` it rejects with the same error, so the coding is named only when the final response's header lines all
+	 * arrived and the failure came with the body, and only from that response's lines, joined, not from a 1xx response before it.
+	 */
+	public function testTheContentEncodingNamedIsTheFinalResponses(): void
+	{
+		$headers = [
+			'one coding' => ['HTTP/1.1 200 OK', 'Content-Encoding: utf8', ''],
+			'two lines' => ['HTTP/1.1 200 OK', 'Content-Encoding: utf8', 'Content-Encoding: gzip', ''],
+			'an empty one' => ['HTTP/1.1 200 OK', 'Content-Encoding:', ''],
+			'none' => ['HTTP/1.1 200 OK', 'Content-Type: text/plain', ''],
+			'the header lines cut short' => ['HTTP/1.1 200 OK', 'Content-Encoding: gzip'],
+			'a coding in a 1xx response only' => ['HTTP/1.1 103 Early Hints', 'Content-Encoding: utf8', '', 'HTTP/1.1 200 OK', ''],
+			'a coding after a 1xx response' => ['HTTP/1.1 100 Continue', '', 'HTTP/1.1 200 OK', 'Content-Encoding: utf8', ''],
+			'only a 1xx response arrived' => ['HTTP/1.1 103 Early Hints', 'Content-Encoding: utf8', ''],
+		];
+		$method = new ReflectionMethod(SecurityTxtFetcherCurlClient::class, 'getContentEncoding');
+		$client = new SecurityTxtFetcherCurlClient('test');
+		Assert::same([
+			'one coding' => 'utf8',
+			'two lines' => 'utf8, gzip',
+			'an empty one' => null,
+			'none' => null,
+			'the header lines cut short' => null,
+			'a coding in a 1xx response only' => null,
+			'a coding after a 1xx response' => 'utf8',
+			'only a 1xx response arrived' => null,
+		], array_map(fn(array $lines): mixed => $method->invoke($client, $lines), $headers));
+	}
+
+
 	public function testMaxResponseLengthPositive(): void
 	{
 		Assert::throws(function (): void {

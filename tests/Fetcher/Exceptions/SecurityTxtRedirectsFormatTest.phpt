@@ -8,6 +8,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlContentEncodingException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
@@ -48,6 +49,16 @@ final class SecurityTxtRedirectsFormatTest extends TestCase
 		Assert::same('URL https://1.example/ has an unsupported scheme', new SecurityTxtUrlUnsupportedSchemeException(new Url('https://1.example/'), new SecurityTxtRedirects())->getMessage());
 		Assert::same('URL https://1.example/ has an unsupported scheme (redirects: https://2.example/)', new SecurityTxtUrlUnsupportedSchemeException(new Url('https://1.example/'), new SecurityTxtRedirects('https://2.example/'))->getMessage());
 		Assert::same('URL https://1.example/ has an unsupported scheme (redirects: https://2.example/ → https://3.example/)', new SecurityTxtUrlUnsupportedSchemeException(new Url('https://1.example/'), new SecurityTxtRedirects('https://2.example/', 'https://3.example/'))->getMessage());
+	}
+
+
+	public function testCannotOpenUrlContentEncoding(): void
+	{
+		$exception = fn(SecurityTxtRedirects $redirects, SecurityTxtIpAddressType $type = SecurityTxtIpAddressType::V4): SecurityTxtCannotOpenUrlContentEncodingException => new SecurityTxtCannotOpenUrlContentEncodingException(new Url('https://1.example/'), $redirects, $type === SecurityTxtIpAddressType::V4 ? '192.0.2.1' : '2001:db8::1', $type, 'utf8');
+		Assert::same("Can't read https://1.example/ using its IPv4 address 192.0.2.1, the Content-Encoding header says utf8, which the body can't be decoded with", $exception(new SecurityTxtRedirects())->getMessage());
+		Assert::same("Can't read https://1.example/ (redirects: https://2.example/) using its IPv4 address 192.0.2.1, the Content-Encoding header says utf8, which the body can't be decoded with", $exception(new SecurityTxtRedirects('https://2.example/'))->getMessage());
+		Assert::same("Can't read https://1.example/ (redirects: https://2.example/ → https://3.example/) using its IPv6 address 2001:db8::1, the Content-Encoding header says utf8, which the body can't be decoded with", $exception(new SecurityTxtRedirects('https://2.example/', 'https://3.example/'), SecurityTxtIpAddressType::V6)->getMessage());
+		Assert::same(['2001:db8::1', SecurityTxtIpAddressType::V6], [$exception(new SecurityTxtRedirects(), SecurityTxtIpAddressType::V6)->getIpAddress(), $exception(new SecurityTxtRedirects(), SecurityTxtIpAddressType::V6)->getIpAddressType()]);
 	}
 
 
