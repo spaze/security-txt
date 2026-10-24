@@ -18,6 +18,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoHttpCodeException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectLoopException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectUrlTooLongException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlNotFoundException;
@@ -30,6 +31,7 @@ use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtRedirectNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
@@ -83,6 +85,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
@@ -119,6 +122,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
@@ -165,6 +169,7 @@ final class SecurityTxtFetcher
 	/**
 	 * @param non-negative-int|null $maxAllowedRedirects
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
@@ -196,12 +201,17 @@ final class SecurityTxtFetcher
 			}
 		}
 		if ($ipRecord === null && $ipv6Record === null) {
-			$dnsRecords = $this->dnsLookupProvider->getRecords($url->getUrl(), $host);
+			try {
+				$dnsRecords = $this->dnsLookupProvider->getRecords($url->getUrl(), $host);
+			} catch (SecurityTxtHostNotFoundException $e) {
+				// The provider is asked about one URL and knows nothing of the redirects that led there, which are what makes a host nobody typed make sense
+				throw new SecurityTxtHostNotFoundException($url->getUrl(), $host, $url->getRedirects(), $e);
+			}
 			$ipRecord = $dnsRecords->getIpRecord();
 			$ipv6Record = $dnsRecords->getIpv6Record();
 		}
 		if ($noIpv6 && $ipv6Record !== null && $ipRecord === null) {
-			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl());
+			throw new SecurityTxtOnlyIpv6HostButIpv6DisabledException($host, $ipv6Record, $url->getUrl(), $url->getRedirects());
 		}
 		if (!$noIpv6 && $ipv6Record !== null) {
 			$ipAddress = $ipv6Record;
@@ -211,9 +221,9 @@ final class SecurityTxtFetcher
 			$ipAddressType = SecurityTxtIpAddressType::V4;
 		}
 		if (!isset($ipAddress) || !isset($ipAddressType)) {
-			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host);
+			throw new SecurityTxtHostIpAddressNotFoundException($url->getUrl(), $host, $url->getRedirects());
 		}
-		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl());
+		$this->ipAddressValidator->validate($ipAddress, $ipAddressType, $host, $url->getUrl(), $url->getRedirects());
 
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
@@ -283,6 +293,16 @@ final class SecurityTxtFetcher
 			$contents = $wellKnownContents;
 		}
 		$this->callOnCallback($this->onFinalUrl, $result->getFinalUrl());
+
+		// The last hop is the final URL, and the file location check is what reports that one
+		$redirects = $this->redirects[new SecurityTxtPrintableValue($result->getUrl())->render()] ?? new SecurityTxtRedirects();
+		foreach (array_slice($redirects->toStrings(), 0, -1) as $redirect) {
+			$redirectUrl = Url::parse($redirect);
+			if ($redirectUrl !== null && $redirectUrl->getScheme() === 'http') {
+				$errors[] = new SecurityTxtRedirectNotHttps($result->getUrl(), $redirectUrl);
+				break;
+			}
+		}
 
 		$contentTypeHeader = $result->getContentType();
 		// The URL that answered, not the one the check was built from: a header comes from a response, and after a redirect that response is somewhere else
@@ -365,6 +385,7 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
+	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtUrlNotFoundException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
@@ -378,7 +399,7 @@ final class SecurityTxtFetcher
 		}
 		$location = $response->getHeader('Location');
 		if ($location === null) {
-			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode());
+			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode(), $this->getRedirects($originalUrl));
 		} else {
 			$originalUrlString = new SecurityTxtPrintableValue($originalUrl)->render();
 			// A URL this long is suspicious for a security.txt, and it is refused before the header is parsed, see the method
@@ -387,18 +408,24 @@ final class SecurityTxtFetcher
 			}
 			$locationUrl = $this->urlParser->getRedirectUrl($location, $url);
 			$this->callOnCallback($this->onRedirect, $url, $locationUrl);
+			$visited = $this->isVisited($locationUrl, $originalUrl, $this->redirects[$originalUrlString] ?? new SecurityTxtRedirects());
 			// Where the redirect led rather than the header that said so: a `Location` can be relative, or spell a host in punycode, and this is a record of the URLs a check
 			// went to and not of what a server typed
 			$this->redirects[$originalUrlString] = ($this->redirects[$originalUrlString] ?? new SecurityTxtRedirects())->withRedirect($locationUrl);
-			$finalUrl = $locationUrl;
+			// Before the count, so the hop that closes a loop is called a loop even when it is also one too many
+			if ($visited) {
+				throw new SecurityTxtRedirectLoopException($url, $this->getRedirects($originalUrl));
+			}
 			if ($this->redirects[$originalUrlString]->count() > $maxAllowedRedirects) {
-				throw new SecurityTxtTooManyRedirectsException($url, $this->redirects[$originalUrlString], $maxAllowedRedirects);
+				throw new SecurityTxtTooManyRedirectsException($url, $this->getRedirects($originalUrl), $maxAllowedRedirects);
 			}
 			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as
 			// a hostname that will not parse, losing the redirect chain that says where the host sent us. Settling comes after it for the same reason
 			$fetcherUrl = new SecurityTxtFetcherUrl($locationUrl, $this->getRedirects($originalUrl));
 			$settledUrl = $this->urlParser->normalize($fetcherUrl->getUrl());
-			return $this->getResponse(new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl)), new SecurityTxtHost($settledUrl), $originalUrl, $settledUrl, $noIpv6, $maxAllowedRedirects);
+			// The caller's reference, passed on, so after any number of hops it ends as the URL that answered
+			$finalUrl = $settledUrl;
+			return $this->getResponse(new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl)), new SecurityTxtHost($settledUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 	}
 
@@ -416,6 +443,22 @@ final class SecurityTxtFetcher
 		$encoded = preg_match_all('~[^A-Za-z0-9._\~!$&\'()*+,;=:@/%-]~', $location);
 		// Should the match fail, every character counts as encoded, the bound has to stay one
 		return strlen($base) + strlen($location) + 2 * ($encoded === false ? strlen($location) : $encoded);
+	}
+
+
+	/**
+	 * Compared as it is going to be fetched, settled, because parsing leaves the case of a letter a percent escape uncovers in a host, and `equals()` ignores the fragment, which
+	 * never reaches the server. A method of its own, so the parsed chain is gone before the next hop recurses.
+	 */
+	private function isVisited(Url $locationUrl, Url $originalUrl, SecurityTxtRedirects $redirects): bool
+	{
+		$settledUrl = Url::parse($locationUrl->toAsciiString()) ?? $locationUrl;
+		foreach ([$originalUrl, ...array_filter(array_map(Url::parse(...), $redirects->toStrings()))] as $visitedUrl) {
+			if ($visitedUrl->equals($settledUrl)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 

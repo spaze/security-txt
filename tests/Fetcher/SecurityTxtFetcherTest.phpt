@@ -15,11 +15,14 @@ use ReflectionMethod;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNoLocationHeaderException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtOnlyIpv6HostButIpv6DisabledException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectLoopException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtRedirectUrlTooLongException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
@@ -31,7 +34,10 @@ use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\SecurityTxtContentType;
 use Spaze\SecurityTxt\SecurityTxtHost;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
+use Spaze\SecurityTxt\Violations\SecurityTxtRedirectNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
+use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
@@ -97,7 +103,7 @@ final class SecurityTxtFetcherTest extends TestCase
 				],
 				301,
 				null,
-				SecurityTxtTooManyRedirectsException::class, // The only way to test redirects is to catch en exception
+				SecurityTxtRedirectLoopException::class, // The client sends the same Location every time, and the only way to test redirects is to catch an exception
 			],
 			'302 redirect with no Location' => [
 				302,
@@ -116,7 +122,7 @@ final class SecurityTxtFetcherTest extends TestCase
 				],
 				399,
 				null,
-				SecurityTxtTooManyRedirectsException::class, // The only way to test redirects is to catch en exception
+				SecurityTxtRedirectLoopException::class, // The client sends the same Location every time, and the only way to test redirects is to catch an exception
 			],
 			'Success' => [
 				200,
@@ -390,6 +396,217 @@ final class SecurityTxtFetcherTest extends TestCase
 		];
 		$fetchResult = $fetcher->fetch(new Url('https://com.example/'), false, true);
 		Assert::same($redirects, array_map(fn(SecurityTxtRedirects $r): array => $r->toStrings(), $fetchResult->getRedirects()));
+	}
+
+
+	/**
+	 * Answers by URL, a 404 for anything not listed, so a test can lay out a whole redirect chain.
+	 *
+	 * @param array<string, SecurityTxtFetcherResponse> $responses Keyed by the ASCII URL requested
+	 * @param (Closure(string): void)|null $observe Called with the ASCII URL of every request
+	 */
+	private function getRoutedHttpClient(array $responses, ?Closure $observe = null): SecurityTxtFetcherHttpClient
+	{
+		return new class ($responses, $observe) implements SecurityTxtFetcherHttpClient {
+
+			/**
+			 * @param array<string, SecurityTxtFetcherResponse> $responses
+			 * @param (Closure(string): void)|null $observe
+			 */
+			public function __construct(private readonly array $responses, private readonly ?Closure $observe)
+			{
+			}
+
+
+			#[Override]
+			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
+			{
+				if ($this->observe !== null) {
+					($this->observe)($url->getUrl()->toAsciiString());
+				}
+				return $this->responses[$url->getUrl()->toAsciiString()] ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+			}
+
+		};
+	}
+
+
+	/**
+	 * The final URL is where the file was read, so it decides whether the file came over HTTPS and what `Canonical` is compared with. It has to be the last hop as fetched,
+	 * whatever the number of hops, and settled like every other URL a check goes to.
+	 */
+	public function testTheFinalUrlIsTheLastHop(): void
+	{
+		$redirect = fn(string $location): SecurityTxtFetcherResponse => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$start = 'https://start.example/.well-known/security.txt';
+		$chains = [
+			'one redirect' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $file],
+			'two redirects' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('https://two.example/b'), 'https://two.example/b' => $file],
+			'two redirects, the second to HTTP' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('http://two.example/b'), 'http://two.example/b' => $file],
+			'a redirect to a host with an escaped capital' => [$start => $redirect('https://tw%4F.example/b'), 'https://two.example/b' => $file],
+			'two redirects to a URL that is not found' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('https://two.example/b')],
+		];
+		$reported = [];
+		foreach ($chains as $name => $responses) {
+			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$onFinalUrl = $onUrlNotFound = [];
+			$fetcher->addOnFinalUrl(function (Url $url) use (&$onFinalUrl): void {
+				$onFinalUrl[] = $url->toAsciiString();
+			});
+			$fetcher->addOnUrlNotFound(function (Url $url) use (&$onUrlNotFound): void {
+				$onUrlNotFound[] = $url->toAsciiString();
+			});
+			try {
+				$finalUrl = $fetcher->fetch(new Url('https://start.example/'))->getFinalUrl()->toAsciiString();
+			} catch (SecurityTxtNotFoundException) {
+				$finalUrl = null;
+			}
+			$reported[$name] = [$finalUrl, $onFinalUrl, $onUrlNotFound];
+		}
+		Assert::same([
+			'one redirect' => ['https://one.example/a', ['https://one.example/a'], ['https://start.example/security.txt']],
+			'two redirects' => ['https://two.example/b', ['https://two.example/b'], ['https://start.example/security.txt']],
+			'two redirects, the second to HTTP' => ['http://two.example/b', ['http://two.example/b'], ['https://start.example/security.txt']],
+			'a redirect to a host with an escaped capital' => ['https://two.example/b', ['https://two.example/b'], ['https://start.example/security.txt']],
+			'two redirects to a URL that is not found' => [null, [], ['https://two.example/b', 'https://start.example/security.txt']],
+		], $reported);
+	}
+
+
+	/**
+	 * A redirect back to a URL the chain already went through can only go round, so the fetch stops there and says so, instead of making the requests the limit still allows
+	 * and calling it too many. An empty `Location` and a bare fragment both point back at the URL that sent them.
+	 */
+	public function testARedirectLoopStopsAtTheFirstRepeat(): void
+	{
+		$redirect = fn(string $location): SecurityTxtFetcherResponse => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$start = 'https://start.example/.well-known/security.txt';
+		$chains = [
+			'a redirect to itself' => [$start => $redirect($start)],
+			'a redirect to itself with an escaped capital' => [$start => $redirect('https://st%41rt.example/.well-known/security.txt')],
+			'a later hop redirecting to itself' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('https://one.example/a')],
+			'an empty Location' => [$start => $redirect('')],
+			'a fragment only' => [$start => $redirect('#x')],
+			'back to the start' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('https://two.example/b'), 'https://two.example/b' => $redirect($start)],
+			'between two later hops' => [
+				$start => $redirect('https://one.example/a'),
+				'https://one.example/a' => $redirect('https://two.example/b'),
+				'https://two.example/b' => $redirect('https://one.example/a'),
+			],
+			'a loop longer than the limit' => [
+				$start => $redirect('https://one.example/1'),
+				'https://one.example/1' => $redirect('https://one.example/2'),
+				'https://one.example/2' => $redirect('https://one.example/3'),
+				'https://one.example/3' => $redirect('https://one.example/4'),
+				'https://one.example/4' => $redirect('https://one.example/5'),
+				'https://one.example/5' => $redirect('https://one.example/6'),
+				'https://one.example/6' => $redirect('https://one.example/1'),
+			],
+			'the same path on another host' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $redirect('https://two.example/a'), 'https://two.example/a' => $file],
+			'the same path with another query' => [$start => $redirect('https://one.example/a?1'), 'https://one.example/a?1' => $redirect('https://one.example/a?2'), 'https://one.example/a?2' => $file],
+			'both locations to the same URL' => [$start => $redirect('https://one.example/a'), 'https://start.example/security.txt' => $redirect('https://one.example/a'), 'https://one.example/a' => $file],
+		];
+		$reported = [];
+		foreach ($chains as $name => $responses) {
+			$requested = [];
+			$client = $this->getRoutedHttpClient($responses, function (string $url) use (&$requested): void {
+				$requested[] = $url;
+			});
+			$fetcher = new SecurityTxtFetcher($client, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			try {
+				$outcome = 'fetched ' . $fetcher->fetch(new Url('https://start.example/'))->getFinalUrl()->toAsciiString();
+			} catch (SecurityTxtRedirectLoopException | SecurityTxtTooManyRedirectsException $e) {
+				$outcome = $e::class . ': ' . $e->getMessage();
+			}
+			$reported[$name] = [$outcome, count($requested)];
+		}
+		$loop = SecurityTxtRedirectLoopException::class;
+		Assert::same([
+			'a redirect to itself' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 1],
+			'a redirect to itself with an escaped capital' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 1],
+			'a later hop redirecting to itself' => ["{$loop}: Can't read https://one.example/a, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://one.example/a)", 2],
+			'an empty Location' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 1],
+			'a fragment only' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start}#x)", 1],
+			'back to the start' => ["{$loop}: Can't read https://two.example/b, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://two.example/b → {$start})", 3],
+			'between two later hops' => ["{$loop}: Can't read https://two.example/b, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://two.example/b → https://one.example/a)", 3],
+			'a loop longer than the limit' => [SecurityTxtTooManyRedirectsException::class . ": Can't read https://one.example/5, too many redirects, max allowed is 5 (redirects: {$start} → https://one.example/1 → https://one.example/2 → https://one.example/3 → https://one.example/4 → https://one.example/5 → https://one.example/6, the last one not loaded)", 6],
+			'the same path on another host' => ['fetched https://two.example/a', 4],
+			'the same path with another query' => ['fetched https://one.example/a?2', 4],
+			'both locations to the same URL' => ['fetched https://one.example/a', 4],
+		], $reported);
+
+		// The chain is in the message, so it belongs in the structured getter too
+		$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($chains['back to the start']), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$exception = Assert::exception(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'));
+		}, SecurityTxtRedirectLoopException::class);
+		assert($exception instanceof SecurityTxtRedirectLoopException);
+		Assert::same([$start, 'https://one.example/a', 'https://two.example/b', $start], $exception->getRedirects()->toStrings());
+
+		// The hop that closes the loop is also one too many here, and it is still the loop that gets reported
+		$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($chains['between two later hops']), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		Assert::exception(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'), maxAllowedRedirects: 2);
+		}, SecurityTxtRedirectLoopException::class);
+	}
+
+
+	/**
+	 * A redirect sent over plain HTTP can be changed to point anywhere, so a chain that passes through one is an error even when it ends at HTTPS. A chain that ends at
+	 * HTTP is the file location check's to report, and only the chain of the location whose file is used counts.
+	 */
+	public function testARedirectThroughHttpIsAnError(): void
+	{
+		$redirect = fn(string $location): SecurityTxtFetcherResponse => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$start = 'https://start.example/.well-known/security.txt';
+		$chains = [
+			'HTTPS all the way' => [$start => $redirect('https://one.example/a'), 'https://one.example/a' => $file],
+			'through HTTP and back to HTTPS' => [$start => $redirect('http://one.example/a'), 'http://one.example/a' => $redirect('https://two.example/b'), 'https://two.example/b' => $file],
+			'through HTTP twice' => [
+				$start => $redirect('http://one.example/a'),
+				'http://one.example/a' => $redirect('http://two.example/b'),
+				'http://two.example/b' => $redirect('https://three.example/c'),
+				'https://three.example/c' => $file,
+			],
+			'through HTTP after an HTTPS hop' => [
+				$start => $redirect('https://one.example/a'),
+				'https://one.example/a' => $redirect('http://two.example/b'),
+				'http://two.example/b' => $redirect('https://three.example/c'),
+				'https://three.example/c' => $file,
+			],
+			'to HTTP, and served there' => [$start => $redirect('http://one.example/a'), 'http://one.example/a' => $file],
+			'through HTTP at the top-level location, which is used' => [
+				'https://start.example/security.txt' => $redirect('http://one.example/a'),
+				'http://one.example/a' => $redirect('https://two.example/b'),
+				'https://two.example/b' => $file,
+			],
+			'through HTTP at the location not used' => [
+				$start => $file,
+				'https://start.example/security.txt' => $redirect('http://one.example/a'),
+				'http://one.example/a' => $redirect('https://start.example/.well-known/security.txt'),
+			],
+		];
+		$reported = [];
+		foreach ($chains as $name => $responses) {
+			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$errors = $fetcher->fetch(new Url('https://start.example/'))->getErrors();
+			$reported[$name] = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation::class, $violation->getMessage()], $errors);
+		}
+		Assert::same([
+			'HTTPS all the way' => [],
+			'through HTTP and back to HTTPS' => [[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/.well-known/security.txt go through http://one.example/a, which does not use HTTPS']],
+			'through HTTP twice' => [[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/.well-known/security.txt go through http://one.example/a, which does not use HTTPS']],
+			'through HTTP after an HTTPS hop' => [[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/.well-known/security.txt go through http://two.example/b, which does not use HTTPS']],
+			'to HTTP, and served there' => [],
+			'through HTTP at the top-level location, which is used' => [
+				[SecurityTxtTopLevelPathOnly::class, "security.txt wasn't found under the /.well-known/ path"],
+				[SecurityTxtRedirectNotHttps::class, 'The redirects from https://start.example/security.txt go through http://one.example/a, which does not use HTTPS'],
+			],
+			'through HTTP at the location not used' => [],
+		], $reported);
 	}
 
 
@@ -854,7 +1071,8 @@ final class SecurityTxtFetcherTest extends TestCase
 			'https://com.example/.well-known/security.txt -> https://com.example/one/security.txt',
 			'https://com.example/one/security.txt -> https://com.example/two/security.txt',
 		], $onRedirects);
-		Assert::same(['https://com.example/one/security.txt', 'https://com.example/two/security.txt'], $exception->getRedirects()->toStrings());
+		// The chain starts where the check started, like the chain any other exception carries
+		Assert::same(['https://com.example/.well-known/security.txt', 'https://com.example/one/security.txt', 'https://com.example/two/security.txt'], $exception->getRedirects()->toStrings());
 
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 0);
@@ -919,7 +1137,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 5);
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetch(new Url('https://example.com'), maxAllowedRedirects: 0);
-		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (redirects: https://redir.example/, the last one not loaded)");
+		}, SecurityTxtTooManyRedirectsException::class, "Can't read https://example.com/.well-known/security.txt, too many redirects, max allowed is 0 (redirects: https://example.com/.well-known/security.txt → https://redir.example/, the last one not loaded)");
 	}
 
 
@@ -937,7 +1155,80 @@ final class SecurityTxtFetcherTest extends TestCase
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $dnsProvider, $this->ipAddressValidator);
 		Assert::throws(function () use ($fetcher): void {
 			$fetcher->fetch(new Url('https://example.com/'));
-		}, SecurityTxtHostIpAddressNotPublicException::class, 'Host example.net resolves to a non-public IP address 127.0.0.1');
+		}, SecurityTxtHostIpAddressNotPublicException::class, 'Host example.net resolves to a non-public IP address 127.0.0.1 (redirects: https://example.com/.well-known/security.txt → https://example.net/foo)');
+	}
+
+
+	/**
+	 * A redirect is how a check reaches a host the caller never named, a missing slash turning `https://example.cz/.well-known/` into the host `example.cz.well-known` for
+	 * one, so whatever goes wrong with that host is reported with the chain that led to it. The DNS provider is asked about one URL and is not told the chain.
+	 */
+	public function testAHostReachedByRedirectNamesTheChain(): void
+	{
+		$hosts = [
+			'a host that does not resolve' => [null, false],
+			'a host with no address' => [new SecurityTxtDnsRecords(null, null), false],
+			'a host with only an IPv6 address, IPv6 disabled' => [new SecurityTxtDnsRecords(null, '2001:db8::1'), true],
+			'a host with an invalid address' => [new SecurityTxtDnsRecords(null, '1.2.3.4'), false],
+			'a host with a non-public address' => [new SecurityTxtDnsRecords('127.0.0.1', null), false],
+			'a host with a NAT64 address of a non-public one' => [new SecurityTxtDnsRecords(null, '64:ff9b::7f00:1'), false],
+			'a host with a NAT64 local-use address' => [new SecurityTxtDnsRecords(null, '64:ff9b:1::a9fe:a9fe'), false],
+		];
+		$reported = [];
+		foreach ($hosts as $name => [$records, $noIpv6]) {
+			$httpClient = $this->getRoutedHttpClient([
+				'https://start.example/.well-known/security.txt' => new SecurityTxtFetcherResponse(301, ['location' => 'https://elsewhere.example.well-known/security.txt'], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			]);
+			$dnsProvider = new class ($records) implements SecurityTxtDnsProvider {
+
+				public function __construct(private readonly ?SecurityTxtDnsRecords $records)
+				{
+				}
+
+
+				#[Override]
+				public function getRecords(Url $url, SecurityTxtHost $host): SecurityTxtDnsRecords
+				{
+					if ($host->getAscii() === 'start.example') {
+						return new SecurityTxtDnsRecords('1.1.1.0', null);
+					}
+					return $this->records ?? throw new SecurityTxtHostNotFoundException($url, $host);
+				}
+
+			};
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $dnsProvider, $this->ipAddressValidator);
+			$exception = Assert::throws(function () use ($fetcher, $noIpv6): void {
+				$fetcher->fetch(new Url('https://start.example/'), noIpv6: $noIpv6);
+			}, SecurityTxtFetcherException::class);
+			assert($exception instanceof SecurityTxtFetcherException);
+			$reported[$name] = [$exception::class, $exception->getRedirects()->toStrings(), $exception->getPrevious() === null ? null : $exception->getPrevious()::class];
+		}
+		$chain = ['https://start.example/.well-known/security.txt', 'https://elsewhere.example.well-known/security.txt'];
+		Assert::same([
+			// The provider's own exception is kept as the previous one
+			'a host that does not resolve' => [SecurityTxtHostNotFoundException::class, $chain, SecurityTxtHostNotFoundException::class],
+			'a host with no address' => [SecurityTxtHostIpAddressNotFoundException::class, $chain, null],
+			'a host with only an IPv6 address, IPv6 disabled' => [SecurityTxtOnlyIpv6HostButIpv6DisabledException::class, $chain, null],
+			'a host with an invalid address' => [SecurityTxtHostIpAddressInvalidException::class, $chain, null],
+			'a host with a non-public address' => [SecurityTxtHostIpAddressNotPublicException::class, $chain, null],
+			'a host with a NAT64 address of a non-public one' => [SecurityTxtHostIpAddressNotPublicException::class, $chain, null],
+			'a host with a NAT64 local-use address' => [SecurityTxtHostIpAddressNotPublicException::class, $chain, null],
+		], $reported);
+	}
+
+
+	public function testARedirectWithoutLocationNamesTheChain(): void
+	{
+		$httpClient = $this->getRoutedHttpClient([
+			'https://start.example/.well-known/security.txt' => new SecurityTxtFetcherResponse(301, ['location' => 'https://one.example/a'], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'https://one.example/a' => new SecurityTxtFetcherResponse(302, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		]);
+		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+		$exception = Assert::throws(function () use ($fetcher): void {
+			$fetcher->fetch(new Url('https://start.example/'));
+		}, SecurityTxtNoLocationHeaderException::class, 'HTTP response with code 302 is missing a Location header when fetching https://one.example/a (redirects: https://start.example/.well-known/security.txt → https://one.example/a)');
+		assert($exception instanceof SecurityTxtNoLocationHeaderException);
+		Assert::same(['https://start.example/.well-known/security.txt', 'https://one.example/a'], $exception->getRedirects()->toStrings());
 	}
 
 

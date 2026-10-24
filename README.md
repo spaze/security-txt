@@ -133,8 +133,8 @@ A hop that times out throws `SecurityTxtCannotOpenUrlException`. A transfer that
 ## Fetching restrictions
 The file is fetched from hosts you don't control, so the fetcher is restrictive by default:
 - Fetching always starts at `https://`, whatever scheme you pass in, and any username, password, query and fragment are removed from the URL first.
-- Only `http://` and `https://` are followed, a redirect anywhere else throws `SecurityTxtUrlUnsupportedSchemeException`.
-- Redirects are followed by the library, not by curl, at most 5 by default. Every target goes through the same checks as the original URL.
+- Only `http://` and `https://` are followed, a redirect anywhere else throws `SecurityTxtUrlUnsupportedSchemeException`. A redirect through `http://` on the way to the file is a `SecurityTxtRedirectNotHttps` error, because a redirect sent over plain HTTP can be changed to point anywhere.
+- Redirects are followed by the library, not by curl, at most 5 by default. Every target goes through the same checks as the original URL, and a redirect back to a URL already visited stops with `SecurityTxtRedirectLoopException`.
 - A redirect to a URL longer than 1000 characters is not followed and throws `SecurityTxtRedirectUrlTooLongException`. No `security.txt` needs one, and before PHP 8.5.8 parsing one could put leftover memory of the PHP process into its path, so the `Location` header is measured before it is parsed, and generously: every character that may be percent-encoded counts as three, and a relative one counts with the path it is resolved against.
 - The host is resolved by the library and each address is validated before connecting: private and reserved ranges are rejected, only publicly routable addresses are used. IPv6 addresses are also checked for NAT64, because those embed an IPv4 address the range check can't see: an address with the RFC 6052 well-known prefix (`64:ff9b::/96`) is rejected when the IPv4 it embeds is not public, and the RFC 8215 local-use prefix (`64:ff9b:1::/48`) is rejected as a whole.
 - curl then connects to that validated address, and the response is rejected with `SecurityTxtConnectedToWrongIpAddressException` when it turns out to have talked to a different one.
@@ -144,6 +144,7 @@ The file is fetched from hosts you don't control, so the fetcher is restrictive 
 DNS resolution is handled by `SecurityTxtPhpDnsProvider`, which uses PHP's built-in `dns_get_record()`. This function has no timeout parameter, the system DNS timeout applies.
 If you need explicit DNS timeout control, or would like to use for example DNS-over-HTTPS, you can add a custom provider, which implements the `SecurityTxtDnsProvider` interface,
 and then pass it to `SecurityTxtFetcher` in the `$dnsLookupProvider` parameter.
+A provider reports a host that does not resolve by throwing `SecurityTxtHostNotFoundException` with the URL and host it was given, passing any exception it wraps by name, `previous: $e`; the fetcher adds the redirects that led to the host.
 
 ## Signature verification
 This library verifies that the signature is a valid OpenPGP cleartext signature, but cannot verify whether the signing key is trustworthy, for example when the key is not in local keyring etc. As the [`security.txt` RFC](https://www.rfc-editor.org/rfc/rfc9116#name-digital-signature) puts it:
