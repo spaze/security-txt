@@ -623,7 +623,7 @@ final readonly class SecurityTxtJson
 			$self = new SecurityTxtHost($url);
 		} catch (SecurityTxtCannotParseHostnameException $e) {
 			// The constructor names the URL it was handed, which is one this method derived; a caller of this one asked about a host and gets told about that host
-			throw new SecurityTxtCannotParseHostnameException($host, $e);
+			throw new SecurityTxtCannotParseHostnameException($host, previous: $e);
 		}
 		if ($self->getUnicode() !== $host) {
 			throw new SecurityTxtCannotParseHostnameException($host);

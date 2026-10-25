@@ -15,6 +15,7 @@ use ReflectionMethod;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
@@ -30,6 +31,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -1025,32 +1027,63 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
-	 * Settling a redirect happens after the hop is recorded and after the scheme is refused, so a `Location` the fetcher will not follow still says where the host sent us.
-	 * Settling first turned this into a hostname error with an empty chain.
+	 * A `Location` the fetcher will not follow still says where the host sent us, and the exception saying so can be stored and read back. A redirect is settled before its
+	 * scheme is refused, so an unsupported one is named the way this library writes a URL: refused unsettled, `ftp://ex%41mple.com/` was stored as `ftp://exAmple.com/`,
+	 * which reading it back refuses. A host that will not settle is a hostname error, and it carries the chain as well.
 	 */
 	public function testARefusedRedirectStillReportsWhereItPointed(): void
 	{
-		$httpClient = new class implements SecurityTxtFetcherHttpClient {
-
-			private int $requests = 0;
-
-
-			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
-			{
-				return $this->requests++ === 0
-					? new SecurityTxtFetcherResponse(301, ['location' => 'ftp://%78n--a.example/'], '', false, $ipAddress, $ipAddressType)
-					: new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+		$json = new SecurityTxtJson($this->splitLines);
+		$start = 'https://start.example/.well-known/security.txt';
+		$next = 'https://start.example/next';
+		$locations = [
+			'an unsupported scheme with an escape in the host' => 'ftp://ex%41mple.com/',
+			'an unsupported scheme with a host that will not settle' => 'ftp://%78n--a.example/',
+			'a host that will not settle' => 'https://%78n--a.example/',
+			'a URL that will not parse' => 'ws://',
+		];
+		$refused = [];
+		foreach ($locations as $name => $location) {
+			// A hop before the refused one, so the chain has a redirect to carry even where the refused one never becomes a URL to add to it
+			$httpClient = $this->getRoutedHttpClient([
+				$start => new SecurityTxtFetcherResponse(301, ['location' => $next], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+				$next => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			]);
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			try {
+				$fetcher->fetch(new Url('https://start.example/'));
+				$refused[$name] = 'not refused';
+			} catch (SecurityTxtFetcherException $e) {
+				$encoded = json_encode(['error' => $e]);
+				assert(is_string($encoded));
+				$decoded = json_decode($encoded, true);
+				assert(is_array($decoded));
+				$refused[$name] = [$e::class, $e->getMessage(), $json->createFetcherExceptionFromJsonValues($decoded)->getMessage()];
 			}
-
-		};
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
-		$e = Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch(new Url('https://start.example/'));
-		}, SecurityTxtUrlUnsupportedSchemeException::class);
-		assert($e instanceof SecurityTxtUrlUnsupportedSchemeException);
-		// The chain records where a redirect led rather than the header that said so, and an escape in the host is resolved out of it without losing the host
-		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://xn--a.example/'], $e->getRedirects()->toStrings());
+		}
+		$chain = fn(string ...$redirects): string => ' (redirects: ' . implode(' → ', [$start, $next, ...$redirects]) . ')';
+		Assert::same([
+			'an unsupported scheme with an escape in the host' => [
+				SecurityTxtUrlUnsupportedSchemeException::class,
+				'URL ftp://example.com/ has an unsupported scheme' . $chain('ftp://example.com/'),
+				'URL ftp://example.com/ has an unsupported scheme' . $chain('ftp://example.com/'),
+			],
+			'an unsupported scheme with a host that will not settle' => [
+				SecurityTxtCannotParseHostnameException::class,
+				"Can't parse hostname from ftp://xn--a.example/" . $chain('ftp://xn--a.example/'),
+				"Can't parse hostname from ftp://xn--a.example/" . $chain('ftp://xn--a.example/'),
+			],
+			'a host that will not settle' => [
+				SecurityTxtCannotParseHostnameException::class,
+				"Can't parse hostname from https://xn--a.example/" . $chain('https://xn--a.example/'),
+				"Can't parse hostname from https://xn--a.example/" . $chain('https://xn--a.example/'),
+			],
+			'a URL that will not parse' => [
+				SecurityTxtCannotParseHostnameException::class,
+				"Can't parse hostname from ws://" . $chain(),
+				"Can't parse hostname from ws://" . $chain(),
+			],
+		], $refused);
 	}
 
 

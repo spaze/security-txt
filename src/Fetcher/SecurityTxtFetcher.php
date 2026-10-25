@@ -454,7 +454,12 @@ final class SecurityTxtFetcher
 			if ($this->getRedirectUrlMaxLength($location, $url) > self::MAX_REDIRECT_URL_LENGTH) {
 				throw new SecurityTxtRedirectUrlTooLongException($url, $this->getRedirects($originalUrl), self::MAX_REDIRECT_URL_LENGTH);
 			}
-			$locationUrl = $this->urlParser->getRedirectUrl($location, $url);
+			try {
+				$locationUrl = $this->urlParser->getRedirectUrl($location, $url);
+			} catch (SecurityTxtCannotParseHostnameException $e) {
+				// The parser is handed one header and knows nothing of the redirects that led to it
+				throw new SecurityTxtCannotParseHostnameException($location, $this->getRedirects($originalUrl), $e);
+			}
 			$this->callOnCallback($this->onRedirect, $url, $locationUrl);
 			$visited = $this->isVisited($locationUrl, $originalUrl, $this->redirects[$originalUrlString] ?? new SecurityTxtRedirects());
 			// Where the redirect led rather than the header that said so: a `Location` can be relative, or spell a host in punycode, and this is a record of the URLs a check
@@ -467,13 +472,17 @@ final class SecurityTxtFetcher
 			if ($this->redirects[$originalUrlString]->count() > $maxAllowedRedirects) {
 				throw new SecurityTxtTooManyRedirectsException($url, $this->getRedirects($originalUrl), $maxAllowedRedirects);
 			}
-			// The URL is built first on purpose: its constructor is where an unsupported scheme is refused, and a scheme with no host at all would otherwise be reported as
-			// a hostname that will not parse, losing the redirect chain that says where the host sent us. Settling comes after it for the same reason
-			$fetcherUrl = new SecurityTxtFetcherUrl($locationUrl, $this->getRedirects($originalUrl));
-			$settledUrl = $this->urlParser->normalize($fetcherUrl->getUrl());
+			// Settled before the scheme is checked, so an unsupported one is reported with the URL spelled the way this library writes one, which is what a stored result is
+			// read back with: `ftp://ex%41mple.com/` parses to `ftp://exAmple.com/`, which reading it back refuses
+			try {
+				$settledUrl = $this->urlParser->normalize($locationUrl);
+			} catch (SecurityTxtCannotParseHostnameException $e) {
+				throw new SecurityTxtCannotParseHostnameException($locationUrl->toAsciiString(), $this->getRedirects($originalUrl), $e);
+			}
+			$fetcherUrl = new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl));
 			// The caller's reference, passed on, so after any number of hops it ends as the URL that answered
 			$finalUrl = $settledUrl;
-			return $this->getResponse(new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl)), new SecurityTxtHost($settledUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
+			return $this->getResponse($fetcherUrl, new SecurityTxtHost($settledUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 	}
 
