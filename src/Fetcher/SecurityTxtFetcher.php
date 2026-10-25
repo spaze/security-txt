@@ -30,6 +30,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\SecurityTxtContentType;
 use Spaze\SecurityTxt\SecurityTxtHost;
+use Spaze\SecurityTxt\SecurityTxtPhpUrlWorkarounds;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeWrongCharset;
@@ -450,8 +451,8 @@ final class SecurityTxtFetcher
 			throw new SecurityTxtNoLocationHeaderException($url, $response->getHttpCode(), $this->getRedirects($originalUrl));
 		} else {
 			$originalUrlString = new SecurityTxtPrintableValue($originalUrl)->render();
-			// A URL this long is suspicious for a security.txt, and it is refused before the header is parsed, see the method
-			if ($this->getRedirectUrlMaxLength($location, $url) > self::MAX_REDIRECT_URL_LENGTH) {
+			// A URL this long is suspicious for a security.txt, and it is refused before the header is parsed, see the method, which measuring the parsed URL replaces
+			if (SecurityTxtPhpUrlWorkarounds::getRedirectUrlMaxLength($location, $url) > self::MAX_REDIRECT_URL_LENGTH) {
 				throw new SecurityTxtRedirectUrlTooLongException($url, $this->getRedirects($originalUrl), self::MAX_REDIRECT_URL_LENGTH);
 			}
 			try {
@@ -484,22 +485,6 @@ final class SecurityTxtFetcher
 			$finalUrl = $settledUrl;
 			return $this->getResponse($fetcherUrl, new SecurityTxtHost($settledUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
-	}
-
-
-	/**
-	 * The most a `Location` header can grow to while it is parsed, worked out from the header because parsing it is what has to be avoided: before 8.5.8, PHP can return a
-	 * path starting with up to a kilobyte of leftover memory of the process once the path reaches 1023 bytes while being parsed and contains one of `"`, `<`, `>`, `[`, `]`,
-	 * `^`, `{`, `|`, `}`, a backtick or a non-ASCII character, `.` and `..` segments can then cut what it returns below any length checked afterwards, and PHP 8.5.4 can even
-	 * move a fragment into the path. So the whole header counts, every character that may be percent-encoded as three, and so does the path of the URL it is resolved
-	 * against, unless it starts with a slash and replaces that path.
-	 */
-	private function getRedirectUrlMaxLength(string $location, Url $url): int
-	{
-		$base = str_starts_with($location, '/') || str_starts_with($location, '\\') ? '' : $url->getPath();
-		$encoded = preg_match_all('~[^A-Za-z0-9._\~!$&\'()*+,;=:@/%-]~', $location);
-		// Should the match fail, every character counts as encoded, the bound has to stay one
-		return strlen($base) + strlen($location) + 2 * ($encoded === false ? strlen($location) : $encoded);
 	}
 
 

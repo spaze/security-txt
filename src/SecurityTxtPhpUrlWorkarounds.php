@@ -21,4 +21,20 @@ final class SecurityTxtPhpUrlWorkarounds
 		return preg_match('/[^\x20-\x7E]/', $url->toAsciiString()) === 1;
 	}
 
+
+	/**
+	 * The most a `Location` header can grow to while it is parsed, worked out from the header because parsing it is what has to be avoided: before 8.5.8, PHP can return a
+	 * path starting with up to a kilobyte of leftover memory of the process once the path reaches 1023 bytes while being parsed and contains one of `"`, `<`, `>`, `[`, `]`,
+	 * `^`, `{`, `|`, `}`, a backtick or a non-ASCII character, `.` and `..` segments can then cut what it returns below any length checked afterwards, and PHP 8.5.4 can even
+	 * move a fragment into the path. So the whole header counts, every character that may be percent-encoded as three, and so does the path of the URL it is resolved
+	 * against, unless it starts with a slash and replaces that path.
+	 */
+	public static function getRedirectUrlMaxLength(string $location, Url $url): int
+	{
+		$base = str_starts_with($location, '/') || str_starts_with($location, '\\') ? '' : $url->getPath();
+		$encoded = preg_match_all('~[^A-Za-z0-9._\~!$&\'()*+,;=:@/%-]~', $location);
+		// Should the match fail, every character counts as encoded, the bound has to stay one
+		return strlen($base) + strlen($location) + 2 * ($encoded === false ? strlen($location) : $encoded);
+	}
+
 }

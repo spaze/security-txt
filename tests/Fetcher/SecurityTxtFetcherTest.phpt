@@ -1132,7 +1132,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	/**
 	 * The header is measured before it is parsed, a character that may be percent-encoded as three and a relative one with the path it is resolved against, and the URL is
 	 * refused before it is requested or handed to a callback. Before PHP 8.5.8 the last rows are where process memory would have gone, and `.` and `..` segments can cut it
-	 * short of any length checked after parsing.
+	 * short of any length checked after parsing. Change with the measuring once PHP 8.5.12 is required.
 	 */
 	public function testARedirectToALongUrlIsNotFollowed(): void
 	{
