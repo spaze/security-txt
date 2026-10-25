@@ -17,9 +17,10 @@ final class SecurityTxtHostIpAddressInvalidException extends SecurityTxtFetcherE
 		string $ip,
 		private readonly SecurityTxtIpAddressType $ipAddressType,
 		Url $url,
-		SecurityTxtRedirects $redirects = new SecurityTxtRedirects(),
+		?SecurityTxtRedirects $redirects = null,
 		?Throwable $previous = null,
 	) {
+		$redirects ??= new SecurityTxtRedirects();
 		// A `match` rather than an `if`, so a case added later has to be given a name here instead of quietly being called IPv6
 		$type = match ($ipAddressType) {
 			SecurityTxtIpAddressType::V4 => 'IPv4',

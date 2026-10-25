@@ -15,6 +15,7 @@ use ReflectionMethod;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
@@ -30,6 +31,7 @@ use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtTooManyRedirectsException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtUrlUnsupportedSchemeException;
 use Spaze\SecurityTxt\Fetcher\HttpClients\SecurityTxtFetcherHttpClient;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
+use Spaze\SecurityTxt\Json\SecurityTxtJson;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SecurityTxtUrlParser;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
@@ -409,15 +411,16 @@ final class SecurityTxtFetcherTest extends TestCase
 	 * @param array<string, SecurityTxtFetcherResponse|SecurityTxtFetcherException> $responses Keyed by the ASCII URL requested
 	 * @param (Closure(string): void)|null $observe Called with the ASCII URL of every request
 	 */
-	private function getRoutedHttpClient(array $responses, ?Closure $observe = null): SecurityTxtFetcherHttpClient
+	private function getRoutedHttpClient(array $responses, ?Closure $observe = null, ?SecurityTxtFetcherResponse $otherwise = null): SecurityTxtFetcherHttpClient
 	{
-		return new class ($responses, $observe) implements SecurityTxtFetcherHttpClient {
+		return new class ($responses, $observe, $otherwise) implements SecurityTxtFetcherHttpClient {
 
 			/**
 			 * @param array<string, SecurityTxtFetcherResponse|SecurityTxtFetcherException> $responses
 			 * @param (Closure(string): void)|null $observe
+			 * @param SecurityTxtFetcherResponse|null $otherwise What a URL without a response of its own gets, a 404 when null
 			 */
-			public function __construct(private readonly array $responses, private readonly ?Closure $observe)
+			public function __construct(private readonly array $responses, private readonly ?Closure $observe, private readonly ?SecurityTxtFetcherResponse $otherwise)
 			{
 			}
 
@@ -428,7 +431,7 @@ final class SecurityTxtFetcherTest extends TestCase
 				if ($this->observe !== null) {
 					($this->observe)($url->getUrl()->toAsciiString());
 				}
-				$response = $this->responses[$url->getUrl()->toAsciiString()] ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+				$response = $this->responses[$url->getUrl()->toAsciiString()] ?? $this->otherwise ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
 				if ($response instanceof SecurityTxtFetcherException) {
 					throw $response;
 				}
@@ -1025,39 +1028,111 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
-	 * Settling a redirect happens after the hop is recorded and after the scheme is refused, so a `Location` the fetcher will not follow still says where the host sent us.
-	 * Settling first turned this into a hostname error with an empty chain.
+	 * A `Location` the fetcher will not follow still says where the host sent us, and the exception saying so can be stored and read back. A redirect is settled before its
+	 * scheme is refused, so an unsupported one is named the way this library writes a URL: refused unsettled, `ftp://ex%41mple.com/` was stored as `ftp://exAmple.com/`,
+	 * which reading it back refuses. A host that will not settle is a hostname error, and it carries the chain as well.
 	 */
 	public function testARefusedRedirectStillReportsWhereItPointed(): void
 	{
-		$httpClient = new class implements SecurityTxtFetcherHttpClient {
-
-			private int $requests = 0;
-
-
-			#[Override]
-			public function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, string $ipAddress, SecurityTxtIpAddressType $ipAddressType): SecurityTxtFetcherResponse
-			{
-				return $this->requests++ === 0
-					? new SecurityTxtFetcherResponse(301, ['location' => 'ftp://%78n--a.example/'], '', false, $ipAddress, $ipAddressType)
-					: new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+		$json = new SecurityTxtJson($this->splitLines);
+		$start = 'https://start.example/.well-known/security.txt';
+		$next = 'https://start.example/next';
+		$locations = [
+			'an unsupported scheme with an escape in the host' => 'ftp://ex%41mple.com/',
+			'an unsupported scheme with a host that will not settle' => 'ftp://%78n--a.example/',
+			'a host that will not settle' => 'https://%78n--a.example/',
+			'a URL that will not parse' => 'ws://',
+		];
+		$refused = [];
+		foreach ($locations as $name => $location) {
+			// A hop before the refused one, so the chain has a redirect to carry even where the refused one never becomes a URL to add to it
+			$httpClient = $this->getRoutedHttpClient([
+				$start => new SecurityTxtFetcherResponse(301, ['location' => $next], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+				$next => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			]);
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			try {
+				$fetcher->fetch(new Url('https://start.example/'));
+				$refused[$name] = 'not refused';
+			} catch (SecurityTxtFetcherException $e) {
+				$encoded = json_encode(['error' => $e]);
+				assert(is_string($encoded));
+				$decoded = json_decode($encoded, true);
+				assert(is_array($decoded));
+				$refused[$name] = [$e::class, $e->getMessage(), $json->createFetcherExceptionFromJsonValues($decoded)->getMessage()];
 			}
+		}
+		$chain = fn(string ...$redirects): string => ' (redirects: ' . implode(' → ', [$start, $next, ...$redirects]) . ')';
+		Assert::same([
+			'an unsupported scheme with an escape in the host' => [
+				SecurityTxtUrlUnsupportedSchemeException::class,
+				'URL ftp://example.com/ has an unsupported scheme' . $chain('ftp://example.com/'),
+				'URL ftp://example.com/ has an unsupported scheme' . $chain('ftp://example.com/'),
+			],
+			'an unsupported scheme with a host that will not settle' => [
+				SecurityTxtCannotParseHostnameException::class,
+				"Can't parse hostname from ftp://xn--a.example/" . $chain('ftp://xn--a.example/'),
+				"Can't parse hostname from ftp://xn--a.example/" . $chain('ftp://xn--a.example/'),
+			],
+			'a host that will not settle' => [
+				SecurityTxtCannotParseHostnameException::class,
+				"Can't parse hostname from https://xn--a.example/" . $chain('https://xn--a.example/'),
+				"Can't parse hostname from https://xn--a.example/" . $chain('https://xn--a.example/'),
+			],
+			'a URL that will not parse' => [
+				SecurityTxtCannotParseHostnameException::class,
+				"Can't parse hostname from ws://" . $chain(),
+				"Can't parse hostname from ws://" . $chain(),
+			],
+		], $refused);
+	}
 
-		};
-		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
-		$e = Assert::throws(function () use ($fetcher): void {
-			$fetcher->fetch(new Url('https://start.example/'));
-		}, SecurityTxtUrlUnsupportedSchemeException::class);
-		assert($e instanceof SecurityTxtUrlUnsupportedSchemeException);
-		// The chain records where a redirect led rather than the header that said so, and an escape in the host is resolved out of it without losing the host
-		Assert::same(['https://start.example/.well-known/security.txt', 'ftp://xn--a.example/'], $e->getRedirects()->toStrings());
+
+	/**
+	 * Before PHP 8.5.12 the URL parser copied the two bytes after a `%` that starts no escape into the path unchecked, so these came back with a byte that is not UTF-8,
+	 * which a stored result cannot carry, a NUL, which curl refuses with a `ValueError`, or an escape sequence, which the command line would print. Such a URL is refused
+	 * there and followed percent-encoded where the parser gets it right, and either way no byte outside printable ASCII reaches a request or a callback. The file is
+	 * served wherever the redirect leads, so a URL that kept such a byte would be the final URL of a result that cannot be stored.
+	 * Remove with the check once PHP 8.5.12 is required.
+	 */
+	public function testARedirectUrlIsNothingButPrintable(): void
+	{
+		$start = 'https://start.example/.well-known/security.txt';
+		$locations = [
+			'a byte that is not UTF-8' => "/%\xFF",
+			'a NUL' => "/%\x00x",
+			'an escape sequence' => "/%\x1B[31mRED",
+			'a delete' => "/%\x7F",
+		];
+		$printable = [];
+		foreach ($locations as $name => $location) {
+			$seen = [];
+			$httpClient = $this->getRoutedHttpClient(
+				[$start => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4)],
+				function (string $url) use (&$seen): void {
+					$seen[] = $url;
+				},
+				new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			);
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$fetcher->addOnRedirect(function (Url $url, Url $destination) use (&$seen): void {
+				$seen[] = $destination->toAsciiString();
+			});
+			try {
+				$stored = json_encode($fetcher->fetch(new Url('https://start.example/')));
+			} catch (SecurityTxtFetcherException $e) {
+				$stored = json_encode(['error' => $e]);
+			}
+			$printable[$name] = is_string($stored) && preg_match('/[^\x20-\x7E]/', implode($seen)) === 0;
+		}
+		Assert::same(array_fill_keys(array_keys($locations), true), $printable);
 	}
 
 
 	/**
 	 * The header is measured before it is parsed, a character that may be percent-encoded as three and a relative one with the path it is resolved against, and the URL is
 	 * refused before it is requested or handed to a callback. Before PHP 8.5.8 the last rows are where process memory would have gone, and `.` and `..` segments can cut it
-	 * short of any length checked after parsing.
+	 * short of any length checked after parsing. Change with the measuring once PHP 8.5.12 is required.
 	 */
 	public function testARedirectToALongUrlIsNotFollowed(): void
 	{

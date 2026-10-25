@@ -77,5 +77,5 @@ Inline heredoc expected strings in `.phpt` files contain **raw ANSI escape chara
 ### Constraints
 
 - `parse_url()` is banned — use `Uri\WhatWg\Url` (PHP 8.5 built-in, WhatWG URL standard). Enforced by PHPStan via `phpstan.neon`.
-- PHP 8.5 minimum.
+- PHP 8.5 minimum. What works around a URL parser bug fixed by 8.5.12 goes in `SecurityTxtPhpUrlWorkarounds`, its tests say `once PHP 8.5.12 is required`, and the README names the bug by the version that fixed it, `8.5.8` or `8.5.12`.
 - Zero production dependencies.

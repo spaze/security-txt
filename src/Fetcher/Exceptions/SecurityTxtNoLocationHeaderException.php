@@ -10,8 +10,9 @@ use Uri\WhatWg\Url;
 final class SecurityTxtNoLocationHeaderException extends SecurityTxtFetcherException
 {
 
-	public function __construct(Url $url, int $httpCode, SecurityTxtRedirects $redirects = new SecurityTxtRedirects(), ?Throwable $previous = null)
+	public function __construct(Url $url, int $httpCode, ?SecurityTxtRedirects $redirects = null, ?Throwable $previous = null)
 	{
+		$redirects ??= new SecurityTxtRedirects();
 		parent::__construct(
 			$this->withRedirectsParam([$url, $httpCode], $redirects),
 			'HTTP response with code %s is missing a %s header when fetching %s' . $this->getRedirectsFormat($redirects),

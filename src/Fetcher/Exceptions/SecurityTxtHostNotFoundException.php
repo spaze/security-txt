@@ -11,8 +11,9 @@ use Uri\WhatWg\Url;
 final class SecurityTxtHostNotFoundException extends SecurityTxtFetcherException
 {
 
-	public function __construct(Url $url, SecurityTxtHost $host, SecurityTxtRedirects $redirects = new SecurityTxtRedirects(), ?Throwable $previous = null)
+	public function __construct(Url $url, SecurityTxtHost $host, ?SecurityTxtRedirects $redirects = null, ?Throwable $previous = null)
 	{
+		$redirects ??= new SecurityTxtRedirects();
 		parent::__construct(
 			$this->withRedirectsParam([$url, $host], $redirects),
 			"Can't open %s" . $this->getRedirectsFormat($redirects) . ", can't resolve %s",

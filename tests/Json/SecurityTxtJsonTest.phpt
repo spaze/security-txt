@@ -495,6 +495,7 @@ final class SecurityTxtJsonTest extends TestCase
 		if ($exception instanceof SecurityTxtNotFoundException) {
 			assert($exceptionFromJson instanceof SecurityTxtNotFoundException);
 			Assert::same($exception->getIpAddresses(), $exceptionFromJson->getIpAddresses());
+			Assert::same($exception->getSecurityTxtUrls(), $exceptionFromJson->getSecurityTxtUrls());
 		}
 	}
 

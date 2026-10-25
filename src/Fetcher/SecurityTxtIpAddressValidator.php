@@ -26,7 +26,7 @@ final class SecurityTxtIpAddressValidator
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 */
-	public function validate(string $ipAddress, SecurityTxtIpAddressType $type, SecurityTxtHost $host, Url $url, SecurityTxtRedirects $redirects = new SecurityTxtRedirects()): void
+	public function validate(string $ipAddress, SecurityTxtIpAddressType $type, SecurityTxtHost $host, Url $url, ?SecurityTxtRedirects $redirects = null): void
 	{
 		// A `match` for the same reason `SecurityTxtHostIpAddressInvalidException` uses one, and with more riding on it: a case added later would fall through a ternary to
 		// `FILTER_FLAG_IPV6` while the `V6` test below stayed false, so it would be filtered as IPv6 and skip the NAT64 check that keeps a mapped address off the metadata endpoint
@@ -56,7 +56,7 @@ final class SecurityTxtIpAddressValidator
 	 *
 	 * @throws SecurityTxtHostIpAddressNotPublicException
 	 */
-	private function validateNat64IpAddress(string $ipAddress, SecurityTxtHost $host, Url $url, SecurityTxtRedirects $redirects): void
+	private function validateNat64IpAddress(string $ipAddress, SecurityTxtHost $host, Url $url, ?SecurityTxtRedirects $redirects): void
 	{
 		$binary = inet_pton($ipAddress);
 		if ($binary === false) {

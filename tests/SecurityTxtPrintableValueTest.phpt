@@ -8,6 +8,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt;
 
+use Spaze\SecurityTxt\Violations\SecurityTxtCsafWrongFile;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
@@ -72,6 +73,28 @@ final class SecurityTxtPrintableValueTest extends TestCase
 			Assert::notNull($printed, "what was printed for {$name} does not parse");
 			Assert::same($url->getAsciiHost(), $printed?->getAsciiHost(), "a URL on {$name} prints as a different host");
 		}
+	}
+
+
+	/**
+	 * Before PHP 8.5.12 the URL parser copied the two bytes after a `%` that starts no escape into the path unchecked, so a URL in a checked file, a `Canonical` say,
+	 * parsed with a control character, an escape sequence or a byte that is not UTF-8 in it. Encoded here, it prints the way a parser that gets it right spells it. Remove
+	 * with the encoding once PHP 8.5.12 is required.
+	 */
+	public function testAUrlTheParserLeftRawBytesInPrintsEncoded(): void
+	{
+		$rendered = [];
+		foreach (["https://example.com/%\x1B[2J", "https://example.com/%\x00x", "https://example.com/%\xFF", "https://example.com/%\xC2\x9B2J"] as $value) {
+			$url = Url::parse($value);
+			assert($url !== null);
+			$rendered[] = new SecurityTxtPrintableValue($url)->render();
+		}
+		Assert::same(['https://example.com/%%1B[2J', 'https://example.com/%%00x', 'https://example.com/%%FF', 'https://example.com/%%C2%9B2J'], $rendered);
+		// Through a violation, which hands a URL from the file over as a `Url` whenever it parses back to itself, and on PHP 8.5.4 this one does
+		Assert::same(
+			'The file with the Common Security Advisory Framework (CSAF) metadata currently located at https://example.com/%%1B[31mprovider.json must be called provider-metadata.json',
+			new SecurityTxtCsafWrongFile("https://example.com/%\x1B[31mprovider.json")->getMessage(),
+		);
 	}
 
 

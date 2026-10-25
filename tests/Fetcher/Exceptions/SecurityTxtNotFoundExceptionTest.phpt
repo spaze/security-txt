@@ -187,6 +187,52 @@ final class SecurityTxtNotFoundExceptionTest extends TestCase
 
 
 	/**
+	 * Both locations nearly always resolve to the same address, so `getIpAddresses()` keeps what the second one answered, and only the locations themselves tell a firewall's
+	 * 403 at one from a 404 at the other.
+	 */
+	public function testEachLocationKeepsWhatItAnswered(): void
+	{
+		$exception = new SecurityTxtNotFoundException([
+			'https://example.com/.well-known/security.txt' => [
+				'ip' => '192.0.2.1',
+				'type' => SecurityTxtIpAddressType::V4->value,
+				'code' => 403,
+				'redirects' => ['https://www.example.com/.well-known/security.txt'],
+				'html' => false,
+				'truncated' => true,
+			],
+			'https://example.com/security.txt' => [
+				'ip' => '192.0.2.1',
+				'type' => SecurityTxtIpAddressType::V4->value,
+				'code' => 200,
+				'redirects' => [],
+				'html' => true,
+				'truncated' => false,
+			],
+		], new Url('https://example.com/.well-known/security.txt'));
+		Assert::same(['192.0.2.1' => [SecurityTxtIpAddressType::V4, 200]], $exception->getIpAddresses());
+		Assert::same([
+			'https://example.com/.well-known/security.txt' => [
+				'ip' => '192.0.2.1',
+				'type' => SecurityTxtIpAddressType::V4,
+				'code' => 403,
+				'redirects' => ['https://www.example.com/.well-known/security.txt'],
+				'html' => false,
+				'truncated' => true,
+			],
+			'https://example.com/security.txt' => [
+				'ip' => '192.0.2.1',
+				'type' => SecurityTxtIpAddressType::V4,
+				'code' => 200,
+				'redirects' => [],
+				'html' => true,
+				'truncated' => false,
+			],
+		], $exception->getSecurityTxtUrls());
+	}
+
+
+	/**
 	 * A result stored before URLs were written as A-labels keys its URLs by the readable spelling, while the lookup that finds the well-known one among them is done in the
 	 * wire spelling, so the keys handed in are put in that spelling first. Without it such a result does not replay at all: it fails saying the well-known URL is not among
 	 * its own keys, and the whole stored result goes with it.
