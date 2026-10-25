@@ -6,15 +6,15 @@ namespace Spaze\SecurityTxt\Violations;
 final class SecurityTxtFileLocationNotUri extends SecurityTxtSpecViolation
 {
 
-	public function __construct(string $uri)
+	public function __construct(string $uri, SecurityTxtNotUriReason $reason = SecurityTxtNotUriReason::Unspecified, ?string $correctValue = null)
 	{
 		parent::__construct(
 			func_get_args(),
-			"The location of the file %s doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+			'The location of the file %s ' . $reason->getFormat(),
 			[$uri],
 			'draft-foudil-securitytxt-00',
-			null,
-			'Use a URI as the value',
+			self::asUrl($correctValue),
+			$reason->getHowToFix(),
 			[],
 			'3',
 		);

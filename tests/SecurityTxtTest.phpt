@@ -52,6 +52,10 @@ final class SecurityTxtTest extends TestCase
 		$securityTxt->setFileLocation('https://foo/bar');
 		Assert::same('https://foo/bar', $securityTxt->getFileLocation());
 
+		// As the parser serializes a URL redirected to `/a|b%zz`, which a value written in the file could not be
+		$securityTxt->setFileLocation('https://foo/a|b%zz');
+		Assert::same('https://foo/a|b%zz', $securityTxt->getFileLocation());
+
 		$e = Assert::throws(function () use ($securityTxt): void {
 			$securityTxt->setFileLocation('http://foo/bar');
 		}, SecurityTxtError::class);
@@ -137,7 +141,7 @@ final class SecurityTxtTest extends TestCase
 					'https://example.com/.well-known/security.txt' => null,
 					'http://example.com/.well-known/security.txt' => SecurityTxtCanonicalNotHttps::class,
 					'ftp://foo.bar.example.net/security.txt' => null,
-					'C:\\security.txt' => null,
+					'C:\\security.txt' => SecurityTxtCanonicalNotUri::class,
 					'example.com/.well-known/security.txt' => SecurityTxtCanonicalNotUri::class,
 				],
 				SecurityTxtCanonical::class,
@@ -160,6 +164,20 @@ final class SecurityTxtTest extends TestCase
 					'bar@example.com' => SecurityTxtContactNotUri::class,
 					'tel:+1-201-555-0123' => null,
 					'+1-201-555-01234' => SecurityTxtContactNotUri::class,
+					'mailto: foo@example.com' => SecurityTxtContactNotUri::class,
+					'tel:+1 201 555 0123' => SecurityTxtContactNotUri::class,
+					'mailto:foo@example.com, mailto:bar@example.com' => SecurityTxtContactNotUri::class,
+					'https://example.com/%zz' => SecurityTxtContactNotUri::class,
+					'https://example.com/a|b' => SecurityTxtContactNotUri::class,
+					"https://example.com/\x01" => SecurityTxtContactNotUri::class,
+					'https:///contact' => SecurityTxtContactNotUri::class,
+					'https:example.com/contact' => SecurityTxtContactNotUri::class,
+					'https://user@example.com/contact' => SecurityTxtContactNotUri::class,
+					'https://example.com:65536/contact' => SecurityTxtContactNotUri::class,
+					"https://h\u{E1}\u{10D}ky.example/kontakt" => null,
+					"https://example.com/\u{FDD0}" => SecurityTxtContactNotUri::class,
+					"https://example.com/\xFF" => SecurityTxtContactNotUri::class,
+					'ftp://anonymous@example.com/contact' => null,
 				],
 				SecurityTxtContact::class,
 				function (SecurityTxt $securityTxt): callable {

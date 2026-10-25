@@ -15,25 +15,25 @@ abstract class SecurityTxtNonRfcFieldNotUri extends SecurityTxtSpecViolation
 	 * @param list<mixed> $constructorParams
 	 * @param SecurityTxtField $field
 	 * @param string $uri
+	 * @param SecurityTxtNotUriReason $reason
 	 * @param string|null $correctValue
-	 * @param literal-string|null $howToFix Goes into the format, so it must not be built from anything read from the file
 	 * @param string $specUrl
 	 */
 	public function __construct(
 		array $constructorParams,
 		SecurityTxtField $field,
 		string $uri,
+		SecurityTxtNotUriReason $reason,
 		?string $correctValue,
-		?string $howToFix,
 		string $specUrl,
 	) {
 		parent::__construct(
 			$constructorParams,
-			"The %s value (%s) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+			'The %s value (%s) ' . $reason->getFormat(),
 			[$field->value, $uri],
 			null,
-			$correctValue,
-			$howToFix ?? 'Use a URI as the value',
+			self::asUrl($correctValue),
+			$reason->getHowToFix(),
 			[],
 			null,
 			specUrl: $specUrl,

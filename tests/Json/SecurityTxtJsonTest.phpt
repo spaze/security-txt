@@ -52,6 +52,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtCsafWrongFile;
 use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
+use Spaze\SecurityTxt\Violations\SecurityTxtNotUriReason;
 use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistakeReason;
@@ -137,6 +138,21 @@ final class SecurityTxtJsonTest extends TestCase
 	}
 
 
+	/**
+	 * A violation stored before it carried why the value is not a URI is read back saying only that it is not, the value is not checked again to find out.
+	 */
+	public function testNotUriStoredWithoutTheReason(): void
+	{
+		$violations = $this->securityTxtJson->createViolationsFromJsonValues([[
+			'class' => SecurityTxtContactNotUri::class,
+			'params' => ['foo@example.com'],
+		]]);
+		Assert::same("The Contact value (foo@example.com) isn't a valid URI", $violations[0]->getMessage());
+		Assert::same('Use a URI as the value', $violations[0]->getHowToFix());
+		Assert::null($violations[0]->getCorrectValue());
+	}
+
+
 	public function testSerializePreferredLanguagesCommonMistakeThenCreateFromJsonValues(): void
 	{
 		$violation = new SecurityTxtPreferredLanguagesCommonMistake(2, 'cz-CZ', 'cs-CZ', SecurityTxtPreferredLanguagesCommonMistakeReason::CzechUsesCsNotCz);
@@ -156,9 +172,9 @@ final class SecurityTxtJsonTest extends TestCase
 	public function testSerializeViolationsThenCreateFromJsonValues(): void
 	{
 		$json = json_encode([
-			new SecurityTxtContactNotUri('le big mac'),
+			new SecurityTxtContactNotUri('le big mac', SecurityTxtNotUriReason::SchemeMissing),
 			new SecurityTxtHiringNotHttps('http://example.com/'),
-			new SecurityTxtCsafNotUri('with cheese'),
+			new SecurityTxtCsafNotUri('with cheese', SecurityTxtNotUriReason::SchemeMissing),
 			new SecurityTxtCsafNotHttps('http://example.com/bar.txt'),
 			new SecurityTxtCsafWrongFile('https://example.com/foo/bar.txt'),
 			new SecurityTxtBugBountyWrongCase('false'),
