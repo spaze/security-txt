@@ -6,6 +6,7 @@ namespace Spaze\SecurityTxt\Fetcher\HttpClients;
 use CurlHandle;
 use LogicException;
 use Override;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlContentEncodingException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
@@ -59,6 +60,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 
 	/**
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
@@ -127,6 +129,11 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 		$result = curl_exec($ch);
 		if ($result === false) {
 			$error = curl_errno($ch);
+			// What the server claimed to have encoded the body with, `utf8` say, which is a charset and not a content coding, is the thing to fix, more than that curl failed
+			$contentEncoding = $error === CURLE_BAD_CONTENT_ENCODING ? $this->getContentEncoding($rawHeaders) : null;
+			if ($contentEncoding !== null) {
+				throw new SecurityTxtCannotOpenUrlContentEncodingException($url->getUrl(), $url->getRedirects(), $ipAddress, $ipAddressType, $contentEncoding);
+			}
 			if ($error !== CURLE_WRITE_ERROR || !$truncated) {
 				// Deliberately not curl_error(), that one embeds server controlled strings, see the exception's $error docs
 				throw new SecurityTxtCannotOpenUrlException(
@@ -151,6 +158,52 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			throw new SecurityTxtNoHttpCodeException($url->getUrl(), $url->getRedirects());
 		}
 
+		return new SecurityTxtFetcherResponse(
+			$code,
+			$this->getHeaders($rawHeaders),
+			$contents,
+			$truncated,
+			$ipAddress,
+			$ipAddressType,
+		);
+	}
+
+
+	/**
+	 * The `Content-Encoding` of the final response, its lines joined the way RFC 9110 combines a field, but only once all of that response's header lines have arrived:
+	 * curl reports a `Transfer-Encoding` it rejects while still reading them with the same error, and then it is not the content coding that failed.
+	 *
+	 * @param list<string> $rawHeaders
+	 */
+	private function getContentEncoding(array $rawHeaders): ?string
+	{
+		if ($rawHeaders === [] || $rawHeaders[array_key_last($rawHeaders)] !== '') {
+			return null;
+		}
+		$codings = [];
+		$final = false;
+		foreach ($rawHeaders as $line) {
+			// Each status line starts the header block of another response, and only the one after an informational 1xx response is the final one
+			if (preg_match('~^HTTP/\S+ ([0-9]{3})~', $line, $matches) === 1) {
+				$codings = [];
+				$final = (int)$matches[1] >= 200;
+				continue;
+			}
+			$parts = explode(':', $line, 2);
+			if (count($parts) === 2 && strtolower(trim($parts[0])) === 'content-encoding' && trim($parts[1]) !== '') {
+				$codings[] = trim($parts[1]);
+			}
+		}
+		return $final && $codings !== [] ? implode(', ', $codings) : null;
+	}
+
+
+	/**
+	 * @param list<string> $rawHeaders
+	 * @return array<lowercase-string, string>
+	 */
+	private function getHeaders(array $rawHeaders): array
+	{
 		$headers = [];
 		foreach ($rawHeaders as $i => $line) {
 			if ($i === 0) {
@@ -165,15 +218,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 				$headers[strtolower(trim($parts[0]))] = trim($parts[1]);
 			}
 		}
-
-		return new SecurityTxtFetcherResponse(
-			$code,
-			$headers,
-			$contents,
-			$truncated,
-			$ipAddress,
-			$ipAddressType,
-		);
+		return $headers;
 	}
 
 

@@ -14,6 +14,8 @@ use Override;
 use ReflectionMethod;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsProvider;
 use Spaze\SecurityTxt\Fetcher\DnsLookup\SecurityTxtDnsRecords;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
@@ -38,6 +40,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtRedirectNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelPathOnly;
+use Spaze\SecurityTxt\Violations\SecurityTxtWellKnownPathOnly;
 use Tester\Assert;
 use Tester\TestCase;
 use Uri\WhatWg\Url;
@@ -400,9 +403,10 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
-	 * Answers by URL, a 404 for anything not listed, so a test can lay out a whole redirect chain.
+	 * Answers by URL, a 404 for anything not listed, so a test can lay out a whole redirect chain; an exception listed for a URL is thrown, the way a client reports a
+	 * transfer that failed.
 	 *
-	 * @param array<string, SecurityTxtFetcherResponse> $responses Keyed by the ASCII URL requested
+	 * @param array<string, SecurityTxtFetcherResponse|SecurityTxtFetcherException> $responses Keyed by the ASCII URL requested
 	 * @param (Closure(string): void)|null $observe Called with the ASCII URL of every request
 	 */
 	private function getRoutedHttpClient(array $responses, ?Closure $observe = null): SecurityTxtFetcherHttpClient
@@ -410,7 +414,7 @@ final class SecurityTxtFetcherTest extends TestCase
 		return new class ($responses, $observe) implements SecurityTxtFetcherHttpClient {
 
 			/**
-			 * @param array<string, SecurityTxtFetcherResponse> $responses
+			 * @param array<string, SecurityTxtFetcherResponse|SecurityTxtFetcherException> $responses
 			 * @param (Closure(string): void)|null $observe
 			 */
 			public function __construct(private readonly array $responses, private readonly ?Closure $observe)
@@ -424,10 +428,136 @@ final class SecurityTxtFetcherTest extends TestCase
 				if ($this->observe !== null) {
 					($this->observe)($url->getUrl()->toAsciiString());
 				}
-				return $this->responses[$url->getUrl()->toAsciiString()] ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+				$response = $this->responses[$url->getUrl()->toAsciiString()] ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+				if ($response instanceof SecurityTxtFetcherException) {
+					throw $response;
+				}
+				return $response;
 			}
 
 		};
+	}
+
+
+	/**
+	 * A location that fails, by a redirect loop or a transfer that does not complete, has no file there, so the file at the other location is what gets checked. Without a
+	 * file anywhere the failure is what gets reported, the /.well-known/ one's first, since RFC 9116 has that location used and the top-level one only for legacy
+	 * compatibility. The callback for a failure is called only when it is swallowed, a thrown one reports itself.
+	 */
+	public function testAFailingLocationHasNoFileThere(): void
+	{
+		$redirect = fn(string $location): SecurityTxtFetcherResponse => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$wellKnown = 'https://start.example/.well-known/security.txt';
+		$topLevel = 'https://start.example/security.txt';
+		$cannotOpen = new SecurityTxtCannotOpenUrlException(new Url($topLevel), new SecurityTxtRedirects(), '1.1.1.0', SecurityTxtIpAddressType::V4, 'Unrecognized or bad HTTP Content or Transfer-Encoding');
+		$wrongIp = new SecurityTxtConnectedToWrongIpAddressException('1.1.1.0', '1.1.1.1', new Url($topLevel), new SecurityTxtRedirects());
+		$html = new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<html><body>Not here</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$truncated = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://exa', true, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$locations = [
+			'a top-level redirect loop' => [[$wellKnown => $file, $topLevel => $redirect($topLevel)], false],
+			'a top-level transfer that fails' => [[$wellKnown => $file, $topLevel => $cannotOpen], false],
+			'a top-level connection to the wrong address' => [[$wellKnown => $file, $topLevel => $wrongIp], false],
+			'a top-level redirect loop, the top-level location required' => [[$wellKnown => $file, $topLevel => $redirect($topLevel)], true],
+			'a top-level redirect loop and no file at all' => [[$topLevel => $redirect($topLevel)], false],
+			'a top-level redirect loop and an HTML page at /.well-known/' => [[$wellKnown => $html, $topLevel => $redirect($topLevel)], false],
+			'a top-level redirect loop and a truncated file at /.well-known/' => [[$wellKnown => $truncated, $topLevel => $redirect($topLevel)], false],
+			'a /.well-known/ redirect loop and the file at the top level' => [[$wellKnown => $redirect($wellKnown), $topLevel => $file], false],
+			'a /.well-known/ redirect loop and nothing at the top level' => [[$wellKnown => $redirect($wellKnown)], false],
+			'both locations in a redirect loop' => [[$wellKnown => $redirect($wellKnown), $topLevel => $redirect($topLevel)], false],
+		];
+		$reported = $messages = $failed = [];
+		foreach ($locations as $name => [$responses, $requireTopLevelLocation]) {
+			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$failed[$name] = [];
+			$fetcher->addOnUrlFailed(function (SecurityTxtFetcherException $e) use (&$failed, $name): void {
+				$failed[$name][] = [$e::class, $e->getUrl()?->toAsciiString()];
+			});
+			try {
+				$result = $fetcher->fetch(new Url('https://start.example/'), $requireTopLevelLocation);
+				$reported[$name] = [
+					$result->getFinalUrl()->toAsciiString(),
+					array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $result->getErrors()),
+					array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $result->getWarnings()),
+				];
+				$messages[$name] = array_map(fn(SecurityTxtSpecViolation $violation): string => $violation->getMessage(), [...$result->getErrors(), ...$result->getWarnings()]);
+			} catch (SecurityTxtFetcherException $e) {
+				$reported[$name] = [$e::class, $e->getUrl()?->toAsciiString()];
+			}
+		}
+		Assert::same([
+			'a top-level redirect loop' => [$wellKnown, [], []],
+			'a top-level transfer that fails' => [$wellKnown, [], []],
+			'a top-level connection to the wrong address' => [$wellKnown, [], []],
+			'a top-level redirect loop, the top-level location required' => [$wellKnown, [], [SecurityTxtWellKnownPathOnly::class]],
+			'a top-level redirect loop and no file at all' => [SecurityTxtRedirectLoopException::class, $topLevel],
+			'a top-level redirect loop and an HTML page at /.well-known/' => [SecurityTxtRedirectLoopException::class, $topLevel],
+			'a top-level redirect loop and a truncated file at /.well-known/' => [SecurityTxtRedirectLoopException::class, $topLevel],
+			'a /.well-known/ redirect loop and the file at the top level' => [$topLevel, [SecurityTxtTopLevelPathOnly::class], []],
+			'a /.well-known/ redirect loop and nothing at the top level' => [SecurityTxtRedirectLoopException::class, $wellKnown],
+			'both locations in a redirect loop' => [SecurityTxtRedirectLoopException::class, $wellKnown],
+		], $reported);
+		// The violation for a location that has no file says why, when it was a failure
+		Assert::same([
+			"security.txt wasn't found under the /.well-known/ path: Can't read {$wellKnown}, the redirects go in a loop (redirects: {$wellKnown} → {$wellKnown})",
+		], $messages['a /.well-known/ redirect loop and the file at the top level'] ?? null);
+		Assert::same([
+			"security.txt not found at the top-level path: Can't read {$topLevel}, the redirects go in a loop (redirects: {$topLevel} → {$topLevel})",
+		], $messages['a top-level redirect loop, the top-level location required'] ?? null);
+		Assert::same([
+			'a top-level redirect loop' => [[SecurityTxtRedirectLoopException::class, $topLevel]],
+			'a top-level transfer that fails' => [[SecurityTxtCannotOpenUrlException::class, $topLevel]],
+			'a top-level connection to the wrong address' => [[SecurityTxtConnectedToWrongIpAddressException::class, $topLevel]],
+			'a top-level redirect loop, the top-level location required' => [[SecurityTxtRedirectLoopException::class, $topLevel]],
+			'a top-level redirect loop and no file at all' => [],
+			'a top-level redirect loop and an HTML page at /.well-known/' => [],
+			'a top-level redirect loop and a truncated file at /.well-known/' => [],
+			'a /.well-known/ redirect loop and the file at the top level' => [[SecurityTxtRedirectLoopException::class, $wellKnown]],
+			'a /.well-known/ redirect loop and nothing at the top level' => [],
+			'both locations in a redirect loop' => [],
+		], $failed);
+	}
+
+
+	/**
+	 * A firewall or a bot protection answering for /.well-known/security.txt is a different fix than a file in the wrong place, so the error says what that location answered
+	 * when it was an error other than one saying there is no file there. The callback for a location without a file is told the code too.
+	 */
+	public function testOnlyTheTopLevelFileSaysWhatTheWellKnownLocationAnswered(): void
+	{
+		$file = new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+		$answers = [
+			'404' => new SecurityTxtFetcherResponse(404, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'410' => new SecurityTxtFetcherResponse(410, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'400' => new SecurityTxtFetcherResponse(400, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'403' => new SecurityTxtFetcherResponse(403, ['content-type' => 'text/html'], '<html><body>Blocked</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'500' => new SecurityTxtFetcherResponse(500, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'an HTML page with 200' => new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<html><body>Not here</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+		];
+		$reported = [];
+		foreach ($answers as $name => $answer) {
+			$responses = ['https://start.example/.well-known/security.txt' => $answer, 'https://start.example/security.txt' => $file];
+			$fetcher = new SecurityTxtFetcher($this->getRoutedHttpClient($responses), $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$notFound = [];
+			$fetcher->addOnUrlNotFound(function (Url $url, int $httpCode) use (&$notFound): void {
+				$notFound[] = "{$httpCode} {$url->toAsciiString()}";
+			});
+			$errors = $fetcher->fetch(new Url('https://start.example/'))->getErrors();
+			$reported[$name] = [array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation->getMessage(), $violation->getHowToFix()], $errors), $notFound];
+		}
+		$notFound = ["security.txt wasn't found under the /.well-known/ path", 'Move the security.txt file from the top-level location under the /.well-known/ path and redirect /security.txt to /.well-known/security.txt'];
+		$answered = fn(int $code): array => [
+			"/.well-known/security.txt answered with HTTP code {$code}, only the top-level security.txt was found",
+			'Make /.well-known/security.txt available to everyone, a firewall or a bot protection may be what answers instead, and redirect /security.txt to it',
+		];
+		Assert::same([
+			'404' => [[$notFound], ['404 https://start.example/.well-known/security.txt']],
+			'410' => [[$notFound], ['410 https://start.example/.well-known/security.txt']],
+			'400' => [[$answered(400)], ['400 https://start.example/.well-known/security.txt']],
+			'403' => [[$answered(403)], ['403 https://start.example/.well-known/security.txt']],
+			'500' => [[$answered(500)], ['500 https://start.example/.well-known/security.txt']],
+			'an HTML page with 200' => [[$notFound], []],
+		], $reported);
 	}
 
 
@@ -524,14 +654,14 @@ final class SecurityTxtFetcherTest extends TestCase
 		}
 		$loop = SecurityTxtRedirectLoopException::class;
 		Assert::same([
-			'a redirect to itself' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 1],
-			'a redirect to itself with an escaped capital' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 1],
-			'a later hop redirecting to itself' => ["{$loop}: Can't read https://one.example/a, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://one.example/a)", 2],
-			'an empty Location' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 1],
-			'a fragment only' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start}#x)", 1],
-			'back to the start' => ["{$loop}: Can't read https://two.example/b, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://two.example/b → {$start})", 3],
-			'between two later hops' => ["{$loop}: Can't read https://two.example/b, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://two.example/b → https://one.example/a)", 3],
-			'a loop longer than the limit' => [SecurityTxtTooManyRedirectsException::class . ": Can't read https://one.example/5, too many redirects, max allowed is 5 (redirects: {$start} → https://one.example/1 → https://one.example/2 → https://one.example/3 → https://one.example/4 → https://one.example/5 → https://one.example/6, the last one not loaded)", 6],
+			'a redirect to itself' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 2],
+			'a redirect to itself with an escaped capital' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 2],
+			'a later hop redirecting to itself' => ["{$loop}: Can't read https://one.example/a, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://one.example/a)", 3],
+			'an empty Location' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start})", 2],
+			'a fragment only' => ["{$loop}: Can't read {$start}, the redirects go in a loop (redirects: {$start} → {$start}#x)", 2],
+			'back to the start' => ["{$loop}: Can't read https://two.example/b, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://two.example/b → {$start})", 4],
+			'between two later hops' => ["{$loop}: Can't read https://two.example/b, the redirects go in a loop (redirects: {$start} → https://one.example/a → https://two.example/b → https://one.example/a)", 4],
+			'a loop longer than the limit' => [SecurityTxtTooManyRedirectsException::class . ": Can't read https://one.example/5, too many redirects, max allowed is 5 (redirects: {$start} → https://one.example/1 → https://one.example/2 → https://one.example/3 → https://one.example/4 → https://one.example/5 → https://one.example/6, the last one not loaded)", 7],
 			'the same path on another host' => ['fetched https://two.example/a', 4],
 			'the same path with another query' => ['fetched https://one.example/a?2', 4],
 			'both locations to the same URL' => ['fetched https://one.example/a', 4],
@@ -988,19 +1118,19 @@ final class SecurityTxtFetcherTest extends TestCase
 		}
 		Assert::same([
 			'a path of 1000 characters' => [SecurityTxtNotFoundException::class, [25, 1000, 13], [1000]],
-			'a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
 			'a path starting with a backslash counted as 1000 characters, the backslash as three' => [SecurityTxtNotFoundException::class, [25, 998, 13], [998]],
 			'a path and a query counted as 1000 characters, the question mark as three' => [SecurityTxtNotFoundException::class, [25, 2, 13], [2]],
-			'a path and a query counted as 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a path and a query counted as 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
 			'a relative path of 1000 characters with the base path' => [SecurityTxtNotFoundException::class, [25, 988, 13], [988]],
-			'a relative path of 1001 characters with the base path' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a relative path of 1001 characters with the base path' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
 			'a path of 1000 characters once percent-encoded' => [SecurityTxtNotFoundException::class, [25, 1000, 13], [1000]],
-			'a path of 1003 characters once percent-encoded' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
-			'another host with a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
-			'an unsupported scheme with a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
-			'dot segments cutting a path back' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
-			'a long fragment after a dot segment' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
-			'a path PHP before 8.5.8 fills with process memory' => [SecurityTxtRedirectUrlTooLongException::class, [25], []],
+			'a path of 1003 characters once percent-encoded' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
+			'another host with a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
+			'an unsupported scheme with a path of 1001 characters' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
+			'dot segments cutting a path back' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
+			'a long fragment after a dot segment' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
+			'a path PHP before 8.5.8 fills with process memory' => [SecurityTxtRedirectUrlTooLongException::class, [25, 13], []],
 		], $requested);
 	}
 
@@ -1042,20 +1172,23 @@ final class SecurityTxtFetcherTest extends TestCase
 
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(301, ['location' => 'https://location.example/'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 0);
-		$onRedirectUrl = $onRedirectDestination = null;
-		$fetcher->addOnRedirect(function (Url $url, Url $destination) use (&$onRedirectUrl, &$onRedirectDestination): void {
-			$onRedirectUrl = $url->toUnicodeString();
-			$onRedirectDestination = $destination->toUnicodeString();
+		$onRedirects = [];
+		$fetcher->addOnRedirect(function (Url $url, Url $destination) use (&$onRedirects): void {
+			$onRedirects[] = "{$url->toUnicodeString()} -> {$destination->toUnicodeString()}";
 		});
 		Assert::throws(function () use (&$fetcher): void {
 			$fetcher->fetch(new Url('https://com.example/'));
 		}, SecurityTxtTooManyRedirectsException::class);
-		Assert::same('https://com.example/.well-known/security.txt', $onRedirectUrl);
-		Assert::same('https://location.example/', $onRedirectDestination);
+		// The top-level location is tried after the /.well-known/ one fails, and the /.well-known/ failure is the one reported
+		Assert::same([
+			'https://com.example/.well-known/security.txt -> https://location.example/',
+			'https://com.example/security.txt -> https://location.example/',
+		], $onRedirects);
 
 		$httpClient = $this->getHttpClient(
 			new SecurityTxtFetcherResponse(301, ['location' => '/one/security.txt'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 			new SecurityTxtFetcherResponse(301, ['location' => '/two/security.txt'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'nah', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 1);
 		$onRedirects = [];
@@ -1132,7 +1265,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 		$httpClient = $this->getHttpClient(
 			new SecurityTxtFetcherResponse(301, ['location' => 'https://redir.example/'], 'random redir', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
-			new SecurityTxtFetcherResponse(200, [], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			new SecurityTxtFetcherResponse(404, [], 'nah', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		);
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator, 5);
 		Assert::throws(function () use ($fetcher): void {

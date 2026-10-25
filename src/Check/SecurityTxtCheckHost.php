@@ -4,11 +4,13 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Check;
 
 use DateTimeImmutable;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlContentEncodingException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlExtensionNotLoadedException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotOpenUrlUserAgentInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtCannotParseHostnameException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtConnectedToWrongIpAddressException;
+use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtFetcherException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressInvalidException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotFoundException;
 use Spaze\SecurityTxt\Fetcher\Exceptions\SecurityTxtHostIpAddressNotPublicException;
@@ -40,8 +42,11 @@ final class SecurityTxtCheckHost
 	/** @var list<callable(Url, Url): void> */
 	private array $onRedirect = [];
 
-	/** @var list<callable(Url): void> */
+	/** @var list<callable(Url, int): void> */
 	private array $onUrlNotFound = [];
+
+	/** @var list<callable(SecurityTxtFetcherException): void> */
+	private array $onUrlFailed = [];
 
 	/** @var list<callable(positive-int, DateTimeImmutable): void> */
 	private array $onIsExpired = [];
@@ -95,6 +100,7 @@ final class SecurityTxtCheckHost
 	 * @throws SecurityTxtRedirectUrlTooLongException
 	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
+	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
@@ -171,8 +177,13 @@ final class SecurityTxtCheckHost
 			},
 		);
 		$this->fetcher->addOnUrlNotFound(
-			function (Url $url): void {
-				$this->callOnCallback($this->onUrlNotFound, $url);
+			function (Url $url, int $httpCode): void {
+				$this->callOnCallback($this->onUrlNotFound, $url, $httpCode);
+			},
+		);
+		$this->fetcher->addOnUrlFailed(
+			function (SecurityTxtFetcherException $exception): void {
+				$this->callOnCallback($this->onUrlFailed, $exception);
 			},
 		);
 	}
@@ -190,7 +201,7 @@ final class SecurityTxtCheckHost
 	/**
 	 * @param list<callable> $onCallbacks
 	 */
-	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|Url|SecurityTxtHost|SecurityTxtSpecViolation|null ...$params): void
+	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|Url|SecurityTxtHost|SecurityTxtSpecViolation|SecurityTxtFetcherException|null ...$params): void
 	{
 		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
@@ -226,11 +237,22 @@ final class SecurityTxtCheckHost
 
 
 	/**
-	 * @param callable(Url $url): void $onUrlNotFound
+	 * @param callable(Url $url, int $httpCode): void $onUrlNotFound
 	 */
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
 		$this->onUrlNotFound[] = $onUrlNotFound;
+	}
+
+
+	/**
+	 * Called only when the file at the other location is used, a failure that leaves no file anywhere is thrown instead
+	 *
+	 * @param callable(SecurityTxtFetcherException $exception): void $onUrlFailed
+	 */
+	public function addOnUrlFailed(callable $onUrlFailed): void
+	{
+		$this->onUrlFailed[] = $onUrlFailed;
 	}
 
 
