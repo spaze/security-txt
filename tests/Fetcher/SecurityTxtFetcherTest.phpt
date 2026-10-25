@@ -411,15 +411,16 @@ final class SecurityTxtFetcherTest extends TestCase
 	 * @param array<string, SecurityTxtFetcherResponse|SecurityTxtFetcherException> $responses Keyed by the ASCII URL requested
 	 * @param (Closure(string): void)|null $observe Called with the ASCII URL of every request
 	 */
-	private function getRoutedHttpClient(array $responses, ?Closure $observe = null): SecurityTxtFetcherHttpClient
+	private function getRoutedHttpClient(array $responses, ?Closure $observe = null, ?SecurityTxtFetcherResponse $otherwise = null): SecurityTxtFetcherHttpClient
 	{
-		return new class ($responses, $observe) implements SecurityTxtFetcherHttpClient {
+		return new class ($responses, $observe, $otherwise) implements SecurityTxtFetcherHttpClient {
 
 			/**
 			 * @param array<string, SecurityTxtFetcherResponse|SecurityTxtFetcherException> $responses
 			 * @param (Closure(string): void)|null $observe
+			 * @param SecurityTxtFetcherResponse|null $otherwise What a URL without a response of its own gets, a 404 when null
 			 */
-			public function __construct(private readonly array $responses, private readonly ?Closure $observe)
+			public function __construct(private readonly array $responses, private readonly ?Closure $observe, private readonly ?SecurityTxtFetcherResponse $otherwise)
 			{
 			}
 
@@ -430,7 +431,7 @@ final class SecurityTxtFetcherTest extends TestCase
 				if ($this->observe !== null) {
 					($this->observe)($url->getUrl()->toAsciiString());
 				}
-				$response = $this->responses[$url->getUrl()->toAsciiString()] ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
+				$response = $this->responses[$url->getUrl()->toAsciiString()] ?? $this->otherwise ?? new SecurityTxtFetcherResponse(404, [], '', false, $ipAddress, $ipAddressType);
 				if ($response instanceof SecurityTxtFetcherException) {
 					throw $response;
 				}
@@ -1084,6 +1085,47 @@ final class SecurityTxtFetcherTest extends TestCase
 				"Can't parse hostname from ws://" . $chain(),
 			],
 		], $refused);
+	}
+
+
+	/**
+	 * Before PHP 8.5.12 the URL parser copied the two bytes after a `%` that starts no escape into the path unchecked, so these came back with a byte that is not UTF-8,
+	 * which a stored result cannot carry, a NUL, which curl refuses with a `ValueError`, or an escape sequence, which the command line would print. Such a URL is refused
+	 * there and followed percent-encoded where the parser gets it right, and either way no byte outside printable ASCII reaches a request or a callback. The file is
+	 * served wherever the redirect leads, so a URL that kept such a byte would be the final URL of a result that cannot be stored.
+	 * Remove with the check once PHP 8.5.12 is required.
+	 */
+	public function testARedirectUrlIsNothingButPrintable(): void
+	{
+		$start = 'https://start.example/.well-known/security.txt';
+		$locations = [
+			'a byte that is not UTF-8' => "/%\xFF",
+			'a NUL' => "/%\x00x",
+			'an escape sequence' => "/%\x1B[31mRED",
+			'a delete' => "/%\x7F",
+		];
+		$printable = [];
+		foreach ($locations as $name => $location) {
+			$seen = [];
+			$httpClient = $this->getRoutedHttpClient(
+				[$start => new SecurityTxtFetcherResponse(301, ['location' => $location], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4)],
+				function (string $url) use (&$seen): void {
+					$seen[] = $url;
+				},
+				new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], 'Contact: https://example.com/', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			);
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$fetcher->addOnRedirect(function (Url $url, Url $destination) use (&$seen): void {
+				$seen[] = $destination->toAsciiString();
+			});
+			try {
+				$stored = json_encode($fetcher->fetch(new Url('https://start.example/')));
+			} catch (SecurityTxtFetcherException $e) {
+				$stored = json_encode(['error' => $e]);
+			}
+			$printable[$name] = is_string($stored) && preg_match('/[^\x20-\x7E]/', implode($seen)) === 0;
+		}
+		Assert::same(array_fill_keys(array_keys($locations), true), $printable);
 	}
 
 

@@ -24,8 +24,8 @@ final readonly class SecurityTxtPrintableValue
 
 	/**
 	 * A `Url` and a `SecurityTxtHost` exist only because they parsed, and parsing rejects a host with a control character in it and percent-encodes everything after the host, so
-	 * there is nothing left in one to encode and it is printed as it reads. Anything else is a string this library cannot vouch for, and is encoded down to printable ASCII,
-	 * a tab to `TAB`.
+	 * there is nothing left in one to encode and it is printed as it reads, unless the parser got that wrong, see `renderUrl()`. Anything else is a string this library cannot
+	 * vouch for, and is encoded down to printable ASCII, a tab to `TAB`.
 	 */
 	public function render(): string
 	{
@@ -48,6 +48,10 @@ final readonly class SecurityTxtPrintableValue
 		// A scheme this library would not fetch is printed as it was given, encoded: decoding is what loses things, `ftp://%78n--a.example/` has a label that is not punycode
 		// and reads back as `ftp://`, and a URL that has lost its host says nothing about where a redirect pointed
 		if (!in_array($url->getScheme(), ['http', 'https'], true)) {
+			return $this->encode($url->toAsciiString());
+		}
+		// A URL read out of a checked file reaches here as it parsed
+		if (SecurityTxtPhpUrlWorkarounds::hasRawBytes($url)) {
 			return $this->encode($url->toAsciiString());
 		}
 		// `toUnicodeString()` decodes every punycode label, and decoding one is not always reversible: `xn--khby` decodes to a pair that composes to a single character and
