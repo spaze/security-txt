@@ -11,8 +11,9 @@ use Uri\WhatWg\Url;
 final class SecurityTxtHostIpAddressNotPublicException extends SecurityTxtFetcherException
 {
 
-	public function __construct(SecurityTxtHost $host, string $ip, Url $url, SecurityTxtRedirects $redirects = new SecurityTxtRedirects(), ?Throwable $previous = null)
+	public function __construct(SecurityTxtHost $host, string $ip, Url $url, ?SecurityTxtRedirects $redirects = null, ?Throwable $previous = null)
 	{
+		$redirects ??= new SecurityTxtRedirects();
 		parent::__construct(
 			$this->withRedirectsParam([$host, $ip, $url], $redirects),
 			"Host %s resolves to a non-public IP address %s" . $this->getRedirectsFormat($redirects),
