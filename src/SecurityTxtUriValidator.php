@@ -52,6 +52,11 @@ final class SecurityTxtUriValidator
 
 	private const string CONTROL = '(?:[\x00-\x1f\x7f]|\xc2[\x80-\x9f])';
 
+	/**
+	 * What a value or a word may be wrapped in, and isn't part of it
+	 */
+	private const string WRAPPERS = '<>()[]"\'';
+
 
 	/**
 	 * @param class-string<SecurityTxtAcknowledgmentsNotUri|SecurityTxtCanonicalNotUri|SecurityTxtContactNotUri|SecurityTxtCsafNotUri|SecurityTxtEncryptionNotUri|SecurityTxtHiringNotUri|SecurityTxtPolicyNotUri|SecurityTxtFileLocationNotUri> $notUriError
@@ -120,11 +125,103 @@ final class SecurityTxtUriValidator
 	 */
 	private function explainNotRfc3986(string $uri, string $iri, ?SecurityTxtField $field): array
 	{
-		// Words separated by spaces, commas or control characters, of which a scheme and `//`, or a scheme RFC 9116 uses and more, is a URI, not `ext:12` or `example.com:8080`
+		if ($uri === '') {
+			return ['reason' => SecurityTxtNotUriReason::Empty];
+		}
+		if (preg_match('/^(?:<([^<>]+)>|\(([^()]+)\)|\[([^\[\]]+)\]|"([^"]+)"|\'([^\']+)\')$/D', $uri, $matches) === 1) {
+			$reason = match (count($matches)) {
+				2 => SecurityTxtNotUriReason::AngleBrackets,
+				3 => SecurityTxtNotUriReason::Parentheses,
+				4 => SecurityTxtNotUriReason::SquareBrackets,
+				default => SecurityTxtNotUriReason::Quotes,
+			};
+			return ['reason' => $reason, 'correctValue' => $this->suggest($matches[count($matches) - 1])];
+		}
+		// Words separated by spaces, commas or control characters, of which a scheme and `//`, a scheme RFC 9116 uses and more, or any scheme and an `@`, `sip:security@example.com`,
+		// is a URI, not `ext:12` or `example.com:8080`
 		$words = preg_split('/(?:[\s,]|' . self::CONTROL . ')++/', $uri, -1, PREG_SPLIT_NO_EMPTY);
-		$uris = array_filter($words === false ? [] : $words, fn(string $word): bool => preg_match('~^(?:' . self::SCHEME . '://|(?:' . self::KNOWN_SCHEMES . '):).~i', $word) === 1);
-		if (count($uris) > 1) {
-			return ['reason' => SecurityTxtNotUriReason::MoreThanOneUri];
+		$words = $words === false ? [] : $words;
+		$isUri = fn(string $word): bool => preg_match('~^(?:' . self::SCHEME . '://|(?:' . self::KNOWN_SCHEMES . '):.|' . self::SCHEME . ':[^@]++@)~i', trim($word, self::WRAPPERS)) === 1;
+		$uris = [];
+		foreach ($words as $position => $word) {
+			$next = $words[$position + 1] ?? null;
+			// And so is one of those schemes and a space before what is neither a URI nor an address, `tel: +420-123-456-789`, the address after `mailto: ` is the contact
+			if (
+				$isUri($word)
+				|| (
+					preg_match('/^(?:' . self::KNOWN_SCHEMES . '):$/iD', trim($word, self::WRAPPERS)) === 1
+					&& $next !== null
+					&& !$isUri($next)
+					&& filter_var(trim($next, self::WRAPPERS . ';:'), FILTER_VALIDATE_EMAIL) === false
+				)
+			) {
+				$uris[] = $position;
+			}
+		}
+		// A value that starts with a scheme RFC 9116 uses is one contact up to a comma or a semicolon and a space, even with a space in it, `mailto:Security Team <security@example.com>`
+		// or `mailto: security@example.com`
+		$list = $uri;
+		if (preg_match('/^(?:' . self::KNOWN_SCHEMES . '):/i', $uri) === 1) {
+			$list = preg_match('/[,;]\s/', $uri, $separator, PREG_OFFSET_CAPTURE) === 1 ? substr($uri, $separator[0][1]) : '';
+			if ($list !== '' && ($uris[0] ?? null) !== 0) {
+				array_unshift($uris, 0);
+			}
+		}
+		// An address in a Contact is one more contact, and only spaces and commas separate them, a control character inside one is no separator
+		$emails = [];
+		$phones = 0;
+		if ($field === SecurityTxtField::Contact) {
+			$emailWords = preg_split('/[\s,]++/', $list, -1, PREG_SPLIT_NO_EMPTY);
+			foreach ($emailWords === false ? [] : $emailWords as $position => $word) {
+				if (filter_var(trim($word, self::WRAPPERS . ';:'), FILTER_VALIDATE_EMAIL) !== false) {
+					$emails[$position] = $word;
+				}
+			}
+			// And so is a phone number between commas or semicolons, seven digits or more with hyphens, dots, spaces or brackets between them, `+44 (0)20 7946 0958`,
+			// after a label too, `Phone: +1-201-555-0123`, but not after `tel: `, which is one of the URIs already, nor a comma or a semicolon in a URI
+			$items = preg_replace_callback('/\S++/', fn(array $word): string => $isUri($word[0]) ? preg_replace('/[,;](?=\S)/', '_', $word[0]) ?? '' : $word[0], $list) ?? '';
+			foreach (explode(',', str_replace(';', ',', $items)) as $item) {
+				if (
+					preg_match('~^\s*+(?:(\p{L}[\p{L}\p{N}+./-]*+):\s*+)?\+?\(?[0-9](?:(?:\)[\- ]?|[\- ]?\(|[\-. ]++)?+[0-9]){6,}+\s*+$~iuD', $item, $label) === 1
+					&& preg_match('/^(?:' . self::KNOWN_SCHEMES . ')$/iD', $label[1] ?? '') !== 1
+				) {
+					$phones++;
+				}
+			}
+		}
+		if (count($uris) + count($emails) + $phones > 1) {
+			return ['reason' => match (true) {
+				$emails === [] && $phones === 0 => SecurityTxtNotUriReason::MoreThanOneUri,
+				$uris === [] && $phones === 0 => SecurityTxtNotUriReason::MoreThanOneEmailAddress,
+				default => SecurityTxtNotUriReason::MoreThanOneContact,
+			}];
+		}
+		$last = count($words) - 1;
+		if ($last > 0 && count($uris) === 1 && $uris[0] === $last) {
+			// Unless the URI's scheme could have started in the word before, `htt ps://`
+			if (
+				preg_match('/^(?:' . self::KNOWN_SCHEMES . '):/i', trim($words[$last], self::WRAPPERS)) === 1
+				|| preg_match('/[^a-z0-9+.-]$/iD', $words[$last - 1]) === 1
+			) {
+				// And without the full stop or a bracket of the sentence around it, which would be part of the path
+				$sentence = preg_match('/[.,;:!?]$/D', $words[$last]) === 1 || substr_count($words[$last], ')') !== substr_count($words[$last], '(') || substr_count($words[$last], ']') !== substr_count($words[$last], '[');
+				return ['reason' => SecurityTxtNotUriReason::TextBeforeUri, 'correctValue' => $sentence ? null : $this->suggest($words[$last])];
+			}
+		}
+		if (count($emails) === 1 && count($words) > 1) {
+			$position = array_key_first($emails);
+			$email = trim($emails[$position], self::WRAPPERS . ';:');
+			// Only an address set apart, in brackets or after a label, `security team@example.com` is not `team@example.com`
+			if ($email !== $emails[$position] || str_ends_with($emailWords[$position - 1] ?? '', ':')) {
+				return ['reason' => SecurityTxtNotUriReason::EmailAddressInText, 'correctValue' => $this->suggest(SecurityTxtContact::email($email)->getUri())];
+			}
+		}
+		if (
+			count($words) > 1
+			&& preg_match('/^(' . self::SCHEME . '):$/iD', $words[0], $label) === 1
+			&& preg_match('/^(?:' . self::KNOWN_SCHEMES . ')$/iD', $label[1]) !== 1
+		) {
+			return ['reason' => SecurityTxtNotUriReason::Label, 'correctValue' => $this->suggest(ltrim(substr($uri, strlen($words[0]))))];
 		}
 		if ($this->isSchemeMissing($uri)) {
 			return $this->explainSchemeMissing($uri, $field);

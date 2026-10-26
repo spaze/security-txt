@@ -116,6 +116,7 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'a phone number with spaces' => [SecurityTxtField::Contact, '+420 123 456 789'],
 			'prose with an email address' => [SecurityTxtField::Contact, 'The security team (security@example.com)'],
 			'a hostname' => [SecurityTxtField::Contact, 'example.com'],
+			'prose' => [SecurityTxtField::Contact, 'the security team'],
 			'a Contact with a scheme' => [SecurityTxtField::Contact, 'https://exa mple.com/'],
 			'a Contact with an uppercase scheme' => [SecurityTxtField::Contact, 'HTTPS://exa mple.com/'],
 			'a Policy with a scheme' => [SecurityTxtField::Policy, 'https://exa mple.com/'],
@@ -134,6 +135,67 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'a phone number with only a space after tel:' => [SecurityTxtField::Contact, 'tel: +420123456789'],
 			'a phone number and more' => [SecurityTxtField::Contact, 'tel:+420 123 456 789 (office)'],
 			'a label before an email address' => [SecurityTxtField::Contact, 'Email: security@example.com'],
+			'more than one email address' => [SecurityTxtField::Contact, 'security@example.com, abuse@example.com'],
+			'an email address in prose in a Policy' => [SecurityTxtField::Policy, 'Write to security@example.com'],
+			'an email address and a URI' => [SecurityTxtField::Contact, 'security@example.com, https://example.com/report'],
+			'an email address and a mailto URI' => [SecurityTxtField::Contact, 'security@example.com, mailto:abuse@example.com'],
+			'a label, an email address and a SIP URI' => [SecurityTxtField::Contact, 'Email: security@example.com, sip:abuse@example.com'],
+			'a label, an email address and a phone number' => [SecurityTxtField::Contact, 'Email: security@example.com, +1-201-555-0123'],
+			'a phone number with spaces and a URI after a semicolon' => [SecurityTxtField::Contact, '+420 123 456 789; mailto:security@example.com'],
+			'a phone number and one after a label' => [SecurityTxtField::Contact, '+420 123 456 789, Phone: +1-201-555-0123'],
+			'an email address and six digits' => [SecurityTxtField::Contact, '<security@example.com>, 123 456'],
+			'an email address and seven digits' => [SecurityTxtField::Contact, '<security@example.com>, 555 1234'],
+			'text and a phone number after a space after the scheme' => [SecurityTxtField::Contact, 'Call us, TEL: +420 123 456 789'],
+			'an email address and a phone number with brackets' => [SecurityTxtField::Contact, 'Email: security@example.com, +44 (0)20 7946 0958'],
+			'a phone number with brackets first and a URI' => [SecurityTxtField::Contact, '(201) 555-0123, mailto:security@example.com'],
+			'an email address and a phone number with dots after a tab and a label' => [SecurityTxtField::Contact, "<security@example.com>,\tTel.: 201.555.0123"],
+			'an email address and a phone number right after a label' => [SecurityTxtField::Contact, 'Email: security@example.com, Tel/Fax:+1-201-555-0123'],
+			'an email address and a phone number after a label that is not ASCII' => [SecurityTxtField::Contact, "<security@example.com>, \u{422}\u{435}\u{43B}.: +7 495 123-45-67"],
+			'a URI and a phone number' => [SecurityTxtField::Contact, 'https://example.com/report, +1-201-555-0123'],
+			'text, a URI and a phone number' => [SecurityTxtField::Contact, 'Report at https://example.com/report, +1-201-555-0123'],
+			'a phone number and an email address after a comma with no space' => [SecurityTxtField::Contact, '+1-201-555-0123,<security@example.com>'],
+			'an email address and a phone number with more spaces' => [SecurityTxtField::Contact, 'Email: security@example.com, +1 - 201 - 555 - 0123'],
+			'an email address and a number in a sentence' => [SecurityTxtField::Contact, '<security@example.com>, 1234567 visits'],
+			'an email address and a phone number after a label like a scheme' => [SecurityTxtField::Contact, '<security@example.com>, Telephone: +1-201-555-0123'],
+			'a phone number and a space before a semicolon' => [SecurityTxtField::Contact, '+1-201-555-0123 ; <security@example.com>'],
+			'a phone number and a URI in a Policy' => [SecurityTxtField::Policy, '+1-201-555-0123, https://example.com/report'],
+			'text and digits at the end of a URI' => [SecurityTxtField::Contact, 'Report at https://example.com/report?id=1234567'],
+			'a label and digits after a comma in a URI' => [SecurityTxtField::Contact, 'Report: https://example.com/report?ids=1234567,7654321'],
+			'a URI and an email address' => [SecurityTxtField::Contact, 'https://example.com/report, security@example.com'],
+			'a mailto URI and an email address' => [SecurityTxtField::Contact, 'mailto:security@example.com, abuse@example.com'],
+			'a name in a mailto URI' => [SecurityTxtField::Contact, 'mailto:Security Team <security@example.com>'],
+			'a space after the scheme and an email address' => [SecurityTxtField::Contact, 'tel: +420-123-456-789, <security@example.com>'],
+			'an uppercase scheme, a space and an email address' => [SecurityTxtField::Contact, 'TEL: +420-123-456-789, <security@example.com>'],
+			'a space after the scheme and a URI' => [SecurityTxtField::Contact, 'mailto: security@example.com, https://example.com/report'],
+			'a comma and a space in a URI' => [SecurityTxtField::Contact, 'https://example.com/a,b c/security@example.com'],
+			'a URI and an email address after a semicolon' => [SecurityTxtField::Contact, 'https://example.com/report; security@example.com'],
+			'a label and a space after the scheme' => [SecurityTxtField::Contact, 'Email: mailto: security@example.com'],
+			'an email address and a space after the scheme' => [SecurityTxtField::Contact, '<security@example.com>, tel: +420-123-456-789'],
+			'a label like a scheme before a URI' => [SecurityTxtField::Policy, 'HTTPS: https://example.com/policy'],
+			'an email address and a scheme with nothing after it' => [SecurityTxtField::Contact, 'security@example.com, tel:'],
+			'two openpgp4fpr URIs' => [SecurityTxtField::Policy, 'openpgp4fpr:5F2DE5521C63A801AB59CCB603D49DE44B29100F openpgp4fpr:6F2DE5521C63A801AB59CCB603D49DE44B29100F'],
+			'an address split by a space' => [SecurityTxtField::Contact, 'security team@example.com'],
+			'a scheme split by a space' => [SecurityTxtField::Policy, 'htt ps://example.com/policy'],
+			'text before the URI and a full stop' => [SecurityTxtField::Contact, 'Please report at https://example.com/security.'],
+			'text in parentheses' => [SecurityTxtField::Policy, '(see https://example.com/policy)'],
+			'two URIs in angle brackets' => [SecurityTxtField::Policy, '<https://a.example/> <https://b.example/>'],
+			'a URI in quotes' => [SecurityTxtField::Policy, '"https://example.com/policy"'],
+			'a URI in square brackets' => [SecurityTxtField::Policy, '[https://example.com/policy]'],
+			'a URI in parentheses' => [SecurityTxtField::Contact, '(https://example.com/report)'],
+			'a label before a phone number' => [SecurityTxtField::Contact, 'Phone: +420 123 456 789'],
+			'a label before a URI and a note' => [SecurityTxtField::Policy, 'Policy: https://example.com/policy (English)'],
+			'a label before a value' => [SecurityTxtField::Policy, 'Policy: dns:example.com'],
+			'a label before an email address in a Policy' => [SecurityTxtField::Policy, 'Email: security@example.com'],
+			'a label and a control character before an address' => [SecurityTxtField::Contact, "Email:\x01security@example.com"],
+			'text before an FTP URI' => [SecurityTxtField::Policy, 'see: ftp://example.com/policy'],
+			'text before the URI and a closing bracket' => [SecurityTxtField::Contact, 'Report it (at https://example.com/security)'],
+			'an address and a semicolon' => [SecurityTxtField::Contact, 'security@example.com;'],
+			'a label before a URN' => [SecurityTxtField::Policy, 'Note: urn:isbn:0451450523'],
+			'nothing' => [SecurityTxtField::Policy, ''],
+			'a URI in angle brackets' => [SecurityTxtField::Policy, '<https://example.com/policy>'],
+			'an email address in angle brackets' => [SecurityTxtField::Contact, '<security@example.com>'],
+			'text before the URI' => [SecurityTxtField::Contact, 'Report at https://example.com/report'],
+			'a label before the URI' => [SecurityTxtField::Policy, 'URL: https://example.com/policy'],
 			'a host and a port after a space' => [SecurityTxtField::Policy, 'https:// example.com:8443/policy'],
 			'a space in the port' => [SecurityTxtField::Policy, 'https://example.com: 8080/policy'],
 			'a tab after the scheme' => [SecurityTxtField::Contact, "mailto:\tsecurity@example.com"],
@@ -215,14 +277,20 @@ final class SecurityTxtUriValidatorTest extends TestCase
 				'The value looks like a phone number, add the "tel" scheme and use hyphens instead of the spaces',
 			],
 			'prose with an email address' => [
-				"The Contact value (The security team (security@example.com)) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
-				null,
-				'Use a URI as the value',
+				'The Contact value (The security team (security@example.com)) has text around the email address',
+				'mailto:security@example.com',
+				'Use just the email address, with the "mailto" scheme',
 			],
 			'a hostname' => [
 				"The Contact value (example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 				'https://example.com',
 				'The value looks like a hostname, add the "https" schema',
+			],
+			// Not `https://the security team`, which is no URI either
+			'prose' => [
+				"The Contact value (the security team) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
 			],
 			'a Contact with a scheme' => [
 				"The Contact value (https://exa mple.com/) doesn't follow the URI syntax described in RFC 3986, it contains a space",
@@ -310,9 +378,330 @@ final class SecurityTxtUriValidatorTest extends TestCase
 				'Remove the spaces, or percent-encode each one as %20',
 			],
 			'a label before an email address' => [
-				"The Contact value (Email: security@example.com) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				'The Contact value (Email: security@example.com) has text around the email address',
+				'mailto:security@example.com',
+				'Use just the email address, with the "mailto" scheme',
+			],
+			'more than one email address' => [
+				'The Contact value (security@example.com, abuse@example.com) lists more than one email address',
+				null,
+				'Put each email address in a Contact field of its own, with the "mailto" scheme',
+			],
+			// Only a Contact is an email address
+			'an email address in prose in a Policy' => [
+				"The Policy value (Write to security@example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'an email address and a URI' => [
+				'The Contact value (security@example.com, https://example.com/report) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'an email address and a mailto URI' => [
+				'The Contact value (security@example.com, mailto:abuse@example.com) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// Not `mailto:security@example.com`, which would leave out the SIP URI
+			'a label, an email address and a SIP URI' => [
+				'The Contact value (Email: security@example.com, sip:abuse@example.com) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// Nor the phone number
+			'a label, an email address and a phone number' => [
+				'The Contact value (Email: security@example.com, +1-201-555-0123) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a phone number with spaces and a URI after a semicolon' => [
+				'The Contact value (+420 123 456 789; mailto:security@example.com) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a phone number and one after a label' => [
+				'The Contact value (+420 123 456 789, Phone: +1-201-555-0123) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// Too few digits for a phone number
+			'an email address and six digits' => [
+				'The Contact value (<security@example.com>, 123 456) has text around the email address',
+				'mailto:security@example.com',
+				'Use just the email address, with the "mailto" scheme',
+			],
+			'an email address and seven digits' => [
+				'The Contact value (<security@example.com>, 555 1234) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// The number is the `tel:` one, not one more
+			'text and a phone number after a space after the scheme' => [
+				"The Contact value (Call us, TEL: +420 123 456 789) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'an email address and a phone number with brackets' => [
+				'The Contact value (Email: security@example.com, +44 (0)20 7946 0958) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a phone number with brackets first and a URI' => [
+				'The Contact value ((201) 555-0123, mailto:security@example.com) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'an email address and a phone number with dots after a tab and a label' => [
+				"The Contact value (<security@example.com>,\u{2192}Tel.: 201.555.0123) lists more than one contact",
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'an email address and a phone number right after a label' => [
+				'The Contact value (Email: security@example.com, Tel/Fax:+1-201-555-0123) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'an email address and a phone number after a label that is not ASCII' => [
+				'The Contact value (<security@example.com>, %D0%A2%D0%B5%D0%BB.: +7 495 123-45-67) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a URI and a phone number' => [
+				'The Contact value (https://example.com/report, +1-201-555-0123) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// The comma after the URI separates it from the phone number
+			'text, a URI and a phone number' => [
+				'The Contact value (Report at https://example.com/report, +1-201-555-0123) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a phone number and an email address after a comma with no space' => [
+				'The Contact value (+1-201-555-0123,<security@example.com>) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'an email address and a phone number with more spaces' => [
+				'The Contact value (Email: security@example.com, +1 - 201 - 555 - 0123) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// A number with words after it is no phone number
+			'an email address and a number in a sentence' => [
+				'The Contact value (<security@example.com>, 1234567 visits) has text around the email address',
+				'mailto:security@example.com',
+				'Use just the email address, with the "mailto" scheme',
+			],
+			// `Telephone` is no `tel`
+			'an email address and a phone number after a label like a scheme' => [
+				'The Contact value (<security@example.com>, Telephone: +1-201-555-0123) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a phone number and a space before a semicolon' => [
+				'The Contact value (+1-201-555-0123 ; <security@example.com>) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// Only a Contact is a phone number
+			'a phone number and a URI in a Policy' => [
+				'The Policy value (+1-201-555-0123, https://example.com/report) has text before the URI',
+				'https://example.com/report',
+				'Remove the text, leave just the URI',
+			],
+			// Digits in the URI are no phone number
+			'text and digits at the end of a URI' => [
+				'The Contact value (Report at https://example.com/report?id=1234567) has text before the URI',
+				'https://example.com/report?id=1234567',
+				'Remove the text, leave just the URI',
+			],
+			'a label and digits after a comma in a URI' => [
+				'The Contact value (Report: https://example.com/report?ids=1234567,7654321) starts with a label',
+				'https://example.com/report?ids=1234567,7654321',
+				'Remove the label, leave just the value',
+			],
+			'a URI and an email address' => [
+				'The Contact value (https://example.com/report, security@example.com) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a mailto URI and an email address' => [
+				'The Contact value (mailto:security@example.com, abuse@example.com) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// After a scheme only a comma ends the URI
+			'a name in a mailto URI' => [
+				"The Contact value (mailto:Security Team <security@example.com>) doesn't follow the URI syntax described in RFC 3986, it contains a space",
 				null,
 				'Remove the spaces, or percent-encode each one as %20',
+			],
+			// Not `mailto:security@example.com`, which would leave out the phone number
+			'a space after the scheme and an email address' => [
+				'The Contact value (tel: +420-123-456-789, <security@example.com>) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'an uppercase scheme, a space and an email address' => [
+				'The Contact value (TEL: +420-123-456-789, <security@example.com>) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			// Not `https://example.com/report`, which would leave out the email address
+			'a space after the scheme and a URI' => [
+				'The Contact value (mailto: security@example.com, https://example.com/report) lists more than one URI',
+				null,
+				'Put each URI in a field of its own',
+			],
+			// A comma without a space after it is in the URI
+			'a comma and a space in a URI' => [
+				"The Contact value (https://example.com/a,b c/security@example.com) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				null,
+				'Remove the spaces, or percent-encode each one as %20',
+			],
+			'a URI and an email address after a semicolon' => [
+				'The Contact value (https://example.com/report; security@example.com) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a label and a space after the scheme' => [
+				'The Contact value (Email: mailto: security@example.com) has text around the email address',
+				'mailto:security@example.com',
+				'Use just the email address, with the "mailto" scheme',
+			],
+			// Not `mailto:security@example.com`, which would leave out the phone number
+			'an email address and a space after the scheme' => [
+				'The Contact value (<security@example.com>, tel: +420-123-456-789) lists more than one contact',
+				null,
+				'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			],
+			'a label like a scheme before a URI' => [
+				'The Policy value (HTTPS: https://example.com/policy) has text before the URI',
+				'https://example.com/policy',
+				'Remove the text, leave just the URI',
+			],
+			'an email address and a scheme with nothing after it' => [
+				"The Contact value (security@example.com, tel:) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'two openpgp4fpr URIs' => [
+				'The Policy value (openpgp4fpr:5F2DE5521C63A801AB59CCB603D49DE44B29100F openpgp4fpr:6F2DE5521C63A801AB59CCB603D49DE44B29100F) lists more than one URI',
+				null,
+				'Put each URI in a field of its own',
+			],
+			'an address split by a space' => [
+				"The Contact value (security team@example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'a scheme split by a space' => [
+				"The Policy value (htt ps://example.com/policy) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'text before the URI and a full stop' => [
+				'The Contact value (Please report at https://example.com/security.) has text before the URI',
+				null,
+				'Remove the text, leave just the URI',
+			],
+			'text in parentheses' => [
+				'The Policy value ((see https://example.com/policy)) is in parentheses',
+				null,
+				'Remove the parentheses',
+			],
+			'two URIs in angle brackets' => [
+				'The Policy value (<https://a.example/> <https://b.example/>) lists more than one URI',
+				null,
+				'Put each URI in a field of its own',
+			],
+			'a URI in quotes' => [
+				'The Policy value ("https://example.com/policy") is in quotes',
+				'https://example.com/policy',
+				'Remove the quotes',
+			],
+			'a URI in square brackets' => [
+				'The Policy value ([https://example.com/policy]) is in square brackets',
+				'https://example.com/policy',
+				'Remove the square brackets',
+			],
+			'a URI in parentheses' => [
+				'The Contact value ((https://example.com/report)) is in parentheses',
+				'https://example.com/report',
+				'Remove the parentheses',
+			],
+			'a label before a phone number' => [
+				'The Contact value (Phone: +420 123 456 789) starts with a label',
+				null,
+				'Remove the label, leave just the value',
+			],
+			'a label before a URI and a note' => [
+				'The Policy value (Policy: https://example.com/policy (English)) starts with a label',
+				null,
+				'Remove the label, leave just the value',
+			],
+			'a label before a value' => [
+				'The Policy value (Policy: dns:example.com) has text before the URI',
+				'dns:example.com',
+				'Remove the text, leave just the URI',
+			],
+			'a label before an email address in a Policy' => [
+				'The Policy value (Email: security@example.com) starts with a label',
+				null,
+				'Remove the label, leave just the value',
+			],
+			// A control character is no separator of addresses
+			'a label and a control character before an address' => [
+				'The Contact value (Email:%01security@example.com) starts with a label',
+				null,
+				'Remove the label, leave just the value',
+			],
+			'text before an FTP URI' => [
+				'The Policy value (see: ftp://example.com/policy) has text before the URI',
+				'ftp://example.com/policy',
+				'Remove the text, leave just the URI',
+			],
+			'text before the URI and a closing bracket' => [
+				'The Contact value (Report it (at https://example.com/security)) has text before the URI',
+				null,
+				'Remove the text, leave just the URI',
+			],
+			'an address and a semicolon' => [
+				"The Contact value (security@example.com;) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'a label before a URN' => [
+				'The Policy value (Note: urn:isbn:0451450523) starts with a label',
+				'urn:isbn:0451450523',
+				'Remove the label, leave just the value',
+			],
+			'nothing' => [
+				'The Policy value () is empty',
+				null,
+				'Use a URI as the value',
+			],
+			'a URI in angle brackets' => [
+				'The Policy value (<https://example.com/policy>) is in angle brackets',
+				'https://example.com/policy',
+				'Remove the angle brackets',
+			],
+			'an email address in angle brackets' => [
+				'The Contact value (<security@example.com>) is in angle brackets',
+				null,
+				'Remove the angle brackets',
+			],
+			'text before the URI' => [
+				'The Contact value (Report at https://example.com/report) has text before the URI',
+				'https://example.com/report',
+				'Remove the text, leave just the URI',
+			],
+			'a label before the URI' => [
+				'The Policy value (URL: https://example.com/policy) has text before the URI',
+				'https://example.com/policy',
+				'Remove the text, leave just the URI',
 			],
 			'a host and a port after a space' => [
 				"The Policy value (https:// example.com:8443/policy) doesn't follow the URI syntax described in RFC 3986, it contains a space",
@@ -617,6 +1006,22 @@ final class SecurityTxtUriValidatorTest extends TestCase
 				'Use a URI as the value',
 			],
 		], $actual);
+	}
+
+
+	/**
+	 * A suggestion is only checked, not explained, so a value of labels before labels is not explained once for each of them.
+	 */
+	public function testALabelBeforeALabelIsExplainedOnce(): void
+	{
+		$uri = str_repeat('Note: ', 2000) . 'urn:isbn:0451450523';
+		memory_reset_peak_usage();
+		$before = memory_get_usage();
+		Assert::exception(function () use ($uri): void {
+			$this->validator->validate($uri, SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class, SecurityTxtField::Policy);
+		}, SecurityTxtError::class);
+		// Over 100 MB when each was explained again
+		Assert::true(memory_get_peak_usage() - $before < 5_000_000);
 	}
 
 

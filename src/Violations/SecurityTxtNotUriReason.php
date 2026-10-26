@@ -16,6 +16,26 @@ enum SecurityTxtNotUriReason: string
 	 */
 	case Unspecified = 'unspecified';
 
+	case Empty = 'empty';
+
+	case AngleBrackets = 'angle-brackets';
+
+	case Parentheses = 'parentheses';
+
+	case SquareBrackets = 'square-brackets';
+
+	case Quotes = 'quotes';
+
+	case TextBeforeUri = 'text-before-uri';
+
+	case EmailAddressInText = 'email-address-in-text';
+
+	case MoreThanOneEmailAddress = 'more-than-one-email-address';
+
+	case MoreThanOneContact = 'more-than-one-contact';
+
+	case Label = 'label';
+
 	case SchemeMissing = 'scheme-missing';
 
 	case SchemeMissingEmail = 'scheme-missing-email';
@@ -84,6 +104,16 @@ enum SecurityTxtNotUriReason: string
 	{
 		return match ($this) {
 			self::Unspecified => "isn't a valid URI",
+			self::Empty => 'is empty',
+			self::AngleBrackets => 'is in angle brackets',
+			self::Parentheses => 'is in parentheses',
+			self::SquareBrackets => 'is in square brackets',
+			self::Quotes => 'is in quotes',
+			self::TextBeforeUri => 'has text before the URI',
+			self::EmailAddressInText => 'has text around the email address',
+			self::MoreThanOneEmailAddress => 'lists more than one email address',
+			self::MoreThanOneContact => 'lists more than one contact',
+			self::Label => 'starts with a label',
 			self::SchemeMissing,
 			self::SchemeMissingEmail,
 			self::SchemeMissingPhone,
@@ -122,7 +152,16 @@ enum SecurityTxtNotUriReason: string
 	public function getHowToFix(): string
 	{
 		return match ($this) {
-			self::Unspecified, self::SchemeMissing, self::NotRfc3986 => 'Use a URI as the value',
+			self::Unspecified, self::Empty, self::SchemeMissing, self::NotRfc3986 => 'Use a URI as the value',
+			self::AngleBrackets => 'Remove the angle brackets',
+			self::Parentheses => 'Remove the parentheses',
+			self::SquareBrackets => 'Remove the square brackets',
+			self::Quotes => 'Remove the quotes',
+			self::TextBeforeUri => 'Remove the text, leave just the URI',
+			self::EmailAddressInText => 'Use just the email address, with the "mailto" scheme',
+			self::MoreThanOneEmailAddress => 'Put each email address in a Contact field of its own, with the "mailto" scheme',
+			self::MoreThanOneContact => 'Put each in a Contact field of its own, with the "mailto" or "tel" scheme where it has none',
+			self::Label => 'Remove the label, leave just the value',
 			self::SchemeMissingEmail => 'The value looks like an email address, add the "mailto" schema',
 			self::SchemeMissingPhone => 'The value looks like a phone number, add the "tel" schema',
 			self::SchemeMissingPhoneWithSpaces => 'The value looks like a phone number, add the "tel" scheme and use hyphens instead of the spaces',
