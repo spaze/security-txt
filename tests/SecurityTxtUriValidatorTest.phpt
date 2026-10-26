@@ -273,12 +273,12 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'an email address' => [
 				"The Contact value (bar@example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 				'mailto:bar@example.com',
-				'The value looks like an email address, add the "mailto" schema',
+				'The value looks like an email address, add the "mailto" scheme',
 			],
 			'a phone number' => [
 				"The Contact value (+1-201-555-01234) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 				'tel:+1-201-555-01234',
-				'The value looks like a phone number, add the "tel" schema',
+				'The value looks like a phone number, add the "tel" scheme',
 			],
 			'a phone number with spaces' => [
 				"The Contact value (+420 123 456 789) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
@@ -293,7 +293,7 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'a hostname' => [
 				"The Contact value (example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 				'https://example.com',
-				'The value looks like a hostname, add the "https" schema',
+				'The value looks like a hostname, add the "https" scheme',
 			],
 			// Not `https://the security team`, which is no URI either
 			'prose' => [
