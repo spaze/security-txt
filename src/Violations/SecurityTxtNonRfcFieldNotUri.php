@@ -17,6 +17,7 @@ abstract class SecurityTxtNonRfcFieldNotUri extends SecurityTxtSpecViolation
 	 * @param string $uri
 	 * @param SecurityTxtNotUriReason $reason
 	 * @param string|null $correctValue
+	 * @param string|null $character The one the reason names, if it names one
 	 * @param string $specUrl
 	 */
 	public function __construct(
@@ -25,16 +26,17 @@ abstract class SecurityTxtNonRfcFieldNotUri extends SecurityTxtSpecViolation
 		string $uri,
 		SecurityTxtNotUriReason $reason,
 		?string $correctValue,
+		?string $character,
 		string $specUrl,
 	) {
 		parent::__construct(
 			$constructorParams,
 			'The %s value (%s) ' . $reason->getFormat(),
-			[$field->value, $uri],
+			[$field->value, $uri, ...$reason->getValues($character)],
 			null,
 			self::asUrl($correctValue),
 			$reason->getHowToFix(),
-			[],
+			$reason->getHowToFixValues($character),
 			null,
 			specUrl: $specUrl,
 		);

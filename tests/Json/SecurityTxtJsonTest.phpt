@@ -54,6 +54,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtNotUriReason;
 use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistakeReason;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
@@ -150,6 +151,23 @@ final class SecurityTxtJsonTest extends TestCase
 		Assert::same("The Contact value (foo@example.com) isn't a valid URI", $violations[0]->getMessage());
 		Assert::same('Use a URI as the value', $violations[0]->getHowToFix());
 		Assert::null($violations[0]->getCorrectValue());
+	}
+
+
+	/**
+	 * The reason goes on the wire as its case value, and the character it names as the value itself, which is all a replay reads to say it again.
+	 */
+	public function testSerializeNotUriThenCreateFromJsonValues(): void
+	{
+		$violation = new SecurityTxtPolicyNotUri('https://example.com/a|b', SecurityTxtNotUriReason::Character, null, '|');
+		$json = json_encode([$violation]);
+		assert(is_string($json));
+		$decoded = json_decode($json, true);
+		assert(is_array($decoded) && is_array($decoded[0]));
+		Assert::same(['https://example.com/a|b', 'character', null, '|'], $decoded[0]['params']);
+		$violations = $this->securityTxtJson->createViolationsFromJsonValues(array_values($decoded));
+		Assert::same("The Policy value (https://example.com/a|b) doesn't follow the URI syntax described in RFC 3986, it contains |, which has to be percent-encoded", $violations[0]->getMessage());
+		Assert::same('Percent-encode it as %7C', $violations[0]->getHowToFix());
 	}
 
 

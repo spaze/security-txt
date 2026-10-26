@@ -28,6 +28,40 @@ enum SecurityTxtNotUriReason: string
 
 	case NotRfc3986 = 'not-rfc-3986';
 
+	case MoreThanOneUri = 'more-than-one-uri';
+
+	case Space = 'space';
+
+	case SpaceAfterScheme = 'space-after-scheme';
+
+	case SpaceInPhoneNumber = 'space-in-phone-number';
+
+	case SpaceAfterSchemeAndInPhoneNumber = 'space-after-scheme-and-in-phone-number';
+
+	case SpaceInHost = 'space-in-host';
+
+	case SpaceInPort = 'space-in-port';
+
+	case ControlCharacter = 'control-character';
+
+	case StrayPercent = 'stray-percent';
+
+	case StrayPercentInHost = 'stray-percent-in-host';
+
+	case Backslash = 'backslash';
+
+	case Character = 'character';
+
+	case CharacterInHost = 'character-in-host';
+
+	case UnencodedCharacter = 'unencoded-character';
+
+	case Ipv6WithoutBrackets = 'ipv6-without-brackets';
+
+	case Ipv6Unclosed = 'ipv6-unclosed';
+
+	case PortNotNumber = 'port-not-number';
+
 	case HostMissing = 'host-missing';
 
 	case UserInfo = 'user-info';
@@ -56,6 +90,22 @@ enum SecurityTxtNotUriReason: string
 			self::SchemeMissingPhoneWithSpaces,
 			self::SchemeMissingHostname => "doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 			self::NotRfc3986 => "doesn't follow the URI syntax described in RFC 3986",
+			self::MoreThanOneUri => 'lists more than one URI',
+			self::Space,
+			self::SpaceAfterScheme,
+			self::SpaceInPhoneNumber,
+			self::SpaceAfterSchemeAndInPhoneNumber,
+			self::SpaceInHost,
+			self::SpaceInPort => "doesn't follow the URI syntax described in RFC 3986, it contains a space",
+			self::ControlCharacter => "doesn't follow the URI syntax described in RFC 3986, it contains a control character",
+			self::StrayPercent, self::StrayPercentInHost => "doesn't follow the URI syntax described in RFC 3986, it contains a %% not followed by two hexadecimal digits",
+			self::Backslash => "doesn't follow the URI syntax described in RFC 3986, it contains a backslash",
+			self::Character => "doesn't follow the URI syntax described in RFC 3986, it contains %s, which has to be percent-encoded",
+			self::CharacterInHost => "doesn't follow the URI syntax described in RFC 3986, it contains %s in the host",
+			self::UnencodedCharacter => "doesn't follow the URI syntax described in RFC 3986, it contains a character that has to be percent-encoded",
+			self::Ipv6WithoutBrackets => "doesn't follow the URI syntax described in RFC 3986, an IPv6 address has to be in square brackets",
+			self::Ipv6Unclosed => "doesn't follow the URI syntax described in RFC 3986, the IPv6 address has no closing ]",
+			self::PortNotNumber => "doesn't follow the URI syntax described in RFC 3986, the port isn't a number",
 			self::HostMissing => 'has no host',
 			self::UserInfo => "contains a user name or a password, which RFC 9110 doesn't allow in an HTTP or HTTPS URI",
 			self::EmptyUserInfo => "has an @ before the host, which RFC 9110 doesn't allow in an HTTP or HTTPS URI",
@@ -77,13 +127,49 @@ enum SecurityTxtNotUriReason: string
 			self::SchemeMissingPhone => 'The value looks like a phone number, add the "tel" schema',
 			self::SchemeMissingPhoneWithSpaces => 'The value looks like a phone number, add the "tel" scheme and use hyphens instead of the spaces',
 			self::SchemeMissingHostname => 'The value looks like a hostname, add the "https" schema',
+			self::MoreThanOneUri => 'Put each URI in a field of its own',
+			self::Space => 'Remove the spaces, or percent-encode each one as %%20',
+			self::SpaceAfterScheme => 'Remove the space after the scheme',
+			self::SpaceInPhoneNumber => 'Use hyphens instead of the spaces',
+			self::SpaceAfterSchemeAndInPhoneNumber => 'Remove the space after the scheme, and use hyphens instead of the other spaces',
+			self::SpaceInHost => 'Remove the spaces from the host',
+			self::SpaceInPort => 'Remove the spaces from the port',
+			self::ControlCharacter => 'Remove the control characters',
+			self::StrayPercent => 'Percent-encode the %% itself, as %%25',
+			self::StrayPercentInHost => 'Remove the %% from the host',
+			self::Backslash => 'Use a slash instead, or percent-encode the backslash as %%5C',
+			self::Character => 'Percent-encode it as %s',
+			self::CharacterInHost => 'Remove it from the host',
+			self::UnencodedCharacter => 'Percent-encode the character',
+			self::Ipv6WithoutBrackets => 'Put the IPv6 address in square brackets',
+			self::Ipv6Unclosed => 'Add the ] after the IPv6 address',
+			self::PortNotNumber, self::PortOutOfRange => 'Use a port number from 0 to 65535, or leave the port out',
 			self::HostMissing => 'Put // and the host right after the scheme',
 			self::UserInfo => 'Remove the user name, the password, and the @ after them',
 			self::EmptyUserInfo => 'Remove the @',
-			self::PortOutOfRange => 'Use a port number from 0 to 65535, or leave the port out',
 			self::InvalidHost => 'Use a domain name or an IP address as the host',
 			self::NotUrl => 'Use a URL as the value',
 		};
+	}
+
+
+	/**
+	 * The values the format expects, taken from the character the violation carries for a reason that names one, so the two always agree on how many there are.
+	 *
+	 * @return list<string>
+	 */
+	public function getValues(?string $character): array
+	{
+		return $this === self::Character || $this === self::CharacterInHost ? [$character ?? ''] : [];
+	}
+
+
+	/**
+	 * @return list<string>
+	 */
+	public function getHowToFixValues(?string $character): array
+	{
+		return $this === self::Character ? [rawurlencode($character ?? '')] : [];
 	}
 
 }
