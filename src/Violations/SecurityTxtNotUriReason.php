@@ -22,6 +22,8 @@ enum SecurityTxtNotUriReason: string
 
 	case SchemeMissingPhone = 'scheme-missing-phone';
 
+	case SchemeMissingPhoneWithSpaces = 'scheme-missing-phone-with-spaces';
+
 	case SchemeMissingHostname = 'scheme-missing-hostname';
 
 	case NotRfc3986 = 'not-rfc-3986';
@@ -48,7 +50,11 @@ enum SecurityTxtNotUriReason: string
 	{
 		return match ($this) {
 			self::Unspecified => "isn't a valid URI",
-			self::SchemeMissing, self::SchemeMissingEmail, self::SchemeMissingPhone, self::SchemeMissingHostname => "doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+			self::SchemeMissing,
+			self::SchemeMissingEmail,
+			self::SchemeMissingPhone,
+			self::SchemeMissingPhoneWithSpaces,
+			self::SchemeMissingHostname => "doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 			self::NotRfc3986 => "doesn't follow the URI syntax described in RFC 3986",
 			self::HostMissing => 'has no host',
 			self::UserInfo => "contains a user name or a password, which RFC 9110 doesn't allow in an HTTP or HTTPS URI",
@@ -69,6 +75,7 @@ enum SecurityTxtNotUriReason: string
 			self::Unspecified, self::SchemeMissing, self::NotRfc3986 => 'Use a URI as the value',
 			self::SchemeMissingEmail => 'The value looks like an email address, add the "mailto" schema',
 			self::SchemeMissingPhone => 'The value looks like a phone number, add the "tel" schema',
+			self::SchemeMissingPhoneWithSpaces => 'The value looks like a phone number, add the "tel" scheme and use hyphens instead of the spaces',
 			self::SchemeMissingHostname => 'The value looks like a hostname, add the "https" schema',
 			self::HostMissing => 'Put // and the host right after the scheme',
 			self::UserInfo => 'Remove the user name, the password, and the @ after them',

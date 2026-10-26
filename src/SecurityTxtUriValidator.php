@@ -107,7 +107,10 @@ final class SecurityTxtUriValidator
 		if ($field === SecurityTxtField::Contact) {
 			[$reason, $correctValue] = match (true) {
 				filter_var($uri, FILTER_VALIDATE_EMAIL) !== false => [SecurityTxtNotUriReason::SchemeMissingEmail, SecurityTxtContact::email($uri)->getUri()],
-				preg_match('/^\+?[0-9\-. ]+$/', $uri) === 1 => [SecurityTxtNotUriReason::SchemeMissingPhone, SecurityTxtContact::phone($uri)->getUri()],
+				preg_match('/^\+?[0-9\-. ]+$/D', $uri) === 1 => [
+					str_contains($uri, ' ') ? SecurityTxtNotUriReason::SchemeMissingPhoneWithSpaces : SecurityTxtNotUriReason::SchemeMissingPhone,
+					SecurityTxtContact::phone($uri)->getUri(),
+				],
 				default => [SecurityTxtNotUriReason::SchemeMissingHostname, "https://{$uri}"],
 			};
 			// Prose with an @ in it does not become a URI by putting a scheme in front, and the hint saying it would goes with the suggestion

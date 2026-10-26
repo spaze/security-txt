@@ -21,9 +21,12 @@ final class SecurityTxtContact extends SecurityTxtUriField implements SecurityTx
 	}
 
 
+	/**
+	 * A space is not one of the visual separators a `tel:` URI allows, a hyphen is.
+	 */
 	public static function phone(string $phone): self
 	{
-		return new self('tel:' . $phone);
+		return new self('tel:' . str_replace(' ', '-', $phone));
 	}
 
 }

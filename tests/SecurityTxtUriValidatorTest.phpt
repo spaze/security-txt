@@ -158,8 +158,8 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			],
 			'a phone number with spaces' => [
 				"The Contact value (+420 123 456 789) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
-				null,
-				'Use a URI as the value',
+				'tel:+420-123-456-789',
+				'The value looks like a phone number, add the "tel" scheme and use hyphens instead of the spaces',
 			],
 			'prose with an email address' => [
 				"The Contact value (The security team (security@example.com)) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",

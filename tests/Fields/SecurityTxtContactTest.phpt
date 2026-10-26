@@ -41,6 +41,20 @@ final class SecurityTxtContactTest extends TestCase
 		});
 	}
 
+
+	public function testPhone(): void
+	{
+		$uris = [];
+		foreach (['+420 123 456 789', '+1-201-555-0123', '123456'] as $phone) {
+			$uris[$phone] = SecurityTxtContact::phone($phone)->getUri();
+		}
+		Assert::same([
+			'+420 123 456 789' => 'tel:+420-123-456-789',
+			'+1-201-555-0123' => 'tel:+1-201-555-0123',
+			'123456' => 'tel:123456',
+		], $uris);
+	}
+
 }
 
 (new SecurityTxtContactTest())->run();
