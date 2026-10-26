@@ -46,6 +46,10 @@ enum SecurityTxtNotUriReason: string
 
 	case SchemeMissingHostname = 'scheme-missing-hostname';
 
+	case SchemeMissingFingerprint = 'scheme-missing-fingerprint';
+
+	case SchemeMissingFingerprintWithSpaces = 'scheme-missing-fingerprint-with-spaces';
+
 	case NotRfc3986 = 'not-rfc-3986';
 
 	case MoreThanOneUri = 'more-than-one-uri';
@@ -61,6 +65,8 @@ enum SecurityTxtNotUriReason: string
 	case SpaceInHost = 'space-in-host';
 
 	case SpaceInPort = 'space-in-port';
+
+	case SpaceInFingerprint = 'space-in-fingerprint';
 
 	case ControlCharacter = 'control-character';
 
@@ -118,7 +124,9 @@ enum SecurityTxtNotUriReason: string
 			self::SchemeMissingEmail,
 			self::SchemeMissingPhone,
 			self::SchemeMissingPhoneWithSpaces,
-			self::SchemeMissingHostname => "doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+			self::SchemeMissingHostname,
+			self::SchemeMissingFingerprint,
+			self::SchemeMissingFingerprintWithSpaces => "doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 			self::NotRfc3986 => "doesn't follow the URI syntax described in RFC 3986",
 			self::MoreThanOneUri => 'lists more than one URI',
 			self::Space,
@@ -126,7 +134,8 @@ enum SecurityTxtNotUriReason: string
 			self::SpaceInPhoneNumber,
 			self::SpaceAfterSchemeAndInPhoneNumber,
 			self::SpaceInHost,
-			self::SpaceInPort => "doesn't follow the URI syntax described in RFC 3986, it contains a space",
+			self::SpaceInPort,
+			self::SpaceInFingerprint => "doesn't follow the URI syntax described in RFC 3986, it contains a space",
 			self::ControlCharacter => "doesn't follow the URI syntax described in RFC 3986, it contains a control character",
 			self::StrayPercent, self::StrayPercentInHost => "doesn't follow the URI syntax described in RFC 3986, it contains a %% not followed by two hexadecimal digits",
 			self::Backslash => "doesn't follow the URI syntax described in RFC 3986, it contains a backslash",
@@ -166,6 +175,8 @@ enum SecurityTxtNotUriReason: string
 			self::SchemeMissingPhone => 'The value looks like a phone number, add the "tel" schema',
 			self::SchemeMissingPhoneWithSpaces => 'The value looks like a phone number, add the "tel" scheme and use hyphens instead of the spaces',
 			self::SchemeMissingHostname => 'The value looks like a hostname, add the "https" schema',
+			self::SchemeMissingFingerprint => 'The value looks like an OpenPGP key fingerprint, add the "openpgp4fpr" scheme',
+			self::SchemeMissingFingerprintWithSpaces => 'The value looks like an OpenPGP key fingerprint, add the "openpgp4fpr" scheme and remove the spaces',
 			self::MoreThanOneUri => 'Put each URI in a field of its own',
 			self::Space => 'Remove the spaces, or percent-encode each one as %%20',
 			self::SpaceAfterScheme => 'Remove the space after the scheme',
@@ -173,6 +184,7 @@ enum SecurityTxtNotUriReason: string
 			self::SpaceAfterSchemeAndInPhoneNumber => 'Remove the space after the scheme, and use hyphens instead of the other spaces',
 			self::SpaceInHost => 'Remove the spaces from the host',
 			self::SpaceInPort => 'Remove the spaces from the port',
+			self::SpaceInFingerprint => 'Remove the spaces from the fingerprint',
 			self::ControlCharacter => 'Remove the control characters',
 			self::StrayPercent => 'Percent-encode the %% itself, as %%25',
 			self::StrayPercentInHost => 'Remove the %% from the host',

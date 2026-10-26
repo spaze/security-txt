@@ -14,6 +14,8 @@ use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtCsafNotUri;
+use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotHttps;
+use Spaze\SecurityTxt\Violations\SecurityTxtEncryptionNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtHiringNotHttps;
@@ -117,6 +119,13 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'prose with an email address' => [SecurityTxtField::Contact, 'The security team (security@example.com)'],
 			'a hostname' => [SecurityTxtField::Contact, 'example.com'],
 			'prose' => [SecurityTxtField::Contact, 'the security team'],
+			'a fingerprint' => [SecurityTxtField::Encryption, '5F2DE5521C63A801AB59CCB603D49DE44B29100F'],
+			'a fingerprint as GnuPG prints it' => [SecurityTxtField::Encryption, '5F2D E552 1C63 A801 AB59  CCB6 03D4 9DE4 4B29 100F'],
+			'a fingerprint one digit short' => [SecurityTxtField::Encryption, '5F2DE5521C63A801AB59CCB603D49DE44B29100'],
+			'a fingerprint in a Policy' => [SecurityTxtField::Policy, '5F2DE5521C63A801AB59CCB603D49DE44B29100F'],
+			'a fingerprint and a newline' => [SecurityTxtField::Encryption, "5F2DE5521C63A801AB59CCB603D49DE44B29100F\n"],
+			'a fingerprint with spaces after the scheme' => [SecurityTxtField::Encryption, 'openpgp4fpr:5F2D E552 1C63 A801 AB59  CCB6 03D4 9DE4 4B29 100F'],
+			'a fingerprint after the scheme and a space' => [SecurityTxtField::Encryption, 'openpgp4fpr: 5F2DE5521C63A801AB59CCB603D49DE44B29100F'],
 			'a Contact with a scheme' => [SecurityTxtField::Contact, 'https://exa mple.com/'],
 			'a Contact with an uppercase scheme' => [SecurityTxtField::Contact, 'HTTPS://exa mple.com/'],
 			'a Policy with a scheme' => [SecurityTxtField::Policy, 'https://exa mple.com/'],
@@ -291,6 +300,42 @@ final class SecurityTxtUriValidatorTest extends TestCase
 				"The Contact value (the security team) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 				null,
 				'Use a URI as the value',
+			],
+			'a fingerprint' => [
+				"The Encryption value (5F2DE5521C63A801AB59CCB603D49DE44B29100F) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				'openpgp4fpr:5F2DE5521C63A801AB59CCB603D49DE44B29100F',
+				'The value looks like an OpenPGP key fingerprint, add the "openpgp4fpr" scheme',
+			],
+			'a fingerprint as GnuPG prints it' => [
+				"The Encryption value (5F2D E552 1C63 A801 AB59  CCB6 03D4 9DE4 4B29 100F) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				'openpgp4fpr:5F2DE5521C63A801AB59CCB603D49DE44B29100F',
+				'The value looks like an OpenPGP key fingerprint, add the "openpgp4fpr" scheme and remove the spaces',
+			],
+			'a fingerprint one digit short' => [
+				"The Encryption value (5F2DE5521C63A801AB59CCB603D49DE44B29100) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'a fingerprint in a Policy' => [
+				"The Policy value (5F2DE5521C63A801AB59CCB603D49DE44B29100F) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			// The newline is a control character, not a fingerprint's
+			'a fingerprint and a newline' => [
+				"The Encryption value (5F2DE5521C63A801AB59CCB603D49DE44B29100F%0A) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'a fingerprint with spaces after the scheme' => [
+				"The Encryption value (openpgp4fpr:5F2D E552 1C63 A801 AB59  CCB6 03D4 9DE4 4B29 100F) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				'openpgp4fpr:5F2DE5521C63A801AB59CCB603D49DE44B29100F',
+				'Remove the spaces from the fingerprint',
+			],
+			'a fingerprint after the scheme and a space' => [
+				"The Encryption value (openpgp4fpr: 5F2DE5521C63A801AB59CCB603D49DE44B29100F) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				'openpgp4fpr:5F2DE5521C63A801AB59CCB603D49DE44B29100F',
+				'Remove the space after the scheme',
 			],
 			'a Contact with a scheme' => [
 				"The Contact value (https://exa mple.com/) doesn't follow the URI syntax described in RFC 3986, it contains a space",
@@ -1035,6 +1080,7 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			SecurityTxtField::Contact => [SecurityTxtContactNotUri::class, SecurityTxtContactNotHttps::class],
 			SecurityTxtField::Csaf => [SecurityTxtCsafNotUri::class, SecurityTxtCsafNotHttps::class],
 			SecurityTxtField::Hiring => [SecurityTxtHiringNotUri::class, SecurityTxtHiringNotHttps::class],
+			SecurityTxtField::Encryption => [SecurityTxtEncryptionNotUri::class, SecurityTxtEncryptionNotHttps::class],
 			default => [SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class],
 		};
 		$e = Assert::throws(function () use ($uri, $notUri, $notHttps, $field): void {

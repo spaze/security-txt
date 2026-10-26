@@ -53,6 +53,11 @@ final class SecurityTxtUriValidator
 	private const string CONTROL = '(?:[\x00-\x1f\x7f]|\xc2[\x80-\x9f])';
 
 	/**
+	 * An OpenPGP key fingerprint, the spaces in it as GnuPG prints it, grouped by four, two in the middle
+	 */
+	private const string FINGERPRINT = '(?:[0-9a-f]{4} {0,2}){9}[0-9a-f]{4}';
+
+	/**
 	 * What a value or a word may be wrapped in, and isn't part of it
 	 */
 	private const string WRAPPERS = '<>()[]"\'';
@@ -234,6 +239,9 @@ final class SecurityTxtUriValidator
 					'correctValue' => $this->suggest(SecurityTxtContact::phone($matches[2])->getUri()),
 				];
 			}
+			if (preg_match('/^openpgp4fpr: *(' . self::FINGERPRINT . ')$/iD', $uri, $matches) === 1 && str_contains($matches[1], ' ')) {
+				return ['reason' => SecurityTxtNotUriReason::SpaceInFingerprint, 'correctValue' => $this->suggest('openpgp4fpr:' . str_replace(' ', '', $matches[1]))];
+			}
 			if (preg_match('/^(' . self::KNOWN_SCHEMES . '): +(\S+)$/iD', $uri, $matches) === 1) {
 				return ['reason' => SecurityTxtNotUriReason::SpaceAfterScheme, 'correctValue' => $this->suggest("{$matches[1]}:{$matches[2]}")];
 			}
@@ -305,6 +313,12 @@ final class SecurityTxtUriValidator
 	 */
 	private function explainSchemeMissing(string $uri, ?SecurityTxtField $field): array
 	{
+		if ($field === SecurityTxtField::Encryption && preg_match('/^' . self::FINGERPRINT . '$/iD', $uri) === 1) {
+			return [
+				'reason' => str_contains($uri, ' ') ? SecurityTxtNotUriReason::SchemeMissingFingerprintWithSpaces : SecurityTxtNotUriReason::SchemeMissingFingerprint,
+				'correctValue' => $this->suggest('openpgp4fpr:' . str_replace(' ', '', $uri)),
+			];
+		}
 		if ($field === SecurityTxtField::Contact) {
 			[$reason, $correctValue] = match (true) {
 				filter_var($uri, FILTER_VALIDATE_EMAIL) !== false => [SecurityTxtNotUriReason::SchemeMissingEmail, SecurityTxtContact::email($uri)->getUri()],
