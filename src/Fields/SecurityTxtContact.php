@@ -15,9 +15,15 @@ final class SecurityTxtContact extends SecurityTxtUriField implements SecurityTx
 	}
 
 
+	/**
+	 * Not every character an address can have is allowed in a `mailto:` URI, in `mailto:foo#bar@example.com` the address would be `foo`, so those RFC 6068 doesn't allow
+	 * are percent-encoded, an `@` before the last one too, `mailto:%22not%40me%22@example.org`, and a comma, which would separate two addresses.
+	 */
 	public static function email(string $email): self
 	{
-		return new self('mailto:' . $email);
+		$encode = fn(string $part): ?string => preg_replace_callback("~[^a-z0-9\\-._\\~!$'()*+:\\x80-\\xff]~i", fn(array $matches): string => rawurlencode($matches[0]), $part);
+		$at = strrpos($email, '@');
+		return new self('mailto:' . ($at === false ? $encode($email) : $encode(substr($email, 0, $at)) . '@' . $encode(substr($email, $at + 1))));
 	}
 
 

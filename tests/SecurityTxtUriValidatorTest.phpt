@@ -114,6 +114,7 @@ final class SecurityTxtUriValidatorTest extends TestCase
 	{
 		$values = [
 			'an email address' => [SecurityTxtField::Contact, 'bar@example.com'],
+			'an email address with a number sign' => [SecurityTxtField::Contact, 'foo#bar@example.com'],
 			'a phone number' => [SecurityTxtField::Contact, '+1-201-555-01234'],
 			'a phone number with spaces' => [SecurityTxtField::Contact, '+420 123 456 789'],
 			'prose with an email address' => [SecurityTxtField::Contact, 'The security team (security@example.com)'],
@@ -148,6 +149,13 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'a CSAF with a scheme' => [SecurityTxtField::Csaf, 'https://exa mple.com/provider-metadata.json'],
 			'a space' => [SecurityTxtField::Policy, 'https://example.com/security policy.html'],
 			'a space after the scheme' => [SecurityTxtField::Contact, 'mailto: security@example.com'],
+			'a space after the scheme and a number sign' => [SecurityTxtField::Contact, 'MAILTO: foo#bar@example.com'],
+			'a space after the scheme and a query' => [SecurityTxtField::Contact, 'mailto: security@example.com?subject=Report'],
+			'a space after the scheme and an encoded address' => [SecurityTxtField::Contact, 'mailto: gorby%25kremvax@example.com'],
+			'a space after the scheme and a number sign before an internationalized domain' => [SecurityTxtField::Contact, "mailto: foo#bar@h\u{E1}\u{10D}ky.example"],
+			'a space after the scheme and an encoded query' => [SecurityTxtField::Contact, 'mailto: security@example.com?subject=Report%20this'],
+			'a space after the scheme and a question mark before a query' => [SecurityTxtField::Contact, 'mailto: foo?bar@example.com?subject=Report'],
+			'a space after the scheme and an email address in a Policy' => [SecurityTxtField::Policy, 'https: security@example.com'],
 			'a character outside RFC 3987' => [SecurityTxtField::Policy, "https://example.com/\u{FDD0}"],
 			'not UTF-8' => [SecurityTxtField::Policy, "https://example.com/\xFF"],
 			'more than one URI' => [SecurityTxtField::Hiring, 'https://example.com/jobs, https://example.net/jobs'],
@@ -288,6 +296,12 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'an email address' => [
 				"The Contact value (bar@example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 				'mailto:bar@example.com',
+				'The value looks like an email address, add the "mailto" scheme',
+			],
+			// Not `mailto:foo#bar@example.com`, which mails `foo`
+			'an email address with a number sign' => [
+				"The Contact value (foo#bar@example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				'mailto:foo%23bar@example.com',
 				'The value looks like an email address, add the "mailto" scheme',
 			],
 			'a phone number' => [
@@ -466,6 +480,47 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'a space after the scheme' => [
 				"The Contact value (mailto: security@example.com) doesn't follow the URI syntax described in RFC 3986, it contains a space",
 				'mailto:security@example.com',
+				'Remove the space after the scheme',
+			],
+			// Not `mailto:foo#bar@example.com`, which mails `foo`
+			'a space after the scheme and a number sign' => [
+				"The Contact value (MAILTO: foo#bar@example.com) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				'mailto:foo%23bar@example.com',
+				'Remove the space after the scheme',
+			],
+			// The address is the part before the query, which is no address
+			'a space after the scheme and a query' => [
+				"The Contact value (mailto: security@example.com?subject=Report) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				'mailto:security@example.com?subject=Report',
+				'Remove the space after the scheme',
+			],
+			// It may be `gorby%kremvax@example.com` as RFC 6068 writes it, or `gorby%25kremvax@example.com`
+			'a space after the scheme and an encoded address' => [
+				"The Contact value (mailto: gorby%25kremvax@example.com) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				null,
+				'Remove the space after the scheme',
+			],
+			// Not `mailto:foo#bar@háčky.example`, which mails `foo`
+			'a space after the scheme and a number sign before an internationalized domain' => [
+				"The Contact value (mailto: foo#bar@h%C3%A1%C4%8Dky.example) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				null,
+				'Remove the space after the scheme',
+			],
+			'a space after the scheme and an encoded query' => [
+				"The Contact value (mailto: security@example.com?subject=Report%20this) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				'mailto:security@example.com?subject=Report%20this',
+				'Remove the space after the scheme',
+			],
+			// Not `mailto:foo?bar@example.com?subject=Report`, which mails `foo`
+			'a space after the scheme and a question mark before a query' => [
+				"The Contact value (mailto: foo?bar@example.com?subject=Report) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				null,
+				'Remove the space after the scheme',
+			],
+			// Not `mailto:security@example.com`, the scheme is `https`
+			'a space after the scheme and an email address in a Policy' => [
+				"The Policy value (https: security@example.com) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				null,
 				'Remove the space after the scheme',
 			],
 			'a character outside RFC 3987' => [

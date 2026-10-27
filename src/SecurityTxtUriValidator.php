@@ -258,7 +258,18 @@ final class SecurityTxtUriValidator
 				return ['reason' => SecurityTxtNotUriReason::SpaceInFingerprint, 'correctValue' => $this->suggest('openpgp4fpr:' . str_replace(' ', '', $matches[1]))];
 			}
 			if (preg_match('/^(' . self::KNOWN_SCHEMES . '): +(\S+)$/iD', $uri, $matches) === 1) {
-				return ['reason' => SecurityTxtNotUriReason::SpaceAfterScheme, 'correctValue' => $this->suggest("{$matches[1]}:{$matches[2]}")];
+				$correctValue = "{$matches[1]}:{$matches[2]}";
+				if (strtolower($matches[1]) === 'mailto') {
+					// An address encoded, `mailto:foo#bar@example.com` would mail `foo`, but none when the address may be encoded already, or the URI would mail no address
+					$address = substr($matches[2], 0, strcspn($matches[2], '?#'));
+					$correctValue = match (true) {
+						preg_match('/%[0-9a-f]{2}/i', $address) === 1 => null,
+						filter_var($matches[2], FILTER_VALIDATE_EMAIL) !== false => SecurityTxtContact::email($matches[2])->getUri(),
+						!str_contains($address, '@') => null,
+						default => $correctValue,
+					};
+				}
+				return ['reason' => SecurityTxtNotUriReason::SpaceAfterScheme, 'correctValue' => $this->suggest($correctValue)];
 			}
 			// In the host or the port only if the path or something else follows them, with nothing after the host, a space may as well end the URI and start a note
 			$authority = preg_match('~^' . self::SCHEME . '://[^/?#]*+[/?#]~i', $uri) === 1;

@@ -42,6 +42,27 @@ final class SecurityTxtContactTest extends TestCase
 	}
 
 
+	public function testEmail(): void
+	{
+		$uris = [];
+		foreach (['security@example.com', "o'brien+tag@example.com", 'foo#bar@example.com', 'foo?bar@example.com', 'gorby%kremvax@example.com', '"not@me"@example.org', '"oh\\\\no"@example.org', '"a,b;c"@example.com', "security@h\u{E1}\u{10D}ky.example"] as $email) {
+			$uris[$email] = SecurityTxtContact::email($email)->getUri();
+		}
+		Assert::same([
+			'security@example.com' => 'mailto:security@example.com',
+			"o'brien+tag@example.com" => "mailto:o'brien+tag@example.com",
+			'foo#bar@example.com' => 'mailto:foo%23bar@example.com',
+			'foo?bar@example.com' => 'mailto:foo%3Fbar@example.com',
+			// Examples from RFC 6068
+			'gorby%kremvax@example.com' => 'mailto:gorby%25kremvax@example.com',
+			'"not@me"@example.org' => 'mailto:%22not%40me%22@example.org',
+			'"oh\\\\no"@example.org' => 'mailto:%22oh%5C%5Cno%22@example.org',
+			'"a,b;c"@example.com' => 'mailto:%22a%2Cb%3Bc%22@example.com',
+			"security@h\u{E1}\u{10D}ky.example" => "mailto:security@h\u{E1}\u{10D}ky.example",
+		], $uris);
+	}
+
+
 	public function testPhone(): void
 	{
 		$uris = [];
