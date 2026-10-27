@@ -58,6 +58,21 @@ final class SecurityTxtUriValidator
 	private const string FINGERPRINT = '(?:[0-9a-f]{4} {0,2}){9}[0-9a-f]{4}';
 
 	/**
+	 * A phone number, with the hyphens, dots and spaces people write in one, and a digit, which RFC 3966 requires
+	 */
+	private const string PHONE = '\+?[\-. ]*+[0-9][0-9\-. ]*+';
+
+	/**
+	 * A hostname label, letters, digits and hyphens of any script, starting with a letter or a digit
+	 */
+	private const string LABEL = '[\p{L}\p{Nd}][\p{L}\p{M}\p{Nd}-]*+';
+
+	/**
+	 * A hostname of two labels or more, then the port, the path, the query, the fragment or nothing
+	 */
+	private const string HOSTNAME = '(?:' . self::LABEL . '\.)++' . self::LABEL . '(?:[/?#:]|$)';
+
+	/**
 	 * What a value or a word may be wrapped in, and isn't part of it
 	 */
 	private const string WRAPPERS = '<>()[]"\'';
@@ -233,7 +248,7 @@ final class SecurityTxtUriValidator
 		}
 		[$host, $port] = $this->getHostAndPort($uri);
 		if (str_contains($uri, ' ')) {
-			if (preg_match('/^tel:( *)(\+?[0-9\-. ]+)$/iD', $uri, $matches) === 1 && str_contains($matches[2], ' ')) {
+			if (preg_match('/^tel:( *+)(' . self::PHONE . ')$/iD', $uri, $matches) === 1 && str_contains($matches[2], ' ')) {
 				return [
 					'reason' => $matches[1] === '' ? SecurityTxtNotUriReason::SpaceInPhoneNumber : SecurityTxtNotUriReason::SpaceAfterSchemeAndInPhoneNumber,
 					'correctValue' => $this->suggest(SecurityTxtContact::phone($matches[2])->getUri()),
@@ -322,11 +337,13 @@ final class SecurityTxtUriValidator
 		if ($field === SecurityTxtField::Contact) {
 			[$reason, $correctValue] = match (true) {
 				filter_var($uri, FILTER_VALIDATE_EMAIL) !== false => [SecurityTxtNotUriReason::SchemeMissingEmail, SecurityTxtContact::email($uri)->getUri()],
-				preg_match('/^\+?[0-9\-. ]+$/D', $uri) === 1 => [
+				preg_match('/^' . self::PHONE . '$/D', $uri) === 1 => [
 					str_contains($uri, ' ') ? SecurityTxtNotUriReason::SchemeMissingPhoneWithSpaces : SecurityTxtNotUriReason::SchemeMissingPhone,
 					SecurityTxtContact::phone($uri)->getUri(),
 				],
-				default => [SecurityTxtNotUriReason::SchemeMissingHostname, "https://{$uri}"],
+				// Without a comma, more likely between two contacts, or a full stop or the like at the end, more likely of a sentence
+				preg_match('~^' . self::HOSTNAME . '~uD', $uri) === 1 && preg_match('/,|[.;:!?]$/D', $uri) !== 1 => [SecurityTxtNotUriReason::SchemeMissingHostname, "https://{$uri}"],
+				default => [SecurityTxtNotUriReason::SchemeMissing, null],
 			};
 			// Prose with an @ in it does not become a URI by putting a scheme in front, and the hint saying it would goes with the suggestion
 			$correctValue = $this->suggest($correctValue);

@@ -118,6 +118,20 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'a phone number with spaces' => [SecurityTxtField::Contact, '+420 123 456 789'],
 			'prose with an email address' => [SecurityTxtField::Contact, 'The security team (security@example.com)'],
 			'a hostname' => [SecurityTxtField::Contact, 'example.com'],
+			'a hostname and a path' => [SecurityTxtField::Contact, 'example.com/security'],
+			'a hostname and a full stop' => [SecurityTxtField::Contact, 'example.com.'],
+			'a hostname and a comma' => [SecurityTxtField::Contact, 'example.com,'],
+			'an internationalized hostname, a port and a path' => [SecurityTxtField::Contact, "h\u{E1}\u{10D}ky.example:8443/"],
+			'an uppercase A-label' => [SecurityTxtField::Contact, 'XN--HKY-SLA3E.EXAMPLE'],
+			'a hostname, a path and a full stop' => [SecurityTxtField::Contact, 'example.com/security.'],
+			'a hostname, a path, a comma and an email address' => [SecurityTxtField::Contact, 'example.com/security,security@example.com'],
+			'a wildcard' => [SecurityTxtField::Contact, '*.example.com'],
+			'a hostname and a closing bracket' => [SecurityTxtField::Contact, 'example.com)'],
+			'hyphens and a dot' => [SecurityTxtField::Contact, '-.-'],
+			'a slash' => [SecurityTxtField::Contact, 'N/A'],
+			'a phone number with dots' => [SecurityTxtField::Contact, '555.123.4567'],
+			'a word' => [SecurityTxtField::Contact, 'TODO'],
+			'hyphens' => [SecurityTxtField::Contact, '---'],
 			'prose' => [SecurityTxtField::Contact, 'the security team'],
 			'a fingerprint' => [SecurityTxtField::Encryption, '5F2DE5521C63A801AB59CCB603D49DE44B29100F'],
 			'a fingerprint as GnuPG prints it' => [SecurityTxtField::Encryption, '5F2D E552 1C63 A801 AB59  CCB6 03D4 9DE4 4B29 100F'],
@@ -143,6 +157,7 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			'a phone number with a space after tel: and more' => [SecurityTxtField::Contact, 'tel: +420 123 456 789'],
 			'a phone number with only a space after tel:' => [SecurityTxtField::Contact, 'tel: +420123456789'],
 			'a phone number and more' => [SecurityTxtField::Contact, 'tel:+420 123 456 789 (office)'],
+			'hyphens and spaces after tel:' => [SecurityTxtField::Contact, 'tel:- -'],
 			'a label before an email address' => [SecurityTxtField::Contact, 'Email: security@example.com'],
 			'more than one email address' => [SecurityTxtField::Contact, 'security@example.com, abuse@example.com'],
 			'an email address in prose in a Policy' => [SecurityTxtField::Policy, 'Write to security@example.com'],
@@ -295,6 +310,82 @@ final class SecurityTxtUriValidatorTest extends TestCase
 				'https://example.com',
 				'The value looks like a hostname, add the "https" scheme',
 			],
+			'a hostname and a path' => [
+				"The Contact value (example.com/security) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				'https://example.com/security',
+				'The value looks like a hostname, add the "https" scheme',
+			],
+			// Not `https://example.com.`, the dot more likely ends a sentence
+			'a hostname and a full stop' => [
+				"The Contact value (example.com.) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			// Not `https://example.com,`
+			'a hostname and a comma' => [
+				"The Contact value (example.com,) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'an internationalized hostname, a port and a path' => [
+				"The Contact value (h%C3%A1%C4%8Dky.example:8443/) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				"https://h\u{E1}\u{10D}ky.example:8443/",
+				'The value looks like a hostname, add the "https" scheme',
+			],
+			'an uppercase A-label' => [
+				"The Contact value (XN--HKY-SLA3E.EXAMPLE) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				'https://XN--HKY-SLA3E.EXAMPLE',
+				'The value looks like a hostname, add the "https" scheme',
+			],
+			'a hostname, a path and a full stop' => [
+				"The Contact value (example.com/security.) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			// Not `https://example.com/security,security@example.com`, which would leave out the email address
+			'a hostname, a path, a comma and an email address' => [
+				"The Contact value (example.com/security,security@example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'a wildcard' => [
+				"The Contact value (*.example.com) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'a hostname and a closing bracket' => [
+				"The Contact value (example.com)) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'hyphens and a dot' => [
+				"The Contact value (-.-) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			'a slash' => [
+				"The Contact value (N/A) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			// Not `https://555.123.4567`
+			'a phone number with dots' => [
+				"The Contact value (555.123.4567) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				'tel:555.123.4567',
+				'The value looks like a phone number, add the "tel" scheme',
+			],
+			// Not `https://TODO`, a hostname has two labels or more
+			'a word' => [
+				"The Contact value (TODO) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
+			// Not `tel:---`, a phone number has a digit
+			'hyphens' => [
+				"The Contact value (---) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
+				null,
+				'Use a URI as the value',
+			],
 			// Not `https://the security team`, which is no URI either
 			'prose' => [
 				"The Contact value (the security team) doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
@@ -419,6 +510,12 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			],
 			'a phone number and more' => [
 				"The Contact value (tel:+420 123 456 789 (office)) doesn't follow the URI syntax described in RFC 3986, it contains a space",
+				null,
+				'Remove the spaces, or percent-encode each one as %20',
+			],
+			// Not `tel:---`
+			'hyphens and spaces after tel:' => [
+				"The Contact value (tel:- -) doesn't follow the URI syntax described in RFC 3986, it contains a space",
 				null,
 				'Remove the spaces, or percent-encode each one as %20',
 			],
