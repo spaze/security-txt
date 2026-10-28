@@ -123,14 +123,30 @@ final class SecurityTxtParser
 
 	/**
 	 * @param int<1, max> $lineNumber
+	 * @param bool $possibleTypo The name may be a typo of the field's, so only the value is checked, nothing counts it as that field, and an error is only a warning
 	 */
-	private function processField(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt): void
+	private function processField(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt, bool $possibleTypo = false): void
 	{
 		foreach ($this->fieldProcessors[$field->value] as $processor) {
+			if (
+				$possibleTypo
+				&& (
+					$processor instanceof BugBountyCheckMultipleFields
+					|| $processor instanceof ExpiresCheckMultipleFields
+					|| $processor instanceof PreferredLanguagesCheckMultipleFields
+					|| $processor instanceof ExpiresSetFieldValue
+				)
+			) {
+				continue;
+			}
 			try {
 				$processor->process($value, $securityTxt);
 			} catch (SecurityTxtError $e) {
-				$this->lineErrors[$lineNumber][] = $e->getViolation();
+				if ($possibleTypo) {
+					$this->lineWarnings[$lineNumber][] = $e->getViolation();
+				} else {
+					$this->lineErrors[$lineNumber][] = $e->getViolation();
+				}
 			} catch (SecurityTxtWarning $e) {
 				$this->lineWarnings[$lineNumber][] = $e->getViolation();
 			}
@@ -280,6 +296,8 @@ final class SecurityTxtParser
 				$this->processField($lineNumber, $fieldValue, $securityTxtField, $securityTxt);
 			} elseif ($suggestion !== null) {
 				$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
+				// What the value would be told as the suggested field, without the file having that field
+				$this->processField($lineNumber, $fieldValue, $suggestion, new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues), true);
 			} else {
 				// With the removed field only when there is one, so a stored violation carries no null for it
 				$removedField = SecurityTxtRemovedField::tryFrom($fieldName);
