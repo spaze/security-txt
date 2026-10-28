@@ -72,6 +72,14 @@ final class ExpiresCheckFieldValueExpiresSoonTest extends TestCase
 		Assert::type(SecurityTxtExpiresSoon::class, $e->getViolation());
 		Assert::same('The file will be considered stale in 3 days', $e->getMessage());
 
+		$expires = new SecurityTxtExpires(new DateTimeImmutable('+1 day +3 hours'), false, 1);
+		$securityTxt->setExpires($expires);
+		$e = Assert::throws(function () use ($processor, $securityTxt): void {
+			$processor->process('unused', securityTxt: $securityTxt);
+		}, SecurityTxtWarning::class);
+		assert($e instanceof SecurityTxtWarning);
+		Assert::same('The file will be considered stale in 1 day', $e->getMessage());
+
 		$expires = new SecurityTxtExpires(new DateTimeImmutable('+3 hours'), false, 0);
 		$securityTxt->setExpires($expires);
 		$e = Assert::throws(function () use ($processor, $securityTxt): void {
@@ -79,7 +87,7 @@ final class ExpiresCheckFieldValueExpiresSoonTest extends TestCase
 		}, SecurityTxtWarning::class);
 		assert($e instanceof SecurityTxtWarning);
 		Assert::type(SecurityTxtExpiresSoon::class, $e->getViolation());
-		Assert::same('The file will be considered stale later today', $e->getMessage());
+		Assert::same('The file will be considered stale in less than a day', $e->getMessage());
 	}
 
 }

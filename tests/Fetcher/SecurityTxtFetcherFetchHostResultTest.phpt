@@ -28,6 +28,52 @@ final class SecurityTxtFetcherFetchHostResultTest extends TestCase
 	}
 
 
+	public function testIsRegularHtmlPage(): void
+	{
+		$bodies = [
+			"<!DOCTYPE html>\n<html lang=\"en\">",
+			'<!doctype html><p>Not found</p>',
+			"\u{FEFF}<!doctype html>",
+			"\n\n  <html>",
+			'<html lang="en">',
+			'<HTML>',
+			'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN">',
+			'<?xml version="1.0"?><html>',
+			'<head><title>Not found</title></head>',
+			'<htmlfoo>',
+			"Contact: https://example.com/\n<html>",
+			'# <html>',
+			"<pre>\nContact: https://example.com/\n</pre>",
+			'<p>Not found</p><body>',
+		];
+		$htmlPages = [];
+		foreach ($bodies as $body) {
+			foreach (['text/plain' => ['content-type' => 'text/plain; charset=utf-8'], 'text/html' => ['content-type' => 'text/html'], 'none' => []] as $type => $headers) {
+				$response = new SecurityTxtFetcherResponse(200, $headers, $body, false, '1.1.1.0', SecurityTxtIpAddressType::V4);
+				$htmlPages[$body][$type] = new SecurityTxtFetcherFetchHostResult(new Url('https://foo.example/'), new Url('https://foo.example/'), '192.0.2.1', SecurityTxtIpAddressType::V4, 200, $response)->isRegularHtmlPage();
+			}
+		}
+		$all = ['text/plain' => true, 'text/html' => true, 'none' => true];
+		$none = ['text/plain' => false, 'text/html' => false, 'none' => false];
+		Assert::same([
+			"<!DOCTYPE html>\n<html lang=\"en\">" => $all,
+			'<!doctype html><p>Not found</p>' => $all,
+			"\u{FEFF}<!doctype html>" => $all,
+			"\n\n  <html>" => $all,
+			'<html lang="en">' => $all,
+			'<HTML>' => $all,
+			'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN">' => $all,
+			'<?xml version="1.0"?><html>' => $none,
+			'<head><title>Not found</title></head>' => $none,
+			'<htmlfoo>' => $none,
+			"Contact: https://example.com/\n<html>" => $none,
+			'# <html>' => $none,
+			"<pre>\nContact: https://example.com/\n</pre>" => $none,
+			'<p>Not found</p><body>' => ['text/plain' => false, 'text/html' => true, 'none' => false],
+		], $htmlPages);
+	}
+
+
 	public function testGetCharsetParameter(): void
 	{
 		$headers = [

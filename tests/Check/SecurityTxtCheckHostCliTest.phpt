@@ -71,7 +71,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Using [1mhttps://example.com/.well-known/security.txt[0m
 		[1;31m[Error][0m The file at https://example.com/.well-known/security.txt has a correct Content-Type of text/plain but the charset=utf-8 parameter is missing (How to fix: Add a charset=utf-8 parameter, e.g. text/plain; charset=utf-8)
 		[1;31m[Error][0m on line [1m2[0m: The file is considered stale and should not be used (How to fix: The Expires field should contain a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
-		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
+		[1m[Warning][0m security.txt wasn't found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file has expired 42 days ago[0m ({$this->expires})
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
@@ -103,7 +103,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 			. " (How to fix: Make sure the Contact field points to an https:// URI, e.g. https://\u{4F8B}\u{3048}.jp/contact)\n"
 			// A URL among the message values reads as itself with the ASCII host alongside, which is what composing the formats is for
 			. "[Warning] The file was fetched from https://\u{4F8B}\u{3048}.jp/.well-known/security.txt"
-			. " but the Canonical field (https://other.example/) does not list this URI"
+			. " but the Canonical field (https://other.example/) doesn't list this URI, so the contents of the file shouldn't be trusted"
 			. " (How to fix: Add a new Canonical field with the URI https://\u{4F8B}\u{3048}.jp/.well-known/security.txt,"
 			. " or ensure the file is fetched from the listed canonical URI)\n"
 			. "[OK] The file will expire in 42 days ({$expires})\n"
@@ -137,13 +137,13 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Not found [1mhttps://nah1.example/[0m
 		[1;90m[Info][0m Using [1mhttps://verbose.example/.well-known/security.txt[0m
 		[1;31m[Error][0m on line [1m2[0m: The file is considered stale and should not be used (How to fix: The Expires field should contain a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
-		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
+		[1m[Warning][0m security.txt wasn't found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file has expired 42 days ago[0m ({$this->expires})
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		[1;90m[Info][0m Parsing security.txt for [1mnon-verbose.example[0m
 		[1;90m[Info][0m Using [1mhttps://non-verbose.example/.well-known/security.txt[0m
 		[1;31m[Error][0m The Expires field must always be present (How to fix: Add an Expires field with a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
-		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
+		[1m[Warning][0m security.txt wasn't found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
 		Assert::same($expected . "\n", $output);

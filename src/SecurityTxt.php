@@ -48,6 +48,32 @@ use Uri\WhatWg\Url;
 final class SecurityTxt implements JsonSerializable
 {
 
+	private const string LANGUAGE_TAG = '/^([a-z]{2,3}(-[a-z0-9]+)*|[xi]-[a-z0-9]+)$/i';
+
+	/**
+	 * The Czech language tag as people get it wrong, `cz` the country code, or `cze` the ISO 639-2 code, which RFC 5646 doesn't use for a language with a shorter one
+	 */
+	private const string CZECH_MISTAKE = '/^cze?(?=-|$)/i';
+
+	/**
+	 * Languages by the English names written instead of their tags, in lowercase
+	 */
+	private const array LANGUAGE_NAMES = [
+		'czech' => 'cs',
+		'dutch' => 'nl',
+		'english' => 'en',
+		'french' => 'fr',
+		'german' => 'de',
+		'hungarian' => 'hu',
+		'italian' => 'it',
+		'polish' => 'pl',
+		'portuguese' => 'pt',
+		'russian' => 'ru',
+		'slovak' => 'sk',
+		'spanish' => 'es',
+		'ukrainian' => 'uk',
+	];
+
 	private ?string $fileLocation = null;
 	private ?SecurityTxtExpires $expires = null;
 	private ?SecurityTxtSignatureVerifyResult $signatureVerifyResult = null;
@@ -237,19 +263,23 @@ final class SecurityTxt implements JsonSerializable
 				}
 				$wrongLanguages = [];
 				foreach ($preferredLanguages->getLanguages() as $key => $value) {
-					if (preg_match('/^([a-z]{2,3}(-[a-z0-9]+)*|[xi]-[a-z0-9]+)$/i', $value) !== 1) {
+					if (preg_match(self::LANGUAGE_TAG, $value) !== 1) {
 						$wrongLanguages[$key + 1] = $value;
 					}
 				}
 				if ($wrongLanguages !== []) {
-					throw new SecurityTxtError(new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages));
+					// Only when every tag has one, a value with some of them still wrong would be no value to use
+					$correctLanguages = array_map($this->getLanguageTag(...), $preferredLanguages->getLanguages());
+					throw new SecurityTxtError(in_array(null, $correctLanguages, true)
+						? new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages)
+						: new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages, implode(', ', $correctLanguages)));
 				}
 				foreach ($preferredLanguages->getLanguages() as $key => $value) {
-					if (preg_match('/^cz-?/i', $value) === 1) {
+					if (preg_match(self::CZECH_MISTAKE, $value) === 1) {
 						throw new SecurityTxtError(new SecurityTxtPreferredLanguagesCommonMistake(
 							$key + 1,
 							$value,
-							preg_replace('/^cz$|cz(-)/i', 'cs$1', $value),
+							preg_replace(self::CZECH_MISTAKE, 'cs', $value),
 							SecurityTxtPreferredLanguagesCommonMistakeReason::CzechUsesCsNotCz,
 						));
 					}
@@ -457,13 +487,23 @@ final class SecurityTxt implements JsonSerializable
 
 
 	/**
+	 * The tag a value is, or is likely meant to be, the language's English name, `Czech`, or the tag with underscores, `cs_CZ`, with the Czech code put right too
+	 */
+	private function getLanguageTag(string $value): ?string
+	{
+		$tag = self::LANGUAGE_NAMES[strtolower($value)] ?? str_replace('_', '-', $value);
+		return preg_match(self::LANGUAGE_TAG, $tag) === 1 ? preg_replace(self::CZECH_MISTAKE, 'cs', $tag) : null;
+	}
+
+
+	/**
 	 * @param class-string<SecurityTxtAcknowledgmentsNotUri|SecurityTxtCanonicalNotUri|SecurityTxtContactNotUri|SecurityTxtCsafNotUri|SecurityTxtEncryptionNotUri|SecurityTxtHiringNotUri|SecurityTxtPolicyNotUri|SecurityTxtFileLocationNotUri> $notUriError
 	 * @param class-string<SecurityTxtAcknowledgmentsNotHttps|SecurityTxtCanonicalNotHttps|SecurityTxtContactNotHttps|SecurityTxtCsafNotHttps|SecurityTxtEncryptionNotHttps|SecurityTxtHiringNotHttps|SecurityTxtPolicyNotHttps|SecurityTxtFileLocationNotHttps> $notHttpsError
 	 * @throws SecurityTxtError
 	 */
 	private function checkUri(string $uri, string $notUriError, string $notHttpsError, ?SecurityTxtField $field = null, bool $fetched = false): void
 	{
-		new SecurityTxtUriValidator()->validate($uri, $notUriError, $notHttpsError, $field, $fetched);
+		new SecurityTxtUriValidator()->validate($uri, $notUriError, $notHttpsError, $field, $fetched, $this->fileLocation);
 	}
 
 

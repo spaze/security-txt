@@ -8,6 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
+use Spaze\SecurityTxt\Fields\SecurityTxtRemovedField;
 use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\FieldProcessors\AcknowledgmentsAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\BugBountyCheckMultipleFields;
@@ -40,6 +41,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtLineControlCharacter;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNeitherFieldNorComment;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
@@ -121,14 +123,30 @@ final class SecurityTxtParser
 
 	/**
 	 * @param int<1, max> $lineNumber
+	 * @param bool $possibleTypo The name may be a typo of the field's, so only the value is checked, nothing counts it as that field, and an error is only a warning
 	 */
-	private function processField(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt): void
+	private function processField(int $lineNumber, string $value, SecurityTxtField $field, SecurityTxt $securityTxt, bool $possibleTypo = false): void
 	{
 		foreach ($this->fieldProcessors[$field->value] as $processor) {
+			if (
+				$possibleTypo
+				&& (
+					$processor instanceof BugBountyCheckMultipleFields
+					|| $processor instanceof ExpiresCheckMultipleFields
+					|| $processor instanceof PreferredLanguagesCheckMultipleFields
+					|| $processor instanceof ExpiresSetFieldValue
+				)
+			) {
+				continue;
+			}
 			try {
 				$processor->process($value, $securityTxt);
 			} catch (SecurityTxtError $e) {
-				$this->lineErrors[$lineNumber][] = $e->getViolation();
+				if ($possibleTypo) {
+					$this->lineWarnings[$lineNumber][] = $e->getViolation();
+				} else {
+					$this->lineErrors[$lineNumber][] = $e->getViolation();
+				}
 			} catch (SecurityTxtWarning $e) {
 				$this->lineWarnings[$lineNumber][] = $e->getViolation();
 			}
@@ -157,6 +175,11 @@ final class SecurityTxtParser
 			}
 		}
 		if (!$this->jsonValueFactory->isUtf8($contents)) {
+			foreach ($this->splitLines->splitLines($contents) as $index => $rawLine) {
+				if (!$this->jsonValueFactory->isUtf8($rawLine)) {
+					$this->lineErrors[$index + 1][] = new SecurityTxtLineNotUtf8(rtrim($rawLine, "\r\n"), $this->getNotUtf8($rawLine));
+				}
+			}
 			return new SecurityTxtParseStringResult(
 				$securityTxt,
 				false,
@@ -202,7 +225,8 @@ final class SecurityTxtParser
 				$rawLine = substr($rawLine, 2);
 			}
 			$lineAsWritten = rtrim($rawLine);
-			$line = ltrim($lineAsWritten);
+			// A Unicode space is whitespace there too, but not when there's nothing else on the line, which isn't empty then
+			$line = preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++(?=.)/s', '', $lineAsWritten) ?? ltrim($lineAsWritten);
 			$lineWithoutEol = rtrim($rawLine, "\r\n");
 			if (!str_ends_with($rawLine, "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
@@ -248,12 +272,13 @@ final class SecurityTxtParser
 				continue;
 			}
 			$fieldNameAsWritten = $field[0];
-			$field[0] = rtrim($fieldNameAsWritten);
+			// Tried only where a run starts, or each byte of a long one would be a start to try the rest from
+			$field[0] = preg_replace('/(?<!\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++$/D', '', $fieldNameAsWritten) ?? rtrim($fieldNameAsWritten);
 			$fieldName = strtolower($field[0]);
-			$fieldValue = trim($field[1]);
+			$fieldValue = trim(preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', $field[1]) ?? $field[1]);
 			$securityTxtField = $securityTxtFields[$fieldName] ?? null;
 			// A colon before anything but whitespace is more likely a part of the value, `Acknowledgments https://example.com/`, than the one after a field name
-			$fieldWithoutColon = $securityTxtField === null && preg_match('/^\S/', $field[1]) === 1 ? $this->getFieldWithoutColon($securityTxtFields, $line) : null;
+			$fieldWithoutColon = $securityTxtField === null && preg_match('/^(?!\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')./s', $field[1]) === 1 ? $this->getFieldWithoutColon($securityTxtFields, $line) : null;
 			$suggestion = $securityTxtField === null && $fieldWithoutColon === null ? $this->getSuggestion($securityTxtFields, $fieldName) : null;
 			// A field name is printable ASCII and no space, RFC 5322 section 3.6.8
 			if ($securityTxtField === null && $suggestion === null && preg_match('/^[!-~]++$/D', $field[0]) !== 1) {
@@ -271,8 +296,12 @@ final class SecurityTxtParser
 				$this->processField($lineNumber, $fieldValue, $securityTxtField, $securityTxt);
 			} elseif ($suggestion !== null) {
 				$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
+				// What the value would be told as the suggested field, without the file having that field
+				$this->processField($lineNumber, $fieldValue, $suggestion, $this->getPossibleTypoSecurityTxt($securityTxt), true);
 			} else {
-				$this->lineWarnings[$lineNumber][] = new SecurityTxtUnknownField($field[0], $line);
+				// With the removed field only when there is one, so a stored violation carries no null for it
+				$removedField = SecurityTxtRemovedField::tryFrom($fieldName);
+				$this->lineWarnings[$lineNumber][] = $removedField !== null ? new SecurityTxtUnknownField($field[0], $line, $removedField) : new SecurityTxtUnknownField($field[0], $line);
 			}
 		}
 		if ($signatureLineNumber !== null) {
@@ -324,7 +353,7 @@ final class SecurityTxtParser
 	 */
 	private function isSpaceAfterColon(SecurityTxtField $field, string $afterColon): bool
 	{
-		$whitespace = substr($afterColon, 0, strlen($afterColon) - strlen(ltrim($afterColon)));
+		$whitespace = preg_match('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')*+/', $afterColon, $matches) === 1 ? $matches[0] : substr($afterColon, 0, strlen($afterColon) - strlen(ltrim($afterColon)));
 		return match ($field) {
 			SecurityTxtField::Acknowledgments,
 			SecurityTxtField::Canonical,
@@ -358,13 +387,44 @@ final class SecurityTxtParser
 
 
 	/**
+	 * Where the value of a field whose name may be a typo is checked, at the file's location, which a path is suggested on, as it is for the field itself
+	 */
+	private function getPossibleTypoSecurityTxt(SecurityTxt $securityTxt): SecurityTxt
+	{
+		$possibleTypo = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
+		$fileLocation = $securityTxt->getFileLocation();
+		if ($fileLocation !== null) {
+			try {
+				$possibleTypo->setFileLocation($fileLocation);
+			} catch (SecurityTxtError) {
+				// Reported for the file already
+			}
+		}
+		return $possibleTypo;
+	}
+
+
+	/**
+	 * Each piece of a line that isn't UTF-8, cut where a character can start, at a byte from 0xC0 with as many continuation bytes after it as it can take, or at a
+	 * continuation byte with none before it, and still told apart by the one UTF-8 test
+	 *
+	 * @return list<string>
+	 */
+	private function getNotUtf8(string $line): array
+	{
+		preg_match_all('/[\xC0-\xDF][\x80-\xBF]?|[\xE0-\xEF][\x80-\xBF]{0,2}|[\xF0-\xFF][\x80-\xBF]{0,3}|[\x80-\xBF]/', $line, $matches);
+		return array_values(array_unique(array_filter($matches[0], fn(string $piece): bool => !$this->jsonValueFactory->isUtf8($piece))));
+	}
+
+
+	/**
 	 * The field whose name the line starts with when whitespace or nothing follows the name, not a colon, `Contact https://example.com/`
 	 *
 	 * @param array<string, SecurityTxtField> $securityTxtFields
 	 */
 	private function getFieldWithoutColon(array $securityTxtFields, string $line): ?SecurityTxtField
 	{
-		return preg_match('/^([^\s:]++)(?:\s|$)/D', $line, $matches) === 1 ? $securityTxtFields[strtolower($matches[1])] ?? null : null;
+		return preg_match('/^([!-9;-~]++)(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . '|$)/D', $line, $matches) === 1 ? $securityTxtFields[strtolower($matches[1])] ?? null : null;
 	}
 
 

@@ -34,6 +34,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresSoon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
@@ -88,7 +89,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 			new SecurityTxtFetchResult($url, $url, [], implode($lines), false, $lines, [], []),
 			[],
 			[],
-			[],
+			[2 => [new SecurityTxtLineNotUtf8("# Kontakt: Michal \xA9pa\xE8ek", ["\xA9", "\xE8"])]],
 			[],
 			[new SecurityTxtContentNotUtf8()],
 			[],
@@ -108,6 +109,7 @@ final class SecurityTxtJsonCreateCheckHostResultFromJsonValuesTest extends TestC
 		Assert::same(implode($lines), $replayed->getContents());
 		Assert::same($lines[1], $replayed->getFetchResult()->getLine(2));
 		Assert::equal([new SecurityTxtContentNotUtf8()], $replayed->getFileErrors());
+		Assert::equal([2 => [new SecurityTxtLineNotUtf8("# Kontakt: Michal \xA9pa\xE8ek", ["\xA9", "\xE8"])]], $replayed->getLineErrors());
 		Assert::same($encoded, json_encode($replayed));
 	}
 

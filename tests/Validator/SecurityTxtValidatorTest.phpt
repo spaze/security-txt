@@ -209,6 +209,56 @@ final class SecurityTxtValidatorTest extends TestCase
 	}
 
 
+	public function testValidateCanonicalUriMismatchReason(): void
+	{
+		$wellKnown = 'https://example.com/.well-known/security.txt';
+		$topLevel = 'https://example.com/security.txt';
+		$cases = [
+			"{$wellKnown} | https://example.com/security.txt" => [$wellKnown, 'https://example.com/security.txt'],
+			"{$wellKnown} | https://example.com/.well-known/sercurity.txt" => [$wellKnown, 'https://example.com/.well-known/sercurity.txt'],
+			"{$wellKnown} | https://example.com/.well-known/security.txt/" => [$wellKnown, 'https://example.com/.well-known/security.txt/'],
+			"{$wellKnown} | https://example.com:8443/.well-known/security.txt" => [$wellKnown, 'https://example.com:8443/.well-known/security.txt'],
+			"{$wellKnown} | http://example.com/.well-known/security.txt" => [$wellKnown, 'http://example.com/.well-known/security.txt'],
+			"{$wellKnown} | https://www.example.com/.well-known/security.txt" => [$wellKnown, 'https://www.example.com/.well-known/security.txt'],
+			"{$wellKnown} | not a uri" => [$wellKnown, 'not a uri'],
+			"{$topLevel} | https://example.com/.well-known/security.txt" => [$topLevel, 'https://example.com/.well-known/security.txt'],
+			"{$topLevel} | https://example.com/.well-known/sercurity.txt" => [$topLevel, 'https://example.com/.well-known/sercurity.txt'],
+			'https://example.com/files/security.txt | https://example.com/.well-known/security.txt' => ['https://example.com/files/security.txt', 'https://example.com/.well-known/security.txt'],
+			'https://example.com/security.txt?x=1 | https://example.com/.well-known/security.txt' => ['https://example.com/security.txt?x=1', 'https://example.com/.well-known/security.txt'],
+			"{$wellKnown}?x=1 | {$wellKnown}" => ["{$wellKnown}?x=1", $wellKnown],
+			"{$wellKnown}#top | {$wellKnown}" => ["{$wellKnown}#top", $wellKnown],
+			"https://h\u{E1}\u{10D}ky.example/.well-known/security.txt | https://xn--hky-ela4t.example/security.txt" => ["https://h\u{E1}\u{10D}ky.example/.well-known/security.txt", 'https://xn--hky-ela4t.example/security.txt'],
+		];
+		$params = [];
+		foreach ($cases as $name => [$fileLocation, $canonical]) {
+			$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValuesSilently);
+			$securityTxt->setFileLocation($fileLocation);
+			$securityTxt->addCanonical(new SecurityTxtCanonical($canonical));
+			$params[$name] = array_map(function (SecurityTxtSpecViolation $warning): array {
+				$stored = $warning->jsonSerialize()['params'] ?? null;
+				assert(is_array($stored));
+				return array_slice($stored, 2);
+			}, $this->securityTxtValidator->validate($securityTxt)->getWarnings());
+		}
+		Assert::same([
+			"{$wellKnown} | https://example.com/security.txt" => [['top-level-listed']],
+			"{$wellKnown} | https://example.com/.well-known/sercurity.txt" => [['same-host']],
+			"{$wellKnown} | https://example.com/.well-known/security.txt/" => [['same-host']],
+			"{$wellKnown} | https://example.com:8443/.well-known/security.txt" => [['same-host']],
+			"{$wellKnown} | http://example.com/.well-known/security.txt" => [['same-host']],
+			"{$wellKnown} | https://www.example.com/.well-known/security.txt" => [[]],
+			"{$wellKnown} | not a uri" => [[]],
+			"{$topLevel} | https://example.com/.well-known/security.txt" => [['well-known-listed']],
+			"{$topLevel} | https://example.com/.well-known/sercurity.txt" => [[]],
+			'https://example.com/files/security.txt | https://example.com/.well-known/security.txt' => [[]],
+			'https://example.com/security.txt?x=1 | https://example.com/.well-known/security.txt' => [[]],
+			"{$wellKnown}?x=1 | {$wellKnown}" => [[]],
+			"{$wellKnown}#top | {$wellKnown}" => [[]],
+			"https://h\u{E1}\u{10D}ky.example/.well-known/security.txt | https://xn--hky-ela4t.example/security.txt" => [['top-level-listed']],
+		], $params);
+	}
+
+
 	public function testValidateMissingExpires(): void
 	{
 		$securityTxt = new SecurityTxt();

@@ -82,11 +82,12 @@ final class SecurityTxtUriValidator
 	 * @param class-string<SecurityTxtAcknowledgmentsNotUri|SecurityTxtCanonicalNotUri|SecurityTxtContactNotUri|SecurityTxtCsafNotUri|SecurityTxtEncryptionNotUri|SecurityTxtHiringNotUri|SecurityTxtPolicyNotUri|SecurityTxtFileLocationNotUri> $notUriError
 	 * @param class-string<SecurityTxtAcknowledgmentsNotHttps|SecurityTxtCanonicalNotHttps|SecurityTxtContactNotHttps|SecurityTxtCsafNotHttps|SecurityTxtEncryptionNotHttps|SecurityTxtHiringNotHttps|SecurityTxtPolicyNotHttps|SecurityTxtFileLocationNotHttps> $notHttpsError
 	 * @param bool $fetched The URL a file was fetched from is not written in the file but serialized by the parser, which leaves `|` or `%zz` in a path as they were, so it is refused only when the parser cannot read it at all
+	 * @param string|null $fileLocation The URL the file was fetched from, which a path is suggested on
 	 * @throws SecurityTxtError
 	 */
-	public function validate(string $uri, string $notUriError, string $notHttpsError, ?SecurityTxtField $field = null, bool $fetched = false): void
+	public function validate(string $uri, string $notUriError, string $notHttpsError, ?SecurityTxtField $field = null, bool $fetched = false, ?string $fileLocation = null): void
 	{
-		$result = $fetched ? $this->checkFetched($uri) : $this->check($uri, $field);
+		$result = $fetched ? $this->checkFetched($uri) : $this->check($uri, $field, $fileLocation);
 		if (!$result instanceof Url) {
 			throw new SecurityTxtError(new $notUriError($uri, ...$result));
 		}
@@ -102,14 +103,14 @@ final class SecurityTxtUriValidator
 	 *
 	 * @return Url|array{reason: SecurityTxtNotUriReason, correctValue?: string|null, character?: string}
 	 */
-	private function check(string $uri, ?SecurityTxtField $field, bool $explain = true): Url|array
+	private function check(string $uri, ?SecurityTxtField $field, ?string $fileLocation = null, bool $explain = true): Url|array
 	{
 		// A value that isn't UTF-8 is not an IRI, and fails here
 		$iri = preg_replace_callback('/[^\x00-\x7f]/u', fn(array $matches): string => $this->isUcschar($matches[0]) ? rawurlencode($matches[0]) : $matches[0], $uri);
 		$rfc3986 = $iri === null ? null : Uri::parse($iri);
 		$scheme = $rfc3986?->getScheme();
 		if ($iri === null || $rfc3986 === null || $scheme === null) {
-			return $explain ? $this->explainNotRfc3986($uri, $iri ?? $uri, $field) : ['reason' => SecurityTxtNotUriReason::NotRfc3986];
+			return $explain ? $this->explainNotRfc3986($uri, $iri ?? $uri, $field, $fileLocation) : ['reason' => SecurityTxtNotUriReason::NotRfc3986];
 		}
 		if (in_array($scheme, ['http', 'https'], true)) {
 			if (in_array($rfc3986->getRawHost(), [null, ''], true)) {
@@ -143,7 +144,7 @@ final class SecurityTxtUriValidator
 	 * @param string $iri The value with the characters RFC 3987 adds for an IRI percent-encoded, so what is left that is not ASCII is not allowed even there
 	 * @return array{reason: SecurityTxtNotUriReason, correctValue?: string|null, character?: string}
 	 */
-	private function explainNotRfc3986(string $uri, string $iri, ?SecurityTxtField $field): array
+	private function explainNotRfc3986(string $uri, string $iri, ?SecurityTxtField $field, ?string $fileLocation): array
 	{
 		if ($uri === '') {
 			return ['reason' => SecurityTxtNotUriReason::Empty];
@@ -244,7 +245,7 @@ final class SecurityTxtUriValidator
 			return ['reason' => SecurityTxtNotUriReason::Label, 'correctValue' => $this->suggest(ltrim(substr($uri, strlen($words[0]))))];
 		}
 		if ($this->isSchemeMissing($uri)) {
-			return $this->explainSchemeMissing($uri, $field);
+			return $this->explainSchemeMissing($uri, $field, $fileLocation);
 		}
 		[$host, $port] = $this->getHostAndPort($uri);
 		if (str_contains($uri, ' ')) {
@@ -337,8 +338,19 @@ final class SecurityTxtUriValidator
 	/**
 	 * @return array{reason: SecurityTxtNotUriReason, correctValue?: string|null}
 	 */
-	private function explainSchemeMissing(string $uri, ?SecurityTxtField $field): array
+	private function explainSchemeMissing(string $uri, ?SecurityTxtField $field, ?string $fileLocation): array
 	{
+		// An absolute path, which resolves the same at either location RFC 9116 puts the file, a relative one doesn't, against the scheme and host the file came from
+		if (
+			$fileLocation !== null
+			&& preg_match('~^/(?!/)~', $uri) === 1
+			&& preg_match('~^' . self::SCHEME . '://[^/?#]*~i', $fileLocation, $origin) === 1
+		) {
+			$correctValue = $this->suggest($origin[0] . $uri);
+			if ($correctValue !== null) {
+				return ['reason' => SecurityTxtNotUriReason::SchemeMissingPath, 'correctValue' => $correctValue];
+			}
+		}
 		if ($field === SecurityTxtField::Encryption && preg_match('/^' . self::FINGERPRINT . '$/iD', $uri) === 1) {
 			return [
 				'reason' => str_contains($uri, ' ') ? SecurityTxtNotUriReason::SchemeMissingFingerprintWithSpaces : SecurityTxtNotUriReason::SchemeMissingFingerprint,

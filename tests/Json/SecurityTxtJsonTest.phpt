@@ -135,7 +135,7 @@ final class SecurityTxtJsonTest extends TestCase
 			'class' => SecurityTxtPreferredLanguagesCommonMistake::class,
 			'params' => [1, 'cz', 'cs', SecurityTxtPreferredLanguagesCommonMistakeReason::CzechUsesCsNotCz->value],
 		]]);
-		Assert::same('The language tag #1 cz in the Preferred-Languages field is not correct, the code for Czech language is cs, not cz', $violations[0]->getMessage());
+		Assert::same('The language tag #1 cz in the Preferred-Languages field is not correct, the code for the Czech language is cs', $violations[0]->getMessage());
 	}
 
 

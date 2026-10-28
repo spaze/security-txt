@@ -249,6 +249,8 @@ final class SecurityTxtTest extends TestCase
 			'one wrong language' => [['en', 'cs', 'E', 'CS'], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
 			'two wrong languages' => [['en', 'cs', 'E', 'F', 'CS'], SecurityTxtPreferredLanguagesWrongLanguageTags::class],
 			'common mistake' => [['en', 'cz'], SecurityTxtPreferredLanguagesCommonMistake::class],
+			'Czech ISO 639-2 code' => [['cze'], SecurityTxtPreferredLanguagesCommonMistake::class],
+			'registered code starting with cz' => [['czk'], null],
 			'alright languages' => [['en', 'cs', 'EN', 'CS'], null],
 		];
 	}
