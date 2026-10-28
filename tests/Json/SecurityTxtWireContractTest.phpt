@@ -84,7 +84,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtByteOrderMark' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalNotHttps' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalNotUri' => '(string $uri, Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason $reason = \\Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason::Unspecified, ?string $correctValue = NULL, ?string $character = NULL)',
-			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalUriMismatch' => '(string $uri, array $canonicalUris)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalUriMismatch' => '(string $uri, array $canonicalUris, Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalUriMismatchReason $reason = \\Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalUriMismatchReason::Unspecified)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContactNotHttps' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContactNotUri' => '(string $uri, Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason $reason = \\Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason::Unspecified, ?string $correctValue = NULL, ?string $character = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtContentNotUtf8' => '()',

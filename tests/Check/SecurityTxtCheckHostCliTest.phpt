@@ -103,7 +103,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 			. " (How to fix: Make sure the Contact field points to an https:// URI, e.g. https://\u{4F8B}\u{3048}.jp/contact)\n"
 			// A URL among the message values reads as itself with the ASCII host alongside, which is what composing the formats is for
 			. "[Warning] The file was fetched from https://\u{4F8B}\u{3048}.jp/.well-known/security.txt"
-			. " but the Canonical field (https://other.example/) does not list this URI"
+			. " but the Canonical field (https://other.example/) doesn't list this URI, so the contents of the file shouldn't be trusted"
 			. " (How to fix: Add a new Canonical field with the URI https://\u{4F8B}\u{3048}.jp/.well-known/security.txt,"
 			. " or ensure the file is fetched from the listed canonical URI)\n"
 			. "[OK] The file will expire in 42 days ({$expires})\n"
