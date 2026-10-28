@@ -50,6 +50,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
@@ -122,6 +123,99 @@ final class SecurityTxtParserTest extends TestCase
 				Assert::type($errors[$lineNumber][$key], $lineError);
 			}
 		}
+	}
+
+
+	public function testParseStringExpiresFieldRfc3339(): void
+	{
+		$year = (int)date('Y') + 1;
+		$expected = [
+			"{$year}-03-04T05:06:07Z" => [],
+			"{$year}-03-04t05:06:07z" => [],
+			"{$year}-03-04T05:06:07.5Z" => [],
+			"{$year}-03-04T05:06:07.123456+01:00" => [],
+			"{$year}-03-04T05:06:07.1234567890-00:00" => [],
+			"{$year}-03-04T05:06:07+0100" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07+01" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07UTC" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07Europe/Prague" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07 Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07.Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04 05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-3-04T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-4T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T5:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			substr((string)$year, 2) . '-03-04T05:06:07Z' => [SecurityTxtExpiresWrongFormat::class],
+			"1{$year}-03-04T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"x{$year}-03-04T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+		];
+		$errors = [];
+		foreach (array_keys($expected) as $value) {
+			$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: {$value}\n");
+			$errors[$value] = array_map(fn(SecurityTxtSpecViolation $error): string => $error::class, $parseResult->getLineErrors()[2] ?? []);
+		}
+		Assert::same($expected, $errors);
+	}
+
+
+	/**
+	 * A date or a time that doesn't exist is refused, and the one PHP would roll it over to is neither suggested nor kept
+	 */
+	public function testParseStringExpiresFieldNoSuchDate(): void
+	{
+		$year = (int)date('Y') + 1;
+		while (checkdate(2, 29, $year)) {
+			$year++;
+		}
+		$values = [
+			'-02-28T00:00:00Z',
+			'-02-29T00:00:00Z',
+			'-02-30T00:00:00Z',
+			'-04-31T00:00:00Z',
+			'-13-01T00:00:00Z',
+			'-00-10T00:00:00Z',
+			'-01-00T00:00:00Z',
+			'-01-01T24:00:00Z',
+			'-01-01T25:00:00Z',
+			'-01-01T00:60:00Z',
+			'-01-01T00:00:61Z',
+			'-01-01T23:59:60Z',
+			'-01-02T00:00:00+23:59',
+			'-01-02T00:00:00+24:00',
+			'-01-02T00:00:00-01:60',
+		];
+		$results = [];
+		foreach ($values as $value) {
+			$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: {$year}{$value}\n");
+			$results[$value] = [
+				array_map(fn(SecurityTxtSpecViolation $error): array => [$error::class, $error->getCorrectValue()], $parseResult->getLineErrors()[2] ?? []),
+				$parseResult->getSecurityTxt()->getExpires()?->getValue(),
+			];
+		}
+		$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: Mon, 30 Feb {$year} 00:00:00 +0000\n");
+		$results['RFC 5322'] = [
+			array_map(fn(SecurityTxtSpecViolation $error): array => [$error::class, $error->getCorrectValue()], $parseResult->getLineErrors()[2] ?? []),
+			$parseResult->getSecurityTxt()->getExpires()?->getValue(),
+		];
+		$wrongFormat = [[[SecurityTxtExpiresWrongFormat::class, new SecurityTxtExpiresWrongFormat()->getCorrectValue()]], null];
+		Assert::same([
+			'-02-28T00:00:00Z' => [[], "{$year}-02-28T00:00:00+00:00"],
+			'-02-29T00:00:00Z' => $wrongFormat,
+			'-02-30T00:00:00Z' => $wrongFormat,
+			'-04-31T00:00:00Z' => $wrongFormat,
+			'-13-01T00:00:00Z' => $wrongFormat,
+			'-00-10T00:00:00Z' => $wrongFormat,
+			'-01-00T00:00:00Z' => $wrongFormat,
+			'-01-01T24:00:00Z' => $wrongFormat,
+			'-01-01T25:00:00Z' => $wrongFormat,
+			'-01-01T00:60:00Z' => $wrongFormat,
+			'-01-01T00:00:61Z' => $wrongFormat,
+			'-01-01T23:59:60Z' => [[], "{$year}-01-02T00:00:00+00:00"],
+			'-01-02T00:00:00+23:59' => [[], "{$year}-01-02T00:00:00+23:59"],
+			'-01-02T00:00:00+24:00' => $wrongFormat,
+			'-01-02T00:00:00-01:60' => $wrongFormat,
+			'RFC 5322' => $wrongFormat,
+		], $results);
 	}
 
 
@@ -290,6 +384,30 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringExpiresNotDate(): void
+	{
+		$errors = [];
+		foreach (['2027-01-01T25:00:00Z', '2027-03-04T05:06:07T08:09:10Z', 'never'] as $value) {
+			$parseResult = $this->securityTxtParser->parseString("Expires: {$value}\nContact: https://example.com/\n");
+			$errors[$value] = array_map(fn(SecurityTxtSpecViolation $error): string => $error::class, [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getFileErrors()]);
+		}
+		Assert::same([
+			'2027-01-01T25:00:00Z' => [SecurityTxtExpiresWrongFormat::class],
+			'2027-03-04T05:06:07T08:09:10Z' => [SecurityTxtExpiresWrongFormat::class],
+			'never' => [SecurityTxtExpiresWrongFormat::class],
+		], $errors);
+	}
+
+
+	public function testParseStringExpiresEmpty(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Expires:\nContact: https://example.com/\n");
+		Assert::equal([1 => [new SecurityTxtExpiresWrongFormat(null)]], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getFileErrors());
+		Assert::null($parseResult->getSecurityTxt()->getExpires());
+	}
+
+
 	public function testParseStringMultipleExpires(): void
 	{
 		$contents = "Contact: https://example.com/\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: " . (new DateTime('+3 months'))->format(SecurityTxtExpires::FORMAT) . "\nHiring: https://com.example/\n";
@@ -320,6 +438,25 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	/**
+	 * A field that may appear only once is counted, whether its value was kept or not
+	 */
+	public function testParseStringSecondFieldAfterOneNotKept(): void
+	{
+		$expires = new DateTimeImmutable('+2 months')->format(SecurityTxtExpires::FORMAT);
+		$errors = [];
+		foreach (["Expires: never\nExpires: {$expires}", "Bug-Bounty: maybe\nBug-Bounty: True", "Preferred-Languages: en; cs\nPreferred-Languages: en"] as $fields) {
+			$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\n{$fields}\n");
+			$errors[$fields] = array_map(fn(array $lineErrors): array => array_map(fn(SecurityTxtSpecViolation $error): string => $error::class, $lineErrors), $parseResult->getLineErrors());
+		}
+		Assert::same([
+			"Expires: never\nExpires: {$expires}" => [2 => [SecurityTxtExpiresWrongFormat::class], 3 => [SecurityTxtMultipleExpires::class]],
+			"Bug-Bounty: maybe\nBug-Bounty: True" => [2 => [SecurityTxtBugBountyWrongValue::class], 3 => [SecurityTxtMultipleBugBounty::class]],
+			"Preferred-Languages: en; cs\nPreferred-Languages: en" => [2 => [SecurityTxtPreferredLanguagesSeparatorNotComma::class], 3 => [SecurityTxtMultiplePreferredLanguages::class]],
+		], $errors);
 	}
 
 

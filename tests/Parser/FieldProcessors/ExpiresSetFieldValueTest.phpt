@@ -39,7 +39,7 @@ final class ExpiresSetFieldValueTest extends TestCase
 	public function testProcess(string $format, bool $valid): void
 	{
 		$securityTxt = new SecurityTxt();
-		$processor = new ExpiresSetFieldValue(new SecurityTxtExpiresFactory());
+		$processor = new ExpiresSetFieldValue(new SecurityTxtExpiresFactory(), new ExpiresCheckFieldFormat());
 		$expires = new DateTimeImmutable('+2 weeks noon -1 second +00:00');
 
 		$processor->process($expires->format($format), $securityTxt);
