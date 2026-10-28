@@ -399,6 +399,15 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringExpiresEmpty(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Expires:\nContact: https://example.com/\n");
+		Assert::equal([1 => [new SecurityTxtExpiresWrongFormat(null)]], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getFileErrors());
+		Assert::null($parseResult->getSecurityTxt()->getExpires());
+	}
+
+
 	public function testParseStringMultipleExpires(): void
 	{
 		$contents = "Contact: https://example.com/\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: " . (new DateTime('+3 months'))->format(SecurityTxtExpires::FORMAT) . "\nHiring: https://com.example/\n";

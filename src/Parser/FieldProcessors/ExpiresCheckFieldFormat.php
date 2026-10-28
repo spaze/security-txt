@@ -44,6 +44,10 @@ final readonly class ExpiresCheckFieldFormat implements FieldProcessor
 	 */
 	public function getDateTime(string $value): ?DateTimeImmutable
 	{
+		// Which PHP reads as now
+		if ($value === '') {
+			return null;
+		}
 		try {
 			$dateTime = new DateTimeImmutable($value);
 		} catch (DateMalformedStringException) {
