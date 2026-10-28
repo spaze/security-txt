@@ -196,7 +196,7 @@ final class SecurityTxtParser
 			}
 			$lineAsWritten = rtrim($rawLine);
 			$line = ltrim($lineAsWritten);
-			$lineWithoutEol = str_ends_with($rawLine, "\r\n") ? substr($rawLine, 0, -2) : rtrim($rawLine, "\n");
+			$lineWithoutEol = rtrim($rawLine, "\r\n");
 			if (!str_ends_with($rawLine, "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
 			}

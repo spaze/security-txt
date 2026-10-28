@@ -637,6 +637,7 @@ final class SecurityTxtParserTest extends TestCase
 			" \t",
 			"X-Foo: bar\x0B",
 			"Contact: https://example.com/\r\r",
+			"Contact: https://example.com/\x0B\r",
 			"Contact: https://example.com/\r",
 			"Contact: https://example.com/ \t",
 			" Contact: https://example.com/\x0B",
@@ -651,7 +652,8 @@ final class SecurityTxtParserTest extends TestCase
 			" \x0B " => ['The line ( %0B ) ends with whitespace other than spaces and tabs'],
 			" \t" => [],
 			"X-Foo: bar\x0B" => ['The line (X-Foo: bar%0B) ends with whitespace other than spaces and tabs', 'Field X-Foo is unknown'],
-			"Contact: https://example.com/\r\r" => ['The line (Contact: https://example.com/%0D) ends with whitespace other than spaces and tabs'],
+			"Contact: https://example.com/\r\r" => ["The line (Contact: https://example.com/) doesn't end with neither <CRLF> nor <LF>"],
+			"Contact: https://example.com/\x0B\r" => ['The line (Contact: https://example.com/%0B) ends with whitespace other than spaces and tabs'],
 			"Contact: https://example.com/\r" => [],
 			"Contact: https://example.com/ \t" => [],
 			" Contact: https://example.com/\x0B" => [
@@ -1070,6 +1072,16 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringLoneCarriageReturn(): void
+	{
+		$expires = new DateTimeImmutable('+2 months')->format(SecurityTxtExpires::FORMAT);
+		$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\rExpires: {$expires}\n");
+		Assert::equal([1 => [new SecurityTxtLineNoEol('Contact: https://example.com/')]], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getFileErrors());
+		Assert::same($expires, $parseResult->getSecurityTxt()->getExpires()?->getValue());
+	}
+
+
 	public function testParseStringSignedFileWithByteOrderMark(): void
 	{
 		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
@@ -1327,6 +1339,7 @@ final class SecurityTxtParserTest extends TestCase
 			'the file ends after the hash header' => "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n",
 			'a literal packet in the signature' => $header . $text . str_replace('iAEE', 'ywFi', $signature),
 			'no signature tail' => $header . $text . str_replace("-----END PGP SIGNATURE-----\n", '', $signature),
+			'a lone CR in the signed text' => $header . "# note\r- Contact: https://other.example/\n" . $text . $signature,
 		];
 		$reported = [];
 		foreach ($files as $name => $contents) {
@@ -1394,6 +1407,7 @@ final class SecurityTxtParserTest extends TestCase
 			'the file ends after the hash header' => [[2 => [$malformed]], false, false],
 			'a literal packet in the signature' => [[6 => [$invalid]], false, false],
 			'no signature tail' => [[9 => [$malformed]], false, false],
+			'a lone CR in the signed text' => [[4 => [SecurityTxtLineNoEol::class, $malformed]], false, false],
 		], $reported);
 	}
 

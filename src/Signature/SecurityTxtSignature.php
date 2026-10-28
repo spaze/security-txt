@@ -124,8 +124,9 @@ final class SecurityTxtSignature
 			return $this->malformed($lines, min($index, $count - 1));
 		}
 		for ($index++; $index < $count && $lines[$index] !== self::SIGNATURE_ARMOR_HEADER; $index++) {
-			// The verifier ends the signed text at a line starting with a dash, which the signer escapes
-			if (str_starts_with($lines[$index], '-') && !str_starts_with($lines[$index], '- ')) {
+			// The verifier ends the signed text at a line starting with a dash, which the signer escapes, and a CR before anything but an LF is not a line ending to it, nor
+			// allowed there by RFC 9116
+			if ((str_starts_with($lines[$index], '-') && !str_starts_with($lines[$index], '- ')) || str_ends_with($lines[$index], "\r")) {
 				return $this->malformed($lines, $index);
 			}
 		}
