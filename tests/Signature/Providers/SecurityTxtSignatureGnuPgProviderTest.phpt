@@ -17,6 +17,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyRevoked;
 use SplFileInfo;
 use Tester\Assert;
@@ -123,6 +124,99 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 			}, SecurityTxtError::class);
 			assert($e instanceof SecurityTxtError);
 			Assert::equal(new SecurityTxtSignatureKeyRevoked($fingerprint), $e->getViolation());
+		});
+	}
+
+
+	/**
+	 * A key that expired in 2020 after it signed, GnuPG says the signature is good and the key has expired
+	 */
+	public function testVerifyExpiredKey(): void
+	{
+		$key = <<< EOT
+		-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+		mDMEXgvhABYJKwYBBAHaRw8BAQdAPgByjhW5IJrrzDgpbqiiRU3l5qCSiKVGC7VA
+		XU6TLey0R0V4cGlyZWQgdGVzdCBrZXkgKGh0dHBzOi8veW91dHUuYmUvZFF3NHc5
+		V2dYY1EpIDxleHBpcmVkQHRlc3RzLmV4YW1wbGU+iJYEExYKAD4WIQT5UiLlVwFo
+		yy/qz/g3xaGfQQq6ZAUCXgvhAAIbAwUJAAFRgAULCQgHAgYVCgkICwIEFgIDAQIe
+		AQIXgAAKCRA3xaGfQQq6ZLlkAP9Evd/uxtG0ZYuO55lOan9PBLTpb4zgNzrKspyc
+		CoSesQEA8NlkElH61dSpbvXw5XuTV7MDJj/r6oQqnH5tOalSLA4=
+		=7mh3
+		-----END PGP PUBLIC KEY BLOCK-----
+		EOT;
+		$signed = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		mess with the best, die like the rest
+		-----BEGIN PGP SIGNATURE-----
+
+		iHUEARYKAB0WIQT5UiLlVwFoyy/qz/g3xaGfQQq6ZAUCXgvvEAAKCRA3xaGfQQq6
+		ZELFAP9zHEL/CWIkxtOr5lC7OzA3ps0BQJuRieiRL5Z+gMUN4gD9EB/yrXaewnIe
+		objK9EKOdNl762LaZCEs4zvS3Y4Y5wM=
+		=NEc7
+		-----END PGP SIGNATURE-----
+		EOT;
+		$this->withKeyring($key, function (string $homeDir) use ($signed): void {
+			$fingerprint = 'F95222E5570168CB2FEACFF837C5A19F410ABA64';
+			$verified = new SecurityTxtSignatureGnuPgProvider($homeDir)->verify($signed);
+			Assert::same([$fingerprint, GNUPG_SIGSUM_KEY_EXPIRED, 117440665], [$verified->getFingerprint(), $verified->getSummary(), $verified->getStatus()]);
+			$e = Assert::throws(function () use ($homeDir, $signed): void {
+				new SecurityTxtSignature(new SecurityTxtSignatureGnuPgProvider($homeDir))->verify($signed);
+			}, SecurityTxtError::class);
+			assert($e instanceof SecurityTxtError);
+			Assert::equal(new SecurityTxtSignatureKeyExpired($fingerprint), $e->getViolation());
+			$verified = new SecurityTxtSignatureGnuPgProvider($homeDir)->verify(str_replace('the best', 'the rest', $signed));
+			Assert::same([GNUPG_SIGSUM_RED, 117440520], [$verified->getSummary(), $verified->getStatus()]);
+		});
+	}
+
+
+	/**
+	 * A key that expired in 2020 and was revoked, the summary says only that it has expired, so a signature by an expired key can't be accepted as GnuPG accepts it
+	 */
+	public function testVerifyExpiredAndRevokedKey(): void
+	{
+		$key = <<< EOT
+		-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+		mDMEXgvhABYJKwYBBAHaRw8BAQdAZwEuXZMzW11IDGChREyYxMqU+sNNDEwmY1OX
+		xEguF7OIeAQgFgoAIBYhBEl6Z8SOMVbjwEpkWhoKRAxP7RNaBQJeC+ECAh0AAAoJ
+		EBoKRAxP7RNazaYBAMHwR/0PLs5NEkTevsdmDnm/DmF6OSdCzCFDAdE5fbD+AP94
+		ViTlvoi/3/ZFDy7geHQ2e3c1iY6/E7x9vopi/N2DAbRbRXhwaXJlZCBhbmQgcmV2
+		b2tlZCB0ZXN0IGtleSAoaHR0cHM6Ly95b3V0dS5iZS9kUXc0dzlXZ1hjUSkgPGV4
+		cGlyZWQtcmV2b2tlZEB0ZXN0cy5leGFtcGxlPoiWBBMWCgA+FiEESXpnxI4xVuPA
+		SmRaGgpEDE/tE1oFAl4L4QACGwMFCQABUYAFCwkIBwIGFQoJCAsCBBYCAwECHgEC
+		F4AACgkQGgpEDE/tE1qNQgD9FrksscHm6r+vSxE9VzdeNZHc46bNnd+TvdciGvXV
+		jnQA/3gDExWFDUcxKiggCuxRUSuQ9JHRy8uqatmDTN7P5wIC
+		=wfNQ
+		-----END PGP PUBLIC KEY BLOCK-----
+		EOT;
+		$signed = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		never send a boy to do a woman's job
+		-----BEGIN PGP SIGNATURE-----
+
+		iHUEARYKAB0WIQRJemfEjjFW48BKZFoaCkQMT+0TWgUCXgvvEAAKCRAaCkQMT+0T
+		WiV9AQClKKvUq6ZwoW6PI2TM0jRHWILFbRBTTbotxJgC1JwQzQD7BI+rPCpLKAdY
+		Z/R0FfyyO2/Ul30MIXe3315jaTLMJgs=
+		=3IhB
+		-----END PGP SIGNATURE-----
+		EOT;
+		$this->withKeyring($key, function (string $homeDir) use ($signed): void {
+			$fingerprint = '497A67C48E3156E3C04A645A1A0A440C4FED135A';
+			$keyInfo = new gnupg(['home_dir' => $homeDir])->keyinfo($fingerprint);
+			Assert::true(is_array($keyInfo[0] ?? null) && $keyInfo[0]['revoked'] === true);
+			$verified = new SecurityTxtSignatureGnuPgProvider($homeDir)->verify($signed);
+			Assert::same([$fingerprint, GNUPG_SIGSUM_KEY_EXPIRED, 117440665], [$verified->getFingerprint(), $verified->getSummary(), $verified->getStatus()]);
+			$e = Assert::throws(function () use ($homeDir, $signed): void {
+				new SecurityTxtSignature(new SecurityTxtSignatureGnuPgProvider($homeDir))->verify($signed);
+			}, SecurityTxtError::class);
+			assert($e instanceof SecurityTxtError);
+			Assert::equal(new SecurityTxtSignatureKeyExpired($fingerprint), $e->getViolation());
 		});
 	}
 
