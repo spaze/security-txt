@@ -404,6 +404,68 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringUnicodeSpace(): void
+	{
+		$reported = [];
+		$lines = [
+			"\u{A0}Contact: https://example.com/",
+			"\u{A0}\u{A0}Contact: https://example.com/",
+			" \u{A0}Contact: https://example.com/",
+			"\u{3000}Policy: https://example.com/policy",
+			"\u{1680}Policy: https://example.com/policy",
+			"\u{202F}Policy: https://example.com/policy",
+			"\u{FEFF}Hiring: https://example.com/jobs",
+			"\u{200B}# a comment",
+			"\u{A0}X-Foo: bar",
+			"\u{A0}\u{A0}",
+			"Contact\u{A0}: https://example.com/",
+			"Contact:\u{A0}https://example.com/",
+			"Contact: \u{A0}https://example.com/",
+			"CSAF:\u{A0}https://example.com/provider-metadata.json",
+			"Con\u{A0}tact: https://example.com/",
+			"Contact Us:\u{A0}mailto:security@example.com",
+			"Contact\u{A0}https://example.com/",
+			"Contact \u{A0}https://example.com/",
+			"Preferred-Languages\u{A0}en:cs",
+			"Contact\u{A0}security@example.com",
+			"# a\u{A0}b",
+		];
+		foreach ($lines as $line) {
+			$parseResult = $this->securityTxtParser->parseString("# The line before\n{$line}\n");
+			$reported[$line] = [
+				...array_map(fn(SecurityTxtSpecViolation $violation): array => ['error', $violation->getMessage(), $violation->getCorrectValue()], $parseResult->getLineErrors()[2] ?? []),
+				...array_map(fn(SecurityTxtSpecViolation $violation): array => ['warning', $violation->getMessage(), $violation->getCorrectValue()], $parseResult->getLineWarnings()[2] ?? []),
+			];
+		}
+		Assert::same([
+			"\u{A0}Contact: https://example.com/" => [['error', 'The line (%C2%A0Contact: https://example.com/) starts with whitespace', 'Contact: https://example.com/']],
+			"\u{A0}\u{A0}Contact: https://example.com/" => [['error', 'The line (%C2%A0%C2%A0Contact: https://example.com/) starts with whitespace', 'Contact: https://example.com/']],
+			" \u{A0}Contact: https://example.com/" => [['error', 'The line ( %C2%A0Contact: https://example.com/) starts with whitespace', 'Contact: https://example.com/']],
+			"\u{3000}Policy: https://example.com/policy" => [['error', 'The line (%E3%80%80Policy: https://example.com/policy) starts with whitespace', 'Policy: https://example.com/policy']],
+			"\u{1680}Policy: https://example.com/policy" => [['error', 'The line (%E1%9A%80Policy: https://example.com/policy) starts with whitespace', 'Policy: https://example.com/policy']],
+			"\u{202F}Policy: https://example.com/policy" => [['error', 'The line (%E2%80%AFPolicy: https://example.com/policy) starts with whitespace', 'Policy: https://example.com/policy']],
+			"\u{FEFF}Hiring: https://example.com/jobs" => [['error', 'The line (%EF%BB%BFHiring: https://example.com/jobs) starts with whitespace', 'Hiring: https://example.com/jobs']],
+			"\u{200B}# a comment" => [['error', 'The line (%E2%80%8B# a comment) starts with whitespace', '# a comment']],
+			"\u{A0}X-Foo: bar" => [['error', 'The line (%C2%A0X-Foo: bar) starts with whitespace', 'X-Foo: bar'], ['warning', 'Field X-Foo is unknown', '# X-Foo: bar']],
+			"\u{A0}\u{A0}" => [['error', 'The line (%C2%A0%C2%A0) is neither a field nor a comment', "# \u{A0}\u{A0}"]],
+			"Contact\u{A0}: https://example.com/" => [['error', 'The line (Contact%C2%A0: https://example.com/) has whitespace between the field name and the colon', 'Contact: https://example.com/']],
+			"Contact:\u{A0}https://example.com/" => [['error', 'The line (Contact:%C2%A0https://example.com/) should have one space between the colon and the value', 'Contact: https://example.com/']],
+			"Contact: \u{A0}https://example.com/" => [['error', 'The line (Contact: %C2%A0https://example.com/) should have one space between the colon and the value', 'Contact: https://example.com/']],
+			"CSAF:\u{A0}https://example.com/provider-metadata.json" => [['error', 'The line (CSAF:%C2%A0https://example.com/provider-metadata.json) should have one space between the colon and the value', 'CSAF: https://example.com/provider-metadata.json']],
+			"Con\u{A0}tact: https://example.com/" => [['warning', 'Field Con%C2%A0tact may be a typo, did you mean Contact?', 'Contact: https://example.com/']],
+			"Contact Us:\u{A0}mailto:security@example.com" => [['warning', 'Field Contact Us may be a typo, did you mean Contact?', "Contact:\u{A0}mailto:security@example.com"]],
+			"Contact\u{A0}https://example.com/" => [['error', 'The line (Contact%C2%A0https://example.com/) is neither a field nor a comment', 'Contact: https://example.com/']],
+			"Contact \u{A0}https://example.com/" => [['error', 'The line (Contact %C2%A0https://example.com/) is neither a field nor a comment', 'Contact: https://example.com/']],
+			"Preferred-Languages\u{A0}en:cs" => [['error', 'The line (Preferred-Languages%C2%A0en:cs) is neither a field nor a comment', 'Preferred-Languages: en:cs']],
+			"Contact\u{A0}security@example.com" => [['error', 'The line (Contact%C2%A0security@example.com) is neither a field nor a comment', 'Contact: security@example.com']],
+			"# a\u{A0}b" => [],
+		], $reported);
+		$parseResult = $this->securityTxtParser->parseString("\u{A0}Contact: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		Assert::same([], $parseResult->getFileErrors());
+	}
+
+
 	public function testParseStringLineWithNulByteIsStillParsed(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString(" Cont\0act: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");

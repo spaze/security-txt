@@ -13,7 +13,7 @@ final class SecurityTxtFieldWhitespaceBeforeColon extends SecurityTxtSpecViolati
 			'The line (%s) has whitespace between the field name and the colon',
 			[$line],
 			'draft-foudil-securitytxt-00',
-			"{$fieldName}: " . ltrim(explode(':', $line, 2)[1] ?? ''),
+			"{$fieldName}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '')),
 			'Remove the whitespace before the colon',
 			[],
 			'4',

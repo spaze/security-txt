@@ -208,7 +208,8 @@ final class SecurityTxtParser
 				$rawLine = substr($rawLine, 2);
 			}
 			$lineAsWritten = rtrim($rawLine);
-			$line = ltrim($lineAsWritten);
+			// A Unicode space is whitespace there too, but not when there's nothing else on the line, which isn't empty then
+			$line = preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++(?=.)/s', '', $lineAsWritten) ?? ltrim($lineAsWritten);
 			$lineWithoutEol = rtrim($rawLine, "\r\n");
 			if (!str_ends_with($rawLine, "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
@@ -254,12 +255,13 @@ final class SecurityTxtParser
 				continue;
 			}
 			$fieldNameAsWritten = $field[0];
-			$field[0] = rtrim($fieldNameAsWritten);
+			// Tried only where a run starts, or each byte of a long one would be a start to try the rest from
+			$field[0] = preg_replace('/(?<!\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++$/D', '', $fieldNameAsWritten) ?? rtrim($fieldNameAsWritten);
 			$fieldName = strtolower($field[0]);
-			$fieldValue = trim($field[1]);
+			$fieldValue = trim(preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', $field[1]) ?? $field[1]);
 			$securityTxtField = $securityTxtFields[$fieldName] ?? null;
 			// A colon before anything but whitespace is more likely a part of the value, `Acknowledgments https://example.com/`, than the one after a field name
-			$fieldWithoutColon = $securityTxtField === null && preg_match('/^\S/', $field[1]) === 1 ? $this->getFieldWithoutColon($securityTxtFields, $line) : null;
+			$fieldWithoutColon = $securityTxtField === null && preg_match('/^(?!\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')./s', $field[1]) === 1 ? $this->getFieldWithoutColon($securityTxtFields, $line) : null;
 			$suggestion = $securityTxtField === null && $fieldWithoutColon === null ? $this->getSuggestion($securityTxtFields, $fieldName) : null;
 			// A field name is printable ASCII and no space, RFC 5322 section 3.6.8
 			if ($securityTxtField === null && $suggestion === null && preg_match('/^[!-~]++$/D', $field[0]) !== 1) {
@@ -330,7 +332,7 @@ final class SecurityTxtParser
 	 */
 	private function isSpaceAfterColon(SecurityTxtField $field, string $afterColon): bool
 	{
-		$whitespace = substr($afterColon, 0, strlen($afterColon) - strlen(ltrim($afterColon)));
+		$whitespace = preg_match('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')*+/', $afterColon, $matches) === 1 ? $matches[0] : substr($afterColon, 0, strlen($afterColon) - strlen(ltrim($afterColon)));
 		return match ($field) {
 			SecurityTxtField::Acknowledgments,
 			SecurityTxtField::Canonical,
@@ -383,7 +385,7 @@ final class SecurityTxtParser
 	 */
 	private function getFieldWithoutColon(array $securityTxtFields, string $line): ?SecurityTxtField
 	{
-		return preg_match('/^([^\s:]++)(?:\s|$)/D', $line, $matches) === 1 ? $securityTxtFields[strtolower($matches[1])] ?? null : null;
+		return preg_match('/^([!-9;-~]++)(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . '|$)/D', $line, $matches) === 1 ? $securityTxtFields[strtolower($matches[1])] ?? null : null;
 	}
 
 

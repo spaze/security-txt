@@ -13,7 +13,7 @@ final class SecurityTxtFieldWrongSpaceAfterColon extends SecurityTxtSpecViolatio
 			'The line (%s) should have one space between the colon and the value',
 			[$line],
 			'draft-foudil-securitytxt-00',
-			"{$fieldName}: " . ltrim(explode(':', $line, 2)[1] ?? ''),
+			"{$fieldName}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '')),
 			'Put one space between the colon and the value',
 			[],
 			'4',

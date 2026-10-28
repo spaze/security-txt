@@ -14,7 +14,7 @@ final class SecurityTxtLineNeitherFieldNorComment extends SecurityTxtSpecViolati
 	public function __construct(string $line, ?SecurityTxtField $field = null)
 	{
 		if ($field !== null) {
-			$value = ltrim(substr($line, strlen($field->value)));
+			$value = preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', substr($line, strlen($field->value))) ?? ltrim(substr($line, strlen($field->value)));
 			$correctValue = $value !== '' ? "{$field->value}: {$value}" : null;
 			$howToFix = 'Put a colon after the %s field name';
 			$howToFixValues = [$field->value];
