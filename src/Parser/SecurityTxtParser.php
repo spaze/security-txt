@@ -39,6 +39,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtUnknownField;
@@ -174,6 +175,7 @@ final class SecurityTxtParser
 		$skipSignatureArmorHeaders = false;
 		$inSignatureArmor = false;
 		$afterSignature = false;
+		$hasExpires = false;
 		for ($lineNumber = 1; $lineNumber <= count($lines); $lineNumber++) {
 			$rawLine = $lines[$lineNumber - 1];
 			// A NUL is reported and then removed, so nothing a line is handed to has to cope with one, while the signature is still verified over the file as served
@@ -237,6 +239,7 @@ final class SecurityTxtParser
 			$fieldName = strtolower($field[0]);
 			$fieldValue = trim($field[1]);
 			if (isset($securityTxtFields[$fieldName])) {
+				$hasExpires = $hasExpires || $securityTxtFields[$fieldName] === SecurityTxtField::Expires;
 				if ($fieldValue !== '' && !$this->isSpaceAfterColon($securityTxtFields[$fieldName], $field[1])) {
 					$this->lineErrors[$lineNumber][] = new SecurityTxtFieldWrongSpaceAfterColon($field[0], $line);
 				}
@@ -262,7 +265,9 @@ final class SecurityTxtParser
 		ksort($this->lineErrors);
 		ksort($this->lineWarnings);
 		$validated = $this->validator->validate($securityTxt);
-		$validateResult = new SecurityTxtValidateResult([...$fileLocationErrors, ...$validated->getErrors()], $validated->getWarnings());
+		// An Expires field with a value that isn't a date is wrong, which its line says, not missing
+		$validatedErrors = array_filter($validated->getErrors(), fn(SecurityTxtSpecViolation $error): bool => !$hasExpires || !$error instanceof SecurityTxtNoExpires);
+		$validateResult = new SecurityTxtValidateResult([...$fileLocationErrors, ...$validatedErrors], $validated->getWarnings());
 		$expires = $securityTxt->getExpires();
 		$hasErrors = $this->lineErrors !== [] || $validateResult->getErrors() !== [];
 		$hasWarnings = $this->lineWarnings !== [] || $validateResult->getWarnings() !== [];

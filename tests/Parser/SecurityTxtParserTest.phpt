@@ -383,6 +383,21 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringExpiresNotDate(): void
+	{
+		$errors = [];
+		foreach (['2027-01-01T25:00:00Z', '2027-03-04T05:06:07T08:09:10Z', 'never'] as $value) {
+			$parseResult = $this->securityTxtParser->parseString("Expires: {$value}\nContact: https://example.com/\n");
+			$errors[$value] = array_map(fn(SecurityTxtSpecViolation $error): string => $error::class, [...$parseResult->getLineErrors()[1] ?? [], ...$parseResult->getFileErrors()]);
+		}
+		Assert::same([
+			'2027-01-01T25:00:00Z' => [SecurityTxtExpiresWrongFormat::class],
+			'2027-03-04T05:06:07T08:09:10Z' => [SecurityTxtExpiresWrongFormat::class],
+			'never' => [SecurityTxtExpiresWrongFormat::class],
+		], $errors);
+	}
+
+
 	public function testParseStringMultipleExpires(): void
 	{
 		$contents = "Contact: https://example.com/\nExpires: " . (new DateTime('+2 months'))->format(SecurityTxtExpires::FORMAT) . "\nExpires: " . (new DateTime('+3 months'))->format(SecurityTxtExpires::FORMAT) . "\nHiring: https://com.example/\n";
