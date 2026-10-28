@@ -281,6 +281,64 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringLineWithControlCharacter(): void
+	{
+		$reported = [];
+		$lines = [
+			"# a\x01b",
+			"Hiring: https://example.com/\x7Fjobs",
+			"Policy: https://example.com/\u{85}",
+			"Expires: x\x1By",
+			"Contact: https://example.com/\x0C",
+			"\x01",
+			"\x0BContact: https://example.com/",
+			"Contact: https://example.com/\x0B",
+			"\x0BContact: https://example.com/\x01",
+			"Contact\x0B: https://example.com/",
+			"# a\x0Bb",
+			"# a:\x0Bb",
+			"X-Foo:\x0Bbar",
+			"# a\tb",
+			"# a\x08b",
+			"# a\x0Eb",
+			"# a\x1Fb",
+			"# a\u{80}b",
+			"# a\u{9F}b",
+			"# a\u{A0}b",
+			"\x01 # a",
+			"\tContact: https://example.com/",
+		];
+		foreach ($lines as $line) {
+			$lineErrors = $this->securityTxtParser->parseString("{$line}\n")->getLineErrors();
+			$reported[$line] = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation->getMessage(), $violation->getCorrectValue()], $lineErrors[1] ?? []);
+		}
+		Assert::same([
+			"# a\x01b" => [['The line (# a%01b) contains a control character', '# ab']],
+			"Hiring: https://example.com/\x7Fjobs" => [['The line (Hiring: https://example.com/%7Fjobs) contains a control character', 'Hiring: https://example.com/jobs']],
+			"Policy: https://example.com/\u{85}" => [['The line (Policy: https://example.com/%C2%85) contains a control character', 'Policy: https://example.com/']],
+			"Expires: x\x1By" => [['The line (Expires: x%1By) contains a control character', 'Expires: xy'], ['The format of the value of the Expires field is wrong', new SecurityTxtExpiresWrongFormat(null)->getCorrectValue()]],
+			"Contact: https://example.com/\x0C" => [['The line (Contact: https://example.com/%0C) contains a control character', 'Contact: https://example.com/']],
+			"\x01" => [['The line (%01) contains a control character', null]],
+			"\x0BContact: https://example.com/" => [['The line (%0BContact: https://example.com/) starts with whitespace', 'Contact: https://example.com/']],
+			"Contact: https://example.com/\x0B" => [['The line (Contact: https://example.com/%0B) ends with whitespace other than spaces and tabs', 'Contact: https://example.com/']],
+			"\x0BContact: https://example.com/\x01" => [['The line (%0BContact: https://example.com/%01) contains a control character', 'Contact: https://example.com/']],
+			"Contact\x0B: https://example.com/" => [['The line (Contact%0B: https://example.com/) contains a control character', 'Contact: https://example.com/']],
+			"# a\x0Bb" => [['The line (# a%0Bb) contains a control character', '# ab']],
+			"# a:\x0Bb" => [['The line (# a:%0Bb) contains a control character', '# a:b']],
+			"X-Foo:\x0Bbar" => [['The line (X-Foo:%0Bbar) contains a control character', 'X-Foo:bar']],
+			"# a\tb" => [],
+			"# a\x08b" => [['The line (# a%08b) contains a control character', '# ab']],
+			"# a\x0Eb" => [['The line (# a%0Eb) contains a control character', '# ab']],
+			"# a\x1Fb" => [['The line (# a%1Fb) contains a control character', '# ab']],
+			"# a\u{80}b" => [['The line (# a%C2%80b) contains a control character', '# ab']],
+			"# a\u{9F}b" => [['The line (# a%C2%9Fb) contains a control character', '# ab']],
+			"# a\u{A0}b" => [],
+			"\x01 # a" => [['The line (%01 # a) contains a control character', '# a'], ['The line ( # a) starts with whitespace', '# a']],
+			"\tContact: https://example.com/" => [["The line (\u{2192}Contact: https://example.com/) starts with whitespace", 'Contact: https://example.com/']],
+		], $reported);
+	}
+
+
 	public function testParseStringLineWithNulByteIsStillParsed(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString(" Cont\0act: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
@@ -731,7 +789,7 @@ final class SecurityTxtParserTest extends TestCase
 			'CSAF:https://example.com/provider-metadata.json' => ['The line (CSAF:https://example.com/provider-metadata.json) should have one space between the colon and the value'],
 			"CSAF:\thttps://example.com/provider-metadata.json" => ['The line (CSAF:→https://example.com/provider-metadata.json) should have one space between the colon and the value'],
 			"CSAF: \thttps://example.com/provider-metadata.json" => [],
-			"CSAF: \x0Bhttps://example.com/provider-metadata.json" => ['The line (CSAF: %0Bhttps://example.com/provider-metadata.json) should have one space between the colon and the value'],
+			"CSAF: \x0Bhttps://example.com/provider-metadata.json" => [],
 			'Bug-Bounty:True' => ['The line (Bug-Bounty:True) should have one space between the colon and the value'],
 			'Bug-Bounty:  True' => [],
 			'X-Foo:bar' => [],
@@ -761,7 +819,7 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::same([
 			'Contact : https://example.com/' => ['The line (Contact : https://example.com/) has whitespace between the field name and the colon'],
 			"Contact\t: https://example.com/" => ['The line (Contact→: https://example.com/) has whitespace between the field name and the colon'],
-			"Contact\x0B: https://example.com/" => ['The line (Contact%0B: https://example.com/) has whitespace between the field name and the colon'],
+			"Contact\x0B: https://example.com/" => ['The line (Contact%0B: https://example.com/) contains a control character'],
 			'Contact :https://example.com/' => [
 				'The line (Contact :https://example.com/) has whitespace between the field name and the colon',
 				'The line (Contact :https://example.com/) should have one space between the colon and the value',

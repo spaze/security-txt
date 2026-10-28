@@ -36,6 +36,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtByteOrderMark;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineControlCharacter;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
@@ -188,6 +189,11 @@ final class SecurityTxtParser
 			if (str_contains($rawLine, "\0")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNulByte(rtrim($rawLine, "\r\n"));
 				$rawLine = str_replace("\0", '', $rawLine);
+			}
+			// So are the other control characters, but a vertical tab at an end of the line, which PHP trims as whitespace, is said to be whitespace there
+			if (preg_match(SecurityTxtLineControlCharacter::CONTROL_CHARACTERS, trim($rawLine)) === 1) {
+				$this->lineErrors[$lineNumber][] = new SecurityTxtLineControlCharacter(rtrim($rawLine, "\r\n"));
+				$rawLine = preg_replace(SecurityTxtLineControlCharacter::CONTROL_CHARACTERS, '', $rawLine) ?? $rawLine;
 			}
 			// The verifier removes the dash escape from a signed line before it checks the signature, so the line is read without it too
 			$dashEscaped = $signatureLineNumber !== null && !$skipSignatureArmorHeaders && !$inSignatureArmor && !$afterSignature && str_starts_with($rawLine, '- ');
