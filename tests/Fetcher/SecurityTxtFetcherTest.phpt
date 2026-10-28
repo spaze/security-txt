@@ -536,6 +536,8 @@ final class SecurityTxtFetcherTest extends TestCase
 			'403' => new SecurityTxtFetcherResponse(403, ['content-type' => 'text/html'], '<html><body>Blocked</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 			'500' => new SecurityTxtFetcherResponse(500, [], '', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 			'an HTML page with 200' => new SecurityTxtFetcherResponse(200, ['content-type' => 'text/html'], '<html><body>Not here</body></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'an HTML page sent as text/plain' => new SecurityTxtFetcherResponse(200, ['content-type' => SecurityTxtContentType::MEDIA_TYPE], "<!DOCTYPE html>\n<html lang=\"en\"><head><title>Not found</title></head></html>\n", false, '1.1.1.0', SecurityTxtIpAddressType::V4),
+			'an HTML page with no Content-Type' => new SecurityTxtFetcherResponse(200, [], '<html><head><script src="/app.js"></script></head></html>', false, '1.1.1.0', SecurityTxtIpAddressType::V4),
 		];
 		$reported = [];
 		foreach ($answers as $name => $answer) {
@@ -560,6 +562,8 @@ final class SecurityTxtFetcherTest extends TestCase
 			'403' => [[$answered(403)], ['403 https://start.example/.well-known/security.txt']],
 			'500' => [[$answered(500)], ['500 https://start.example/.well-known/security.txt']],
 			'an HTML page with 200' => [[$notFound], []],
+			'an HTML page sent as text/plain' => [[$notFound], []],
+			'an HTML page with no Content-Type' => [[$notFound], []],
 		], $reported);
 	}
 

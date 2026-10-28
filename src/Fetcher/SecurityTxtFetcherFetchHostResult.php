@@ -37,9 +37,12 @@ final readonly class SecurityTxtFetcherFetchHostResult
 		}
 		$this->contents = $response?->getContents();
 		$this->isTruncated = $response !== null && $response->isTruncated();
-		$this->isRegularHtmlPage = $this->contentType?->getLowercaseContentType() === 'text/html'
-			&& $this->contents !== null
-			&& str_contains(strtolower($this->contents), '<body');
+		// One that starts like an HTML document is one whatever its Content-Type, a file can't start like that
+		$this->isRegularHtmlPage = $this->contents !== null
+			&& (
+				$this->contentType?->getLowercaseContentType() === 'text/html' && str_contains(strtolower($this->contents), '<body')
+				|| preg_match('/^(?:\xEF\xBB\xBF)?\s*+<(?:!doctype\s++html|html)[\s>]/i', $this->contents) === 1
+			);
 	}
 
 
