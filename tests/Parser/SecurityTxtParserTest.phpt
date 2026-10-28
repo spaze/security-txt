@@ -50,6 +50,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
@@ -428,6 +429,25 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::type(SecurityTxtExpiresOldFormat::class, $parseResult->getLineErrors()[2][0]);
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	/**
+	 * A field that may appear only once is counted, whether its value was kept or not
+	 */
+	public function testParseStringSecondFieldAfterOneNotKept(): void
+	{
+		$expires = new DateTimeImmutable('+2 months')->format(SecurityTxtExpires::FORMAT);
+		$errors = [];
+		foreach (["Expires: never\nExpires: {$expires}", "Bug-Bounty: maybe\nBug-Bounty: True", "Preferred-Languages: en; cs\nPreferred-Languages: en"] as $fields) {
+			$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\n{$fields}\n");
+			$errors[$fields] = array_map(fn(array $lineErrors): array => array_map(fn(SecurityTxtSpecViolation $error): string => $error::class, $lineErrors), $parseResult->getLineErrors());
+		}
+		Assert::same([
+			"Expires: never\nExpires: {$expires}" => [2 => [SecurityTxtExpiresWrongFormat::class], 3 => [SecurityTxtMultipleExpires::class]],
+			"Bug-Bounty: maybe\nBug-Bounty: True" => [2 => [SecurityTxtBugBountyWrongValue::class], 3 => [SecurityTxtMultipleBugBounty::class]],
+			"Preferred-Languages: en; cs\nPreferred-Languages: en" => [2 => [SecurityTxtPreferredLanguagesSeparatorNotComma::class], 3 => [SecurityTxtMultiplePreferredLanguages::class]],
+		], $errors);
 	}
 
 
