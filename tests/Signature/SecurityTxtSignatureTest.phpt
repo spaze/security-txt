@@ -26,6 +26,7 @@ use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyRevoked;
 use Tester\Assert;
 use Tester\TestCase;
 
@@ -137,6 +138,30 @@ final class SecurityTxtSignatureTest extends TestCase
 		assert($e instanceof SecurityTxtWarning);
 		Assert::type(SecurityTxtSignatureCannotVerify::class, $e->getViolation());
 		Assert::same('The file is digitally signed using an OpenPGP cleartext signature but the signature is damaged and cannot be verified (msg, 1336, <null>, <null>)', $e->getMessage());
+	}
+
+
+	public function testVerifyRevokedKey(): void
+	{
+		$violations = [];
+		foreach ([GNUPG_SIGSUM_KEY_REVOKED, GNUPG_SIGSUM_KEY_REVOKED | GNUPG_SIGSUM_GREEN, GNUPG_SIGSUM_KEY_REVOKED | GNUPG_SIGSUM_RED] as $summary) {
+			$signature = new SecurityTxtSignature($this->getSignatureProvider(verifySignatureInfo: new SecurityTxtSignatureVerifySignatureInfo($summary, 'fingerprint1337', 0x123456789)));
+			try {
+				$signature->verify('signed by a revoked key');
+				$violations[$summary] = null;
+			} catch (SecurityTxtError $e) {
+				$violation = $e->getViolation();
+				$violations[$summary] = $violation::class;
+			}
+		}
+		Assert::same([
+			GNUPG_SIGSUM_KEY_REVOKED => SecurityTxtSignatureKeyRevoked::class,
+			GNUPG_SIGSUM_KEY_REVOKED | GNUPG_SIGSUM_GREEN => SecurityTxtSignatureKeyRevoked::class,
+			GNUPG_SIGSUM_KEY_REVOKED | GNUPG_SIGSUM_RED => SecurityTxtSignatureInvalid::class,
+		], $violations);
+		$violation = new SecurityTxtSignatureKeyRevoked('fingerprint1337');
+		Assert::same('The file is digitally signed using an OpenPGP cleartext signature but the keyring the signature was verified with says the key fingerprint1337 has been revoked, so the signature may have been forged', $violation->getMessage());
+		Assert::same("Sign the file with a key that hasn't been revoked", $violation->getHowToFix());
 	}
 
 

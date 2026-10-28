@@ -129,6 +129,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignatureCannotVerify' => '(string $message, string $code, string $source, string $libraryMessage)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignatureExtensionNotLoaded' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignatureInvalid' => '()',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignatureKeyRevoked' => '(string $keyFingerprint)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignedButNoCanonical' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtSignedFileMalformed' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtTopLevelDiffers' => '(string $wellKnownContents, string $topLevelContents)',

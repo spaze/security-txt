@@ -7,14 +7,17 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Signature\Providers;
 
+use Closure;
 use FilesystemIterator;
 use gnupg;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Spaze\SecurityTxt\Exceptions\SecurityTxtError;
 use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyRevoked;
 use SplFileInfo;
 use Tester\Assert;
 use Tester\TestCase;
@@ -67,23 +70,60 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		assert(is_string($signed));
 		$key = new gnupg(['home_dir' => gnupgHomeDir()])->export($fingerprint);
 		assert(is_string($key));
-		$homeDir = sys_get_temp_dir() . '/security-txt-' . bin2hex(random_bytes(8));
-		mkdir($homeDir, 0700);
-		try {
-			new gnupg(['home_dir' => $homeDir])->import($key);
+		$this->withKeyring($key, function (string $homeDir) use ($fingerprint, $signed): void {
 			$verified = new SecurityTxtSignatureGnuPgProvider($homeDir)->verify($signed);
 			Assert::same([$fingerprint, 0, 0], [$verified->getFingerprint(), $verified->getSummary(), $verified->getStatus()]);
 			Assert::same($fingerprint, new SecurityTxtSignature(new SecurityTxtSignatureGnuPgProvider($homeDir))->verify($signed)->getKeyFingerprint());
 			$tampered = str_replace('hack the planet', 'hack the planets', $signed);
 			$verified = new SecurityTxtSignatureGnuPgProvider($homeDir)->verify($tampered);
 			Assert::same([GNUPG_SIGSUM_RED, 117440520], [$verified->getSummary(), $verified->getStatus()]);
-		} finally {
-			foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($homeDir, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST) as $file) {
-				assert($file instanceof SplFileInfo);
-				$file->isDir() && !$file->isLink() ? rmdir($file->getPathname()) : unlink($file->getPathname());
-			}
-			rmdir($homeDir);
-		}
+		});
+	}
+
+
+	/**
+	 * GnuPG calls a signature good even when the key that made it has been revoked, the summary and the error say it was
+	 */
+	public function testVerifyRevokedKey(): void
+	{
+		$key = <<< EOT
+		-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+		mDMEXgvhABYJKwYBBAHaRw8BAQdAJg/6C/ZIl4NtKRRTazdnlvWY7lf+X6nrWpEA
+		S0wcwBaIeAQgFgoAIBYhBCvk7spW9+zrybhhGRc92OGhKKJIBQJeC+ECAh0AAAoJ
+		EBc92OGhKKJIeokA/ix24SxXQDMUwxDO7vstBn3wpXTZJXxF0v6+Dc4DP9nSAP4n
+		oQ+ra8fbHBBSXMpi5EoOb7RvEXSsaW6O9RUTpiM6BbRHUmV2b2tlZCB0ZXN0IGtl
+		eSAoaHR0cHM6Ly95b3V0dS5iZS9kUXc0dzlXZ1hjUSkgPHJldm9rZWRAdGVzdHMu
+		ZXhhbXBsZT6IkAQTFgoAOBYhBCvk7spW9+zrybhhGRc92OGhKKJIBQJeC+EAAhsD
+		BQsJCAcCBhUKCQgLAgQWAgMBAh4BAheAAAoJEBc92OGhKKJI9fUA/j/hskS7NSky
+		eu4ombLUn08raq1gqP8ihmJWZdkAKTYmAQDfHpDYTwB8c0P7Uhviin57VQ6D/6tN
+		Lxhogqm2g/iiCA==
+		=l4pO
+		-----END PGP PUBLIC KEY BLOCK-----
+		EOT;
+		$signed = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		they are trashing our rights
+		-----BEGIN PGP SIGNATURE-----
+
+		iHUEARYKAB0WIQQr5O7KVvfs68m4YRkXPdjhoSiiSAUCXgvvEAAKCRAXPdjhoSii
+		SF+BAQC2Chq3wdLC+wgl6A+wH445FZ1c3rDBvSL8QBm7QJtqNwEAvB576Ul309Jk
+		GZQieJeMWJDGOhHDmJwJJ863acE5zgQ=
+		=o4vs
+		-----END PGP SIGNATURE-----
+		EOT;
+		$this->withKeyring($key, function (string $homeDir) use ($signed): void {
+			$fingerprint = '2BE4EECA56F7ECEBC9B86119173DD8E1A128A248';
+			$verified = new SecurityTxtSignatureGnuPgProvider($homeDir)->verify($signed);
+			Assert::same([$fingerprint, GNUPG_SIGSUM_KEY_REVOKED, 117440606], [$verified->getFingerprint(), $verified->getSummary(), $verified->getStatus()]);
+			$e = Assert::throws(function () use ($homeDir, $signed): void {
+				new SecurityTxtSignature(new SecurityTxtSignatureGnuPgProvider($homeDir))->verify($signed);
+			}, SecurityTxtError::class);
+			assert($e instanceof SecurityTxtError);
+			Assert::equal(new SecurityTxtSignatureKeyRevoked($fingerprint), $e->getViolation());
+		});
 	}
 
 
@@ -132,6 +172,26 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		Assert::same(GNUPG_SIGSUM_KEY_MISSING, $verified->getSummary());
 		Assert::same(9, $verified->getStatus());
 		Assert::same(1753150207, $verified->getTimestamp());
+	}
+
+
+	/**
+	 * @param Closure(string): void $test Gets the home directory of a keyring that holds only the key
+	 */
+	private function withKeyring(string $key, Closure $test): void
+	{
+		$homeDir = sys_get_temp_dir() . '/security-txt-' . bin2hex(random_bytes(8));
+		mkdir($homeDir, 0700);
+		try {
+			new gnupg(['home_dir' => $homeDir])->import($key);
+			$test($homeDir);
+		} finally {
+			foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($homeDir, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST) as $file) {
+				assert($file instanceof SplFileInfo);
+				$file->isDir() && !$file->isLink() ? rmdir($file->getPathname()) : unlink($file->getPathname());
+			}
+			rmdir($homeDir);
+		}
 	}
 
 }

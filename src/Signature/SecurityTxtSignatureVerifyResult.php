@@ -10,7 +10,7 @@ use Override;
 /**
  * The signer as claimed by a valid OpenPGP cleartext signature.
  *
- * Produced for a good signature, whether the keyring trusts the key or not, and for the common case of the signing
+ * Produced for a good signature by a key that hasn't been revoked, whether the keyring trusts the key or not, and for the common case of the signing
  * key not being in the local keyring: the signature is structurally valid but not verified against a trusted key, so
  * treat the fingerprint and key id as claimed and confirm them out-of-band. See "Signature verification" in the README.
  */

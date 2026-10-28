@@ -18,6 +18,7 @@ use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyRevoked;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignedFileMalformed;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
@@ -64,6 +65,11 @@ final class SecurityTxtSignature
 			throw new SecurityTxtWarning($violation, $e);
 		}
 
+		$summary = $signature->getSummary();
+		// A good signature by a revoked key may have been made with a stolen one, a bad one is invalid whoever's key it is
+		if (($summary & GNUPG_SIGSUM_KEY_REVOKED) !== 0 && ($summary & GNUPG_SIGSUM_RED) === 0) {
+			throw new SecurityTxtError(new SecurityTxtSignatureKeyRevoked($signature->getFingerprint()));
+		}
 		if (!$this->isSignatureKindaOkay($signature)) {
 			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
