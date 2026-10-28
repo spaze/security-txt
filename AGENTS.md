@@ -41,6 +41,7 @@ The library has three entry points:
 - **`SecurityTxt`** — the main value object; validates field values on set using `SecurityTxtValidationLevel`
 - **`SecurityTxtFetcher`** — fetches both `/.well-known/security.txt` and `/security.txt`, handles redirects, enforces SSRF protections (DNS + IP validation, starts from HTTPS URLs and only allows HTTP/HTTPS schemes, 10KB default limit but configurable)
 - **`SecurityTxtParser`** — delegates each field to a chain of `FieldProcessor` implementations
+- **`SecurityTxtUriValidator`** — whether a field value is a URI and, when not, why, carried by the violation as a `SecurityTxtNotUriReason` so a stored result is not checked again
 - **`SecurityTxtValidator`** — file-level validation (mandatory fields, canonical URI presence, signed-but-no-canonical)
 - **`SecurityTxtSignature`** — OpenPGP cleartext signature verification and creation (requires `gnupg` extension)
 
@@ -77,5 +78,6 @@ Inline heredoc expected strings in `.phpt` files contain **raw ANSI escape chara
 ### Constraints
 
 - `parse_url()` is banned — use `Uri\WhatWg\Url` (PHP 8.5 built-in, WhatWG URL standard). Enforced by PHPStan via `phpstan.neon`.
+- Whether a value written in the file is a URI is decided by `Uri\Rfc3986\Uri`, because RFC 9116 says RFC 3986, and only in `SecurityTxtUriValidator`, which also says why a value is not one, so the two cannot drift. Everything else, fetching, redirects, comparing and printing, stays `Uri\WhatWg\Url`.
 - PHP 8.5 minimum. What works around a URL parser bug fixed by 8.5.12 goes in `SecurityTxtPhpUrlWorkarounds`, its tests say `once PHP 8.5.12 is required`, and the README names the bug by the version that fixed it, `8.5.8` or `8.5.12`.
 - Zero production dependencies.

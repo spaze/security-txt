@@ -14,6 +14,7 @@ use Spaze\SecurityTxt\Fields\SecurityTxtContact;
 use Spaze\SecurityTxt\Fields\SecurityTxtCsaf;
 use Spaze\SecurityTxt\Fields\SecurityTxtEncryption;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
+use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Fields\SecurityTxtFieldValue;
 use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
 use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
@@ -115,7 +116,7 @@ final class SecurityTxt implements JsonSerializable
 				$this->fileLocation = $fileLocation;
 			},
 			function () use ($fileLocation): void {
-				$this->checkUri($fileLocation, SecurityTxtFileLocationNotUri::class, SecurityTxtFileLocationNotHttps::class);
+				$this->checkUri($fileLocation, SecurityTxtFileLocationNotUri::class, SecurityTxtFileLocationNotHttps::class, fetched: true);
 			},
 		);
 	}
@@ -181,7 +182,7 @@ final class SecurityTxt implements JsonSerializable
 				return $this->canonical[] = $canonical;
 			},
 			function () use ($canonical): void {
-				$this->checkUri($canonical->getUri(), SecurityTxtCanonicalNotUri::class, SecurityTxtCanonicalNotHttps::class);
+				$this->checkUri($canonical->getUri(), SecurityTxtCanonicalNotUri::class, SecurityTxtCanonicalNotHttps::class, SecurityTxtField::Canonical);
 			},
 		);
 	}
@@ -206,7 +207,7 @@ final class SecurityTxt implements JsonSerializable
 				return $this->contact[] = $contact;
 			},
 			function () use ($contact): void {
-				$this->checkUri($contact->getUri(), SecurityTxtContactNotUri::class, SecurityTxtContactNotHttps::class);
+				$this->checkUri($contact->getUri(), SecurityTxtContactNotUri::class, SecurityTxtContactNotHttps::class, SecurityTxtField::Contact);
 			},
 		);
 	}
@@ -274,7 +275,7 @@ final class SecurityTxt implements JsonSerializable
 				return $this->acknowledgments[] = $acknowledgments;
 			},
 			function () use ($acknowledgments): void {
-				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUri::class, SecurityTxtAcknowledgmentsNotHttps::class);
+				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUri::class, SecurityTxtAcknowledgmentsNotHttps::class, SecurityTxtField::Acknowledgments);
 			},
 		);
 	}
@@ -299,7 +300,7 @@ final class SecurityTxt implements JsonSerializable
 				return $this->hiring[] = $hiring;
 			},
 			function () use ($hiring): void {
-				$this->checkUri($hiring->getUri(), SecurityTxtHiringNotUri::class, SecurityTxtHiringNotHttps::class);
+				$this->checkUri($hiring->getUri(), SecurityTxtHiringNotUri::class, SecurityTxtHiringNotHttps::class, SecurityTxtField::Hiring);
 			},
 		);
 	}
@@ -324,7 +325,7 @@ final class SecurityTxt implements JsonSerializable
 				return $this->policy[] = $policy;
 			},
 			function () use ($policy): void {
-				$this->checkUri($policy->getUri(), SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class);
+				$this->checkUri($policy->getUri(), SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class, SecurityTxtField::Policy);
 			},
 		);
 	}
@@ -349,7 +350,7 @@ final class SecurityTxt implements JsonSerializable
 				return $this->encryption[] = $encryption;
 			},
 			function () use ($encryption): void {
-				$this->checkUri($encryption->getUri(), SecurityTxtEncryptionNotUri::class, SecurityTxtEncryptionNotHttps::class);
+				$this->checkUri($encryption->getUri(), SecurityTxtEncryptionNotUri::class, SecurityTxtEncryptionNotHttps::class, SecurityTxtField::Encryption);
 			},
 		);
 	}
@@ -374,7 +375,7 @@ final class SecurityTxt implements JsonSerializable
 				return $this->csaf[] = $csaf;
 			},
 			function () use ($csaf): void {
-				$this->checkUri($csaf->getUri(), SecurityTxtCsafNotUri::class, SecurityTxtCsafNotHttps::class);
+				$this->checkUri($csaf->getUri(), SecurityTxtCsafNotUri::class, SecurityTxtCsafNotHttps::class, SecurityTxtField::Csaf);
 				$url = Url::parse($csaf->getUri());
 				if ($url === null || !str_ends_with($url->getPath(), '/' . SecurityTxtCsaf::METADATA_FILENAME)) {
 					throw new SecurityTxtError(new SecurityTxtCsafWrongFile($csaf->getUri()));
@@ -460,15 +461,9 @@ final class SecurityTxt implements JsonSerializable
 	 * @param class-string<SecurityTxtAcknowledgmentsNotHttps|SecurityTxtCanonicalNotHttps|SecurityTxtContactNotHttps|SecurityTxtCsafNotHttps|SecurityTxtEncryptionNotHttps|SecurityTxtHiringNotHttps|SecurityTxtPolicyNotHttps|SecurityTxtFileLocationNotHttps> $notHttpsError
 	 * @throws SecurityTxtError
 	 */
-	private function checkUri(string $uri, string $notUriError, string $notHttpsError): void
+	private function checkUri(string $uri, string $notUriError, string $notHttpsError, ?SecurityTxtField $field = null, bool $fetched = false): void
 	{
-		$url = Url::parse($uri);
-		if ($url === null) {
-			throw new SecurityTxtError(new $notUriError($uri));
-		}
-		if ($url->getScheme() === 'http') {
-			throw new SecurityTxtError(new $notHttpsError($uri));
-		}
+		new SecurityTxtUriValidator()->validate($uri, $notUriError, $notHttpsError, $field, $fetched);
 	}
 
 

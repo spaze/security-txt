@@ -37,6 +37,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
+use Spaze\SecurityTxt\Violations\SecurityTxtNotUriReason;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 use Spaze\SecurityTxt\Violations\SecurityTxtTopLevelDiffers;
 use Tester\Assert;
@@ -179,10 +180,10 @@ final class SecurityTxtCheckHostTest extends TestCase
 			$onLineWarning = [$line, $violation];
 		});
 		$result = $checkHost->check(new Url('https://example.com'));
-		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com')]], $result->getLineErrors());
+		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com', SecurityTxtNotUriReason::SchemeMissingEmail, 'mailto:foo@example.com')]], $result->getLineErrors());
 		Assert::equal([2 => [new SecurityTxtExpiresTooLong()]], $result->getLineWarnings());
 		// The callbacks get the violation itself, on the line it was found
-		Assert::equal([1, new SecurityTxtContactNotUri('foo@example.com')], $onLineError);
+		Assert::equal([1, new SecurityTxtContactNotUri('foo@example.com', SecurityTxtNotUriReason::SchemeMissingEmail, 'mailto:foo@example.com')], $onLineError);
 		Assert::equal([2, new SecurityTxtExpiresTooLong()], $onLineWarning);
 	}
 
@@ -202,7 +203,7 @@ final class SecurityTxtCheckHostTest extends TestCase
 			$onRedirectCalled = true;
 		});
 		$result = $checkHost->check(new Url('https://example.com'));
-		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com')]], $result->getLineErrors());
+		Assert::equal([1 => [new SecurityTxtContactNotUri('foo@example.com', SecurityTxtNotUriReason::SchemeMissingEmail, 'mailto:foo@example.com')]], $result->getLineErrors());
 		Assert::equal([2 => [new SecurityTxtExpiresTooLong()]], $result->getLineWarnings());
 		Assert::true($onRedirectCalled);
 	}
