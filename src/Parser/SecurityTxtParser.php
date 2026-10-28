@@ -95,10 +95,11 @@ final class SecurityTxtParser
 		$this->fieldProcessors[SecurityTxtField::Encryption->value] = [
 			new EncryptionAddFieldValue(),
 		];
+		$expiresFieldFormat = new ExpiresCheckFieldFormat();
 		$this->fieldProcessors[SecurityTxtField::Expires->value] = [
 			new ExpiresCheckMultipleFields(),
-			new ExpiresCheckFieldFormat(),
-			new ExpiresSetFieldValue($this->expiresFactory),
+			$expiresFieldFormat,
+			new ExpiresSetFieldValue($this->expiresFactory, $expiresFieldFormat),
 			new ExpiresCheckFieldValueExpiresSoon(fn(): ?int => $this->expiresWarningThreshold),
 		];
 		$this->fieldProcessors[SecurityTxtField::Hiring->value] = [

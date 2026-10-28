@@ -157,6 +157,67 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	/**
+	 * A date or a time that doesn't exist is refused, and the one PHP would roll it over to is neither suggested nor kept
+	 */
+	public function testParseStringExpiresFieldNoSuchDate(): void
+	{
+		$year = (int)date('Y') + 1;
+		while (checkdate(2, 29, $year)) {
+			$year++;
+		}
+		$values = [
+			'-02-28T00:00:00Z',
+			'-02-29T00:00:00Z',
+			'-02-30T00:00:00Z',
+			'-04-31T00:00:00Z',
+			'-13-01T00:00:00Z',
+			'-00-10T00:00:00Z',
+			'-01-00T00:00:00Z',
+			'-01-01T24:00:00Z',
+			'-01-01T25:00:00Z',
+			'-01-01T00:60:00Z',
+			'-01-01T00:00:61Z',
+			'-01-01T23:59:60Z',
+			'-01-02T00:00:00+23:59',
+			'-01-02T00:00:00+24:00',
+			'-01-02T00:00:00-01:60',
+		];
+		$results = [];
+		foreach ($values as $value) {
+			$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: {$year}{$value}\n");
+			$results[$value] = [
+				array_map(fn(SecurityTxtSpecViolation $error): array => [$error::class, $error->getCorrectValue()], $parseResult->getLineErrors()[2] ?? []),
+				$parseResult->getSecurityTxt()->getExpires()?->getValue(),
+			];
+		}
+		$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: Mon, 30 Feb {$year} 00:00:00 +0000\n");
+		$results['RFC 5322'] = [
+			array_map(fn(SecurityTxtSpecViolation $error): array => [$error::class, $error->getCorrectValue()], $parseResult->getLineErrors()[2] ?? []),
+			$parseResult->getSecurityTxt()->getExpires()?->getValue(),
+		];
+		$wrongFormat = [[[SecurityTxtExpiresWrongFormat::class, new SecurityTxtExpiresWrongFormat()->getCorrectValue()]], null];
+		Assert::same([
+			'-02-28T00:00:00Z' => [[], "{$year}-02-28T00:00:00+00:00"],
+			'-02-29T00:00:00Z' => $wrongFormat,
+			'-02-30T00:00:00Z' => $wrongFormat,
+			'-04-31T00:00:00Z' => $wrongFormat,
+			'-13-01T00:00:00Z' => $wrongFormat,
+			'-00-10T00:00:00Z' => $wrongFormat,
+			'-01-00T00:00:00Z' => $wrongFormat,
+			'-01-01T24:00:00Z' => $wrongFormat,
+			'-01-01T25:00:00Z' => $wrongFormat,
+			'-01-01T00:60:00Z' => $wrongFormat,
+			'-01-01T00:00:61Z' => $wrongFormat,
+			'-01-01T23:59:60Z' => [[], "{$year}-01-02T00:00:00+00:00"],
+			'-01-02T00:00:00+23:59' => [[], "{$year}-01-02T00:00:00+23:59"],
+			'-01-02T00:00:00+24:00' => $wrongFormat,
+			'-01-02T00:00:00-01:60' => $wrongFormat,
+			'RFC 5322' => $wrongFormat,
+		], $results);
+	}
+
+
 	public function testParseStringExpiresFieldWrongFormat(): void
 	{
 		$contents = "Expires: 4020-10-05 03:21:00 Europe/Prague\n";
