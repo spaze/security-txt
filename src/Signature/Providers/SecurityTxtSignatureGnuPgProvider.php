@@ -69,7 +69,10 @@ final class SecurityTxtSignatureGnuPgProvider implements SecurityTxtSignaturePro
 		if (!isset($signature['timestamp']) || !is_int($signature['timestamp'])) {
 			throw new SecurityTxtCannotVerifySignatureException('timestamp is missing or not a string', $this->getErrorInfo());
 		}
-		return new SecurityTxtSignatureVerifySignatureInfo($signature['summary'], $signature['fingerprint'], $signature['timestamp']);
+		if (!isset($signature['status']) || !is_int($signature['status'])) {
+			throw new SecurityTxtCannotVerifySignatureException('status is missing or not an int', $this->getErrorInfo());
+		}
+		return new SecurityTxtSignatureVerifySignatureInfo($signature['summary'], $signature['fingerprint'], $signature['timestamp'], $signature['status']);
 	}
 
 

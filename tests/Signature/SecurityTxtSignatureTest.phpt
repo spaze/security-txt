@@ -110,12 +110,18 @@ final class SecurityTxtSignatureTest extends TestCase
 		Assert::noError(function () use ($signature, &$result): void {
 			$result = $signature->verify('signed');
 		});
-		$signature = new SecurityTxtSignature($this->getSignatureProvider(verifySignatureInfo: new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_VALID /* you wish */, 'fingerprint1337', $time)));
-		$e = Assert::throws(function () use ($signature): void {
-			$signature->verify('signature invalid');
-		}, SecurityTxtError::class);
-		assert($e instanceof SecurityTxtError);
-		Assert::type(SecurityTxtSignatureInvalid::class, $e->getViolation());
+		$signature = new SecurityTxtSignature($this->getSignatureProvider(verifySignatureInfo: new SecurityTxtSignatureVerifySignatureInfo(0, 'fingerprint1337', $time, 0)));
+		Assert::noError(function () use ($signature, &$result): void {
+			$result = $signature->verify('signed by a key the keyring does not trust');
+		});
+		foreach ([new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_VALID /* you wish */, 'fingerprint1337', $time), new SecurityTxtSignatureVerifySignatureInfo(0, 'fingerprint1337', $time), new SecurityTxtSignatureVerifySignatureInfo(0, 'fingerprint1337', $time, 9), new SecurityTxtSignatureVerifySignatureInfo(GNUPG_SIGSUM_RED, 'fingerprint1337', $time, 0)] as $info) {
+			$signature = new SecurityTxtSignature($this->getSignatureProvider(verifySignatureInfo: $info));
+			$e = Assert::throws(function () use ($signature): void {
+				$signature->verify('signature invalid');
+			}, SecurityTxtError::class);
+			assert($e instanceof SecurityTxtError);
+			Assert::type(SecurityTxtSignatureInvalid::class, $e->getViolation());
+		}
 
 		$signature = new SecurityTxtSignature($this->getSignatureProvider(verifyThrows: new SecurityTxtCannotCreateSignatureExtensionNotLoadedException()));
 		$e = Assert::throws(function () use ($signature): void {
