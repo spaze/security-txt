@@ -32,6 +32,7 @@ use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
+use Spaze\SecurityTxt\Violations\SecurityTxtByteOrderMark;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
@@ -163,6 +164,11 @@ final class SecurityTxtParser
 				$this->lineWarnings,
 				new SecurityTxtValidateResult([...$fileLocationErrors, new SecurityTxtContentNotUtf8()], []),
 			);
+		}
+		// Reported and then removed, or it would be read as the start of the first field name, and GnuPG wouldn't find the signature, which it's not a part of
+		if (str_starts_with($contents, "\u{FEFF}")) {
+			$this->lineErrors[1] = [new SecurityTxtByteOrderMark()];
+			$contents = substr($contents, strlen("\u{FEFF}"));
 		}
 		$lines = $this->splitLines->splitLines($contents);
 		$securityTxtFields = array_combine(

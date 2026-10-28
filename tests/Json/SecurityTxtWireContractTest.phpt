@@ -81,6 +81,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtAcknowledgmentsNotUri' => '(string $uri, Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason $reason = \\Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason::Unspecified, ?string $correctValue = NULL, ?string $character = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtBugBountyWrongCase' => '(string $value)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtBugBountyWrongValue' => '(string $value)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtByteOrderMark' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalNotHttps' => '(string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalNotUri' => '(string $uri, Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason $reason = \\Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason::Unspecified, ?string $correctValue = NULL, ?string $character = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtCanonicalUriMismatch' => '(string $uri, array $canonicalUris)',

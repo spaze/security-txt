@@ -33,6 +33,7 @@ use Spaze\SecurityTxt\Signature\SecurityTxtSignatureVerifySignatureInfo;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidator;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongCase;
 use Spaze\SecurityTxt\Violations\SecurityTxtBugBountyWrongValue;
+use Spaze\SecurityTxt\Violations\SecurityTxtByteOrderMark;
 use Spaze\SecurityTxt\Violations\SecurityTxtContactNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtContentTypeInvalid;
@@ -104,6 +105,18 @@ final class SecurityTxtParserTest extends TestCase
 			'expired' => ['-5 days', true, [2 => [SecurityTxtExpired::class]]],
 			'not expired' => ['+37 days', false, []],
 		];
+	}
+
+
+	public function testParseStringByteOrderMark(): void
+	{
+		$expires = new DateTimeImmutable('+2 months')->format(SecurityTxtExpires::FORMAT);
+		$parseResult = $this->securityTxtParser->parseString("\u{FEFF}Contact: https://example.com/\nExpires: {$expires}\n");
+		Assert::equal([1 => [new SecurityTxtByteOrderMark()]], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getLineWarnings());
+		Assert::same([], $parseResult->getFileErrors());
+		Assert::same('https://example.com/', $parseResult->getSecurityTxt()->getContact()[0]->getUri());
+		Assert::same([], $this->securityTxtParser->parseString("Contact: https://example.com/\n# A\u{FEFF}B\nExpires: {$expires}\n")->getLineErrors());
 	}
 
 
@@ -1053,6 +1066,32 @@ final class SecurityTxtParserTest extends TestCase
 		// Not hasWarnings() so that a failure says what the warning was, verifying a signature can fail for environmental reasons
 		Assert::same([], $parseResult->getLineWarnings());
 		Assert::same([], $parseResult->getFileWarnings());
+		Assert::same('AF6E1775E311FF78E911E7DC7F879001A9C8F50A', $parseResult->getSecurityTxt()->getSignatureVerifyResult()?->getKeyFingerprint());
+	}
+
+
+	public function testParseStringSignedFileWithByteOrderMark(): void
+	{
+		$expires = (new DateTime('+2 weeks'))->format(SecurityTxtExpires::FORMAT);
+		$contents = <<< EOT
+		\u{FEFF}-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		Contact: https://example.com/
+		Expires: {$expires}
+		Canonical: https://foo.bar.example/
+		-----BEGIN PGP SIGNATURE-----
+
+		iJIEARYKADoWIQSvbhd14xH/eOkR59x/h5ABqcj1CgUCaH7y/xwcc3RpbGwudGVz
+		dHNAbGlicmFyeS5leGFtcGxlAAoJEH+HkAGpyPUKRvEA/2cVGZs54ieQ7s1nSTla
+		6O+JHJNaLOf3llvGRi55gW+BAQCDVLTj2q7cbHPS78lD/uvsgFI3NVWwZx8m72sx
+		SmjCCQ==
+		=bZYA
+		-----END PGP SIGNATURE-----
+		EOT . "\n";
+		$parseResult = $this->securityTxtParser->parseString($contents);
+		Assert::equal([1 => [new SecurityTxtByteOrderMark()]], $parseResult->getLineErrors());
+		Assert::same([], $parseResult->getLineWarnings());
 		Assert::same('AF6E1775E311FF78E911E7DC7F879001A9C8F50A', $parseResult->getSecurityTxt()->getSignatureVerifyResult()?->getKeyFingerprint());
 	}
 
