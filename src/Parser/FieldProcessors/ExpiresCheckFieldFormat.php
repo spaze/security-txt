@@ -16,28 +16,30 @@ final readonly class ExpiresCheckFieldFormat implements FieldProcessor
 {
 
 	/**
+	 * RFC 3339 section 5.6, the `T` and the `Z` in either case, and any number of digits in a fraction of a second
+	 */
+	private const string DATE_TIME = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d++)?(?:Z|[+-]\d{2}:\d{2})$/iD';
+
+
+	/**
 	 * @throws SecurityTxtError
 	 */
 	#[Override]
 	public function process(string $value, SecurityTxt $securityTxt): void
 	{
-		$expiresValue = DateTimeImmutable::createFromFormat(SecurityTxtExpires::FORMAT, $value);
-		if ($expiresValue === false) {
-			$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC3339_EXTENDED, $value);
-			if ($expiresValue === false) {
-				$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC2822, $value);
-				if ($expiresValue !== false) {
-					throw new SecurityTxtError(new SecurityTxtExpiresOldFormat($expiresValue->format(SecurityTxtExpires::FORMAT)));
-				} else {
-					try {
-						$expiresValue = new DateTimeImmutable($value);
-					} catch (DateMalformedStringException) {
-						$expiresValue = null;
-					}
-					throw new SecurityTxtError(new SecurityTxtExpiresWrongFormat($expiresValue?->format(SecurityTxtExpires::FORMAT)));
-				}
-			}
+		if (preg_match(self::DATE_TIME, $value) === 1) {
+			return;
 		}
+		$expiresValue = DateTimeImmutable::createFromFormat(DATE_RFC2822, $value);
+		if ($expiresValue !== false) {
+			throw new SecurityTxtError(new SecurityTxtExpiresOldFormat($expiresValue->format(SecurityTxtExpires::FORMAT)));
+		}
+		try {
+			$expiresValue = new DateTimeImmutable($value);
+		} catch (DateMalformedStringException) {
+			$expiresValue = null;
+		}
+		throw new SecurityTxtError(new SecurityTxtExpiresWrongFormat($expiresValue?->format(SecurityTxtExpires::FORMAT)));
 	}
 
 }

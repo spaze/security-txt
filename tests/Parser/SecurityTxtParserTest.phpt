@@ -125,6 +125,38 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringExpiresFieldRfc3339(): void
+	{
+		$year = (int)date('Y') + 1;
+		$expected = [
+			"{$year}-03-04T05:06:07Z" => [],
+			"{$year}-03-04t05:06:07z" => [],
+			"{$year}-03-04T05:06:07.5Z" => [],
+			"{$year}-03-04T05:06:07.123456+01:00" => [],
+			"{$year}-03-04T05:06:07.1234567890-00:00" => [],
+			"{$year}-03-04T05:06:07+0100" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07+01" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07UTC" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07Europe/Prague" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07 Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T05:06:07.Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04 05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-3-04T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-4T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"{$year}-03-04T5:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			substr((string)$year, 2) . '-03-04T05:06:07Z' => [SecurityTxtExpiresWrongFormat::class],
+			"1{$year}-03-04T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+			"x{$year}-03-04T05:06:07Z" => [SecurityTxtExpiresWrongFormat::class],
+		];
+		$errors = [];
+		foreach (array_keys($expected) as $value) {
+			$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: {$value}\n");
+			$errors[$value] = array_map(fn(SecurityTxtSpecViolation $error): string => $error::class, $parseResult->getLineErrors()[2] ?? []);
+		}
+		Assert::same($expected, $errors);
+	}
+
+
 	public function testParseStringExpiresFieldWrongFormat(): void
 	{
 		$contents = "Expires: 4020-10-05 03:21:00 Europe/Prague\n";
