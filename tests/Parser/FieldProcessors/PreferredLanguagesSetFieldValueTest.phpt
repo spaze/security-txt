@@ -34,7 +34,7 @@ final class PreferredLanguagesSetFieldValueTest extends TestCase
 		};
 		$processor = new PreferredLanguagesSetFieldValue($splitProvider);
 		Assert::throws(function () use ($processor, $securityTxt): void {
-			$processor->process("", $securityTxt);
+			$processor->process('en', $securityTxt);
 		}, LogicException::class, 'This should not happen');
 	}
 

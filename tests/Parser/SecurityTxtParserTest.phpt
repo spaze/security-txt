@@ -60,6 +60,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
+use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesSeparatorNotComma;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
@@ -916,6 +917,13 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::same(['en', 'CS'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 		Assert::false($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
+	}
+
+
+	public function testParseStringPreferredLanguagesEmpty(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages:\n");
+		Assert::equal([1 => [new SecurityTxtPreferredLanguagesEmpty()]], $parseResult->getLineErrors());
 	}
 
 
