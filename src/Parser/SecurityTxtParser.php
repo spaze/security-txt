@@ -38,6 +38,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineControlCharacter;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNeitherFieldNorComment;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
@@ -241,28 +242,37 @@ final class SecurityTxtParser
 			}
 			$field = explode(':', $line, 2);
 			if (count($field) !== 2) {
+				if ($line !== '') {
+					$this->lineErrors[$lineNumber][] = $this->getLineNeitherFieldNorComment($line, $this->getFieldWithoutColon($securityTxtFields, $line));
+				}
 				continue;
 			}
 			$fieldNameAsWritten = $field[0];
 			$field[0] = rtrim($fieldNameAsWritten);
+			$fieldName = strtolower($field[0]);
+			$fieldValue = trim($field[1]);
+			$securityTxtField = $securityTxtFields[$fieldName] ?? null;
+			// A colon before anything but whitespace is more likely a part of the value, `Acknowledgments https://example.com/`, than the one after a field name
+			$fieldWithoutColon = $securityTxtField === null && preg_match('/^\S/', $field[1]) === 1 ? $this->getFieldWithoutColon($securityTxtFields, $line) : null;
+			$suggestion = $securityTxtField === null && $fieldWithoutColon === null ? $this->getSuggestion($securityTxtFields, $fieldName) : null;
+			// A field name is printable ASCII and no space, RFC 5322 section 3.6.8
+			if ($securityTxtField === null && $suggestion === null && preg_match('/^[!-~]++$/D', $field[0]) !== 1) {
+				$this->lineErrors[$lineNumber][] = $this->getLineNeitherFieldNorComment($line, $fieldWithoutColon);
+				continue;
+			}
 			if ($field[0] !== $fieldNameAsWritten) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtFieldWhitespaceBeforeColon($field[0], $line);
 			}
-			$fieldName = strtolower($field[0]);
-			$fieldValue = trim($field[1]);
-			if (isset($securityTxtFields[$fieldName])) {
-				$hasExpires = $hasExpires || $securityTxtFields[$fieldName] === SecurityTxtField::Expires;
-				if ($fieldValue !== '' && !$this->isSpaceAfterColon($securityTxtFields[$fieldName], $field[1])) {
+			if ($securityTxtField !== null) {
+				$hasExpires = $hasExpires || $securityTxtField === SecurityTxtField::Expires;
+				if ($fieldValue !== '' && !$this->isSpaceAfterColon($securityTxtField, $field[1])) {
 					$this->lineErrors[$lineNumber][] = new SecurityTxtFieldWrongSpaceAfterColon($field[0], $line);
 				}
-				$this->processField($lineNumber, $fieldValue, $securityTxtFields[$fieldName], $securityTxt);
+				$this->processField($lineNumber, $fieldValue, $securityTxtField, $securityTxt);
+			} elseif ($suggestion !== null) {
+				$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
 			} else {
-				$suggestion = $this->getSuggestion($securityTxtFields, $fieldName);
-				if ($suggestion !== null) {
-					$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
-				} else {
-					$this->lineWarnings[$lineNumber][] = new SecurityTxtUnknownField($field[0], $line);
-				}
+				$this->lineWarnings[$lineNumber][] = new SecurityTxtUnknownField($field[0], $line);
 			}
 		}
 		if ($signatureLineNumber !== null) {
@@ -344,6 +354,26 @@ final class SecurityTxtParser
 			$this->lineWarnings[$lineNumber][] = $e->getViolation();
 		}
 		return $securityTxt;
+	}
+
+
+	/**
+	 * The field whose name the line starts with when whitespace or nothing follows the name, not a colon, `Contact https://example.com/`
+	 *
+	 * @param array<string, SecurityTxtField> $securityTxtFields
+	 */
+	private function getFieldWithoutColon(array $securityTxtFields, string $line): ?SecurityTxtField
+	{
+		return preg_match('/^([^\s:]++)(?:\s|$)/D', $line, $matches) === 1 ? $securityTxtFields[strtolower($matches[1])] ?? null : null;
+	}
+
+
+	/**
+	 * With the field only when there is one, so a stored violation carries no null for it
+	 */
+	private function getLineNeitherFieldNorComment(string $line, ?SecurityTxtField $field): SecurityTxtLineNeitherFieldNorComment
+	{
+		return $field !== null ? new SecurityTxtLineNeitherFieldNorComment($line, $field) : new SecurityTxtLineNeitherFieldNorComment($line);
 	}
 
 

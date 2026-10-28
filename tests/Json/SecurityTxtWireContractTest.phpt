@@ -108,6 +108,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtHiringNotUri' => '(string $uri, Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason $reason = \\Spaze\\SecurityTxt\\Violations\\SecurityTxtNotUriReason::Unspecified, ?string $correctValue = NULL, ?string $character = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineControlCharacter' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineLeadingWhitespace' => '(string $line)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNeitherFieldNorComment' => '(string $line, ?Spaze\\SecurityTxt\\Fields\\SecurityTxtField $field = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNoEol' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNulByte' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineWrongEol' => '(string $line)',

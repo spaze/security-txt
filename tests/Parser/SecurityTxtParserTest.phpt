@@ -20,6 +20,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtRedirects;
 use Spaze\SecurityTxt\Fields\SecurityTxtContact;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpires;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
+use Spaze\SecurityTxt\Fields\SecurityTxtField;
 use Spaze\SecurityTxt\Fields\SecurityTxtHiring;
 use Spaze\SecurityTxt\Fields\SecurityTxtPolicy;
 use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
@@ -48,6 +49,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNeitherFieldNorComment;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
@@ -339,6 +341,67 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringLineNeitherFieldNorComment(): void
+	{
+		$reported = [];
+		$lines = [
+			'Please report issues to our team',
+			"\u{A0}\u{A0}",
+			'<html><body>',
+			'Report to: security@example.com',
+			':security@example.com',
+			"Kontakt\u{E9}: security@example.com",
+			"X\tFoo: bar",
+			'Contact https://example.com/',
+			'contact security@example.com',
+			"Contact\thttps://example.com/",
+			'Contacts https://example.com/',
+			'Acknowledgments https://example.com/',
+			'Preferred-Languages en:cs',
+			'Expires 2027-03-04T05:06:07Z',
+			'Report to : security@example.com',
+			'Contact Us: security@example.com',
+			'Cont act: https://example.com/',
+			'X-Foo: bar',
+			'!X~: bar',
+			'# Report to: security@example.com',
+			'',
+		];
+		foreach ($lines as $line) {
+			$parseResult = $this->securityTxtParser->parseString("{$line}\n");
+			$reported[$line] = [
+				...array_map(fn(SecurityTxtSpecViolation $violation): array => ['error', $violation->getMessage(), $violation->getCorrectValue()], $parseResult->getLineErrors()[1] ?? []),
+				...array_map(fn(SecurityTxtSpecViolation $violation): array => ['warning', $violation->getMessage(), $violation->getCorrectValue()], $parseResult->getLineWarnings()[1] ?? []),
+			];
+		}
+		Assert::same([
+			'Please report issues to our team' => [['error', 'The line (Please report issues to our team) is neither a field nor a comment', '# Please report issues to our team']],
+			"\u{A0}\u{A0}" => [['error', 'The line (%C2%A0%C2%A0) is neither a field nor a comment', "# \u{A0}\u{A0}"]],
+			'<html><body>' => [['error', 'The line (<html><body>) is neither a field nor a comment', '# <html><body>']],
+			'Report to: security@example.com' => [['error', 'The line (Report to: security@example.com) is neither a field nor a comment', '# Report to: security@example.com']],
+			':security@example.com' => [['error', 'The line (:security@example.com) is neither a field nor a comment', '# :security@example.com']],
+			"Kontakt\u{E9}: security@example.com" => [['error', 'The line (Kontakt%C3%A9: security@example.com) is neither a field nor a comment', "# Kontakt\u{E9}: security@example.com"]],
+			"X\tFoo: bar" => [['error', "The line (X\u{2192}Foo: bar) is neither a field nor a comment", "# X\tFoo: bar"]],
+			'Contact https://example.com/' => [['error', 'The line (Contact https://example.com/) is neither a field nor a comment', 'Contact: https://example.com/']],
+			'contact security@example.com' => [['error', 'The line (contact security@example.com) is neither a field nor a comment', 'Contact: security@example.com']],
+			"Contact\thttps://example.com/" => [['error', "The line (Contact\u{2192}https://example.com/) is neither a field nor a comment", 'Contact: https://example.com/']],
+			'Contacts https://example.com/' => [['error', 'The line (Contacts https://example.com/) is neither a field nor a comment', '# Contacts https://example.com/']],
+			'Acknowledgments https://example.com/' => [['error', 'The line (Acknowledgments https://example.com/) is neither a field nor a comment', 'Acknowledgments: https://example.com/']],
+			'Preferred-Languages en:cs' => [['error', 'The line (Preferred-Languages en:cs) is neither a field nor a comment', 'Preferred-Languages: en:cs']],
+			'Expires 2027-03-04T05:06:07Z' => [['error', 'The line (Expires 2027-03-04T05:06:07Z) is neither a field nor a comment', 'Expires: 2027-03-04T05:06:07Z']],
+			'Report to : security@example.com' => [['error', 'The line (Report to : security@example.com) is neither a field nor a comment', '# Report to : security@example.com']],
+			'Contact Us: security@example.com' => [['warning', 'Field Contact Us may be a typo, did you mean Contact?', 'Contact: security@example.com']],
+			'Cont act: https://example.com/' => [['warning', 'Field Cont act may be a typo, did you mean Contact?', 'Contact: https://example.com/']],
+			'X-Foo: bar' => [['warning', 'Field X-Foo is unknown', '# X-Foo: bar']],
+			'!X~: bar' => [['warning', 'Field !X~ is unknown', '# !X~: bar']],
+			'# Report to: security@example.com' => [],
+			'' => [],
+		], $reported);
+		Assert::same('Put a colon after the Contact field name', $this->securityTxtParser->parseString("Contact https://example.com/\n")->getLineErrors()[1][0]->getHowToFix());
+		Assert::null($this->securityTxtParser->parseString("Expires\n")->getLineErrors()[1][0]->getCorrectValue());
+	}
+
+
 	public function testParseStringLineWithNulByteIsStillParsed(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString(" Cont\0act: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");
@@ -447,7 +510,7 @@ final class SecurityTxtParserTest extends TestCase
 	{
 		$contents = "Contact: https://example.com/\nHiring: https://com.example\n#Expires: 2020-10-05T10:20:30+00:00\nExpires\n";
 		$parseResult = $this->securityTxtParser->parseString($contents);
-		Assert::count(0, $parseResult->getLineErrors());
+		Assert::equal([4 => [new SecurityTxtLineNeitherFieldNorComment('Expires', SecurityTxtField::Expires)]], $parseResult->getLineErrors());
 		Assert::count(1, $parseResult->getFileErrors());
 		Assert::type(SecurityTxtNoExpires::class, $parseResult->getFileErrors()[0]);
 		Assert::true($parseResult->hasErrors());
@@ -641,7 +704,7 @@ final class SecurityTxtParserTest extends TestCase
 			"\tContact: https://example.com/" => ['The line (→Contact: https://example.com/) starts with whitespace'],
 			"\x0BContact: https://example.com/" => ['The line (%0BContact: https://example.com/) starts with whitespace'],
 			'  # A comment: with a colon' => ['The line (  # A comment: with a colon) starts with whitespace'],
-			' Not a field' => ['The line ( Not a field) starts with whitespace'],
+			' Not a field' => ['The line ( Not a field) starts with whitespace', 'The line (Not a field) is neither a field nor a comment'],
 			" \t " => [],
 			'Contact: https://example.com/ ' => [],
 		], $reported);
@@ -1235,7 +1298,7 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString(str_repeat("-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\nContact: https://example.com/\n-----BEGIN PGP SIGNATURE-----\n\niAEE\n-----END PGP SIGNATURE-----\n", 50));
 		Assert::same([], $verified);
-		Assert::same([9], array_keys($parseResult->getLineErrors()));
+		Assert::same([9], array_keys(array_filter($parseResult->getLineErrors(), fn(array $violations): bool => !$violations[0] instanceof SecurityTxtLineNeitherFieldNorComment)));
 	}
 
 
@@ -1414,24 +1477,25 @@ final class SecurityTxtParserTest extends TestCase
 			$reported[$name] = [$errors, $verified !== [], $parseResult->getSecurityTxt()->getSignatureVerifyResult() !== null];
 		}
 		$malformed = SecurityTxtSignedFileMalformed::class;
+		$neither = SecurityTxtLineNeitherFieldNorComment::class;
 		$invalid = SecurityTxtSignatureInvalid::class;
 		Assert::same([
 			'signed' => [[], true, true],
 			'signed with CRLF' => [[], true, true],
 			'signed with an armor header' => [[], true, true],
 			'signed with two hash algorithms' => [[], true, true],
-			'signed with dash escaped lines' => [[], true, true],
+			'signed with dash escaped lines' => [[6 => [$neither]], true, true],
 			'a comment before the header' => [[1 => [$malformed]], false, false],
 			'a field before the header' => [[1 => [$malformed]], false, false],
 			'an empty line after the signature' => [[11 => [$malformed]], false, false],
 			'a field after the signature' => [[11 => [$malformed]], false, false],
-			'a second signed message' => [[11 => [$malformed], 15 => [SecurityTxtMultipleExpires::class]], false, false],
-			'other OpenPGP data before the header' => [[1 => [$malformed]], false, false],
+			'a second signed message' => [[11 => [$malformed], 15 => [SecurityTxtMultipleExpires::class], 16 => [$neither], 18 => [$neither], 19 => [$neither], 20 => [$neither]], false, false],
+			'other OpenPGP data before the header' => [[1 => [$neither, $malformed], 3 => [$neither], 4 => [$neither]], false, false],
 			'the header with a space after it' => [[1 => [$malformed]], false, false],
 			'the header with a space before it' => [[1 => [$malformed]], false, false],
 			'no hash header' => [[2 => [$malformed]], false, false],
 			'a comment header' => [[3 => [$malformed]], false, false],
-			'a dash line not escaped' => [[6 => [$malformed]], false, false],
+			'a dash line not escaped' => [[6 => [$neither, $malformed]], false, false],
 			'not Base64 in the signature' => [[8 => [$malformed]], false, false],
 			'no signature data' => [[6 => [$invalid]], false, false],
 			'a compressed packet in the signature' => [[6 => [$invalid]], false, false],
@@ -1457,7 +1521,7 @@ final class SecurityTxtParserTest extends TestCase
 			'whitespace on the line after the hash header' => [[3 => [$malformed]], false, false],
 			'whitespace on the line after the armor header' => [[7 => [$malformed]], false, false],
 			'more after the hash algorithm' => [[2 => [$malformed]], false, false],
-			'a line starting with one dash' => [[6 => [$malformed]], false, false],
+			'a line starting with one dash' => [[6 => [$neither, $malformed]], false, false],
 			'an armor header without a space' => [[7 => [$malformed]], false, false],
 			'Base64 after the checksum' => [[10 => [$malformed]], false, false],
 			'two checksums' => [[10 => [$malformed]], false, false],
@@ -1483,7 +1547,7 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::same(['https://example.com/'], array_map(fn(SecurityTxtContact $contact): string => $contact->getUri(), $parseResult->getSecurityTxt()->getContact()));
 		Assert::same(['https://example.com/jobs'], array_map(fn(SecurityTxtHiring $hiring): string => $hiring->getUri(), $parseResult->getSecurityTxt()->getHiring()));
 		Assert::same(['https://example.com/policy'], array_map(fn(SecurityTxtPolicy $policy): string => $policy->getUri(), $parseResult->getSecurityTxt()->getPolicy()));
-		Assert::same([], $parseResult->getLineErrors());
+		Assert::equal([5 => [new SecurityTxtLineNeitherFieldNorComment('-----BEGIN PGP SIGNATURE-----')], 7 => [new SecurityTxtLineNeitherFieldNorComment('-----BEGIN PGP SIGNED MESSAGE-----')]], $parseResult->getLineErrors());
 		Assert::notNull($parseResult->getSecurityTxt()->getSignatureVerifyResult());
 	}
 
@@ -1499,7 +1563,7 @@ final class SecurityTxtParserTest extends TestCase
 		$securityTxtParser = new SecurityTxtParser($this->securityTxtValidator, new SecurityTxtSignature($signatureProvider), $this->securityTxtExpiresFactory, $this->securityTxtSplitLines, $this->securityTxtPregSplitProvider, $this->securityTxtJsonValueFactory);
 		$parseResult = $securityTxtParser->parseString($contents);
 		Assert::same([$contents], $verified);
-		Assert::same([6 => [SecurityTxtLineLeadingWhitespace::class], 7 => [SecurityTxtLineLeadingWhitespace::class], 9 => [SecurityTxtLineLeadingWhitespace::class]], array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations), $parseResult->getLineErrors()));
+		Assert::same([6 => [SecurityTxtLineLeadingWhitespace::class, SecurityTxtLineNeitherFieldNorComment::class], 7 => [SecurityTxtLineLeadingWhitespace::class, SecurityTxtLineNeitherFieldNorComment::class], 9 => [SecurityTxtLineLeadingWhitespace::class, SecurityTxtLineNeitherFieldNorComment::class]], array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations), $parseResult->getLineErrors()));
 		Assert::same(['https://example.com/jobs'], array_map(fn(SecurityTxtHiring $hiring): string => $hiring->getUri(), $parseResult->getSecurityTxt()->getHiring()));
 		Assert::same(['https://example.com/policy'], array_map(fn(SecurityTxtPolicy $policy): string => $policy->getUri(), $parseResult->getSecurityTxt()->getPolicy()));
 	}
