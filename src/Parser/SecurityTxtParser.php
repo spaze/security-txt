@@ -40,6 +40,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtLineControlCharacter;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNeitherFieldNorComment;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
@@ -157,6 +158,11 @@ final class SecurityTxtParser
 			}
 		}
 		if (!$this->jsonValueFactory->isUtf8($contents)) {
+			foreach ($this->splitLines->splitLines($contents) as $index => $rawLine) {
+				if (!$this->jsonValueFactory->isUtf8($rawLine)) {
+					$this->lineErrors[$index + 1][] = new SecurityTxtLineNotUtf8(rtrim($rawLine, "\r\n"), $this->getNotUtf8($rawLine));
+				}
+			}
 			return new SecurityTxtParseStringResult(
 				$securityTxt,
 				false,
@@ -354,6 +360,19 @@ final class SecurityTxtParser
 			$this->lineWarnings[$lineNumber][] = $e->getViolation();
 		}
 		return $securityTxt;
+	}
+
+
+	/**
+	 * Each piece of a line that isn't UTF-8, cut where a character can start, at a byte from 0xC0 with as many continuation bytes after it as it can take, or at a
+	 * continuation byte with none before it, and still told apart by the one UTF-8 test
+	 *
+	 * @return list<string>
+	 */
+	private function getNotUtf8(string $line): array
+	{
+		preg_match_all('/[\xC0-\xDF][\x80-\xBF]?|[\xE0-\xEF][\x80-\xBF]{0,2}|[\xF0-\xFF][\x80-\xBF]{0,3}|[\x80-\xBF]/', $line, $matches);
+		return array_values(array_unique(array_filter($matches[0], fn(string $piece): bool => !$this->jsonValueFactory->isUtf8($piece))));
 	}
 
 

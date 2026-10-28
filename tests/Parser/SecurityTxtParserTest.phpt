@@ -51,6 +51,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineLeadingWhitespace;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNeitherFieldNorComment;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNoEol;
+use Spaze\SecurityTxt\Violations\SecurityTxtLineNotUtf8;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineNulByte;
 use Spaze\SecurityTxt\Violations\SecurityTxtLineWrongEol;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultipleBugBounty;
@@ -672,7 +673,7 @@ final class SecurityTxtParserTest extends TestCase
 		Assert::count(1, $errors);
 		Assert::type(SecurityTxtContentNotUtf8::class, $errors[0]);
 		Assert::same([], $parseResult->getFileWarnings());
-		Assert::same([], $parseResult->getLineErrors());
+		Assert::equal([1 => [new SecurityTxtLineNotUtf8("\xFF\xFE", ["\xFF", "\xFE"])]], $parseResult->getLineErrors());
 		Assert::same([], $parseResult->getLineWarnings());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
@@ -1068,6 +1069,49 @@ final class SecurityTxtParserTest extends TestCase
 			'HTTP uppercase' => ['HTTP://example.com/.well-known/security.txt', SecurityTxtFileLocationNotHttps::class, 'https://example.com/.well-known/security.txt'],
 			'not a URI' => ['example.com/.well-known/security.txt', SecurityTxtFileLocationNotUri::class, null],
 		];
+	}
+
+
+	public function testParseStringLineNotUtf8(): void
+	{
+		$files = [
+			"Contact:\xA0mailto:security@example.com\n",
+			"# caf\u{E9}, caf\xE9\n",
+			"# caf\u{E9}\n# caf\xE9\n",
+			"# caf\xE9\nContact: mailto:security@example.com\n# na\xEFve\n",
+			"# Bezpe\xE8nost \xE8\xE1\n",
+			"Contact: mailto:security@example.com\r# caf\xE9\r",
+			"# \xC5",
+			"Contact: https://example.com\xC0\xAFsecurity\n",
+			"# caf\u{E9}\xA0\n",
+			"# \u{20AC}\xAC\n",
+			"# \u{1F600}\x80\n",
+			"# \xA9\xAE\n",
+			"# caf\xE9 \n",
+		];
+		$reported = [];
+		foreach ($files as $contents) {
+			$parseResult = $this->securityTxtParser->parseString($contents);
+			$reported[$contents] = array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation->getMessage(), $violation->getHowToFix()], $violations), $parseResult->getLineErrors());
+		}
+		Assert::same([
+			"Contact:\xA0mailto:security@example.com\n" => [1 => [["The line (Contact:%A0mailto:security@example.com) contains %A0, which isn't valid UTF-8", 'Replace %A0 with the character it was meant to be, encoded in UTF-8']]],
+			"# caf\u{E9}, caf\xE9\n" => [1 => [["The line (# caf%C3%A9, caf%E9) contains %E9, which isn't valid UTF-8", 'Replace %E9 with the character it was meant to be, encoded in UTF-8']]],
+			"# caf\u{E9}\n# caf\xE9\n" => [2 => [["The line (# caf%E9) contains %E9, which isn't valid UTF-8", 'Replace %E9 with the character it was meant to be, encoded in UTF-8']]],
+			"# caf\xE9\nContact: mailto:security@example.com\n# na\xEFve\n" => [
+				1 => [["The line (# caf%E9) contains %E9, which isn't valid UTF-8", 'Replace %E9 with the character it was meant to be, encoded in UTF-8']],
+				3 => [["The line (# na%EFve) contains %EF, which isn't valid UTF-8", 'Replace %EF with the character it was meant to be, encoded in UTF-8']],
+			],
+			"# Bezpe\xE8nost \xE8\xE1\n" => [1 => [["The line (# Bezpe%E8nost %E8%E1) contains %E8, %E1, which aren't valid UTF-8", 'Replace %E8, %E1 with the characters they were meant to be, encoded in UTF-8']]],
+			"Contact: mailto:security@example.com\r# caf\xE9\r" => [2 => [["The line (# caf%E9) contains %E9, which isn't valid UTF-8", 'Replace %E9 with the character it was meant to be, encoded in UTF-8']]],
+			"# \xC5" => [1 => [["The line (# %C5) contains %C5, which isn't valid UTF-8", 'Replace %C5 with the character it was meant to be, encoded in UTF-8']]],
+			"Contact: https://example.com\xC0\xAFsecurity\n" => [1 => [["The line (Contact: https://example.com%C0%AFsecurity) contains %C0%AF, which isn't valid UTF-8", 'Replace %C0%AF with the character it was meant to be, encoded in UTF-8']]],
+			"# caf\u{E9}\xA0\n" => [1 => [["The line (# caf%C3%A9%A0) contains %A0, which isn't valid UTF-8", 'Replace %A0 with the character it was meant to be, encoded in UTF-8']]],
+			"# \u{20AC}\xAC\n" => [1 => [["The line (# %E2%82%AC%AC) contains %AC, which isn't valid UTF-8", 'Replace %AC with the character it was meant to be, encoded in UTF-8']]],
+			"# \u{1F600}\x80\n" => [1 => [["The line (# %F0%9F%98%80%80) contains %80, which isn't valid UTF-8", 'Replace %80 with the character it was meant to be, encoded in UTF-8']]],
+			"# \xA9\xAE\n" => [1 => [["The line (# %A9%AE) contains %A9, %AE, which aren't valid UTF-8", 'Replace %A9, %AE with the characters they were meant to be, encoded in UTF-8']]],
+			"# caf\xE9 \n" => [1 => [["The line (# caf%E9 ) contains %E9, which isn't valid UTF-8", 'Replace %E9 with the character it was meant to be, encoded in UTF-8']]],
+		], $reported);
 	}
 
 

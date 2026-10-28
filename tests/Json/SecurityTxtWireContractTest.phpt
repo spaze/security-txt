@@ -110,6 +110,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineLeadingWhitespace' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNeitherFieldNorComment' => '(string $line, ?Spaze\\SecurityTxt\\Fields\\SecurityTxtField $field = NULL)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNoEol' => '(string $line)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNotUtf8' => '(string $line, array $bytes)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineNulByte' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtLineWrongEol' => '(string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtMultipleBugBounty' => '()',
