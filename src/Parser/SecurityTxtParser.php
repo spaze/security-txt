@@ -297,7 +297,7 @@ final class SecurityTxtParser
 			} elseif ($suggestion !== null) {
 				$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
 				// What the value would be told as the suggested field, without the file having that field
-				$this->processField($lineNumber, $fieldValue, $suggestion, new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues), true);
+				$this->processField($lineNumber, $fieldValue, $suggestion, $this->getPossibleTypoSecurityTxt($securityTxt), true);
 			} else {
 				// With the removed field only when there is one, so a stored violation carries no null for it
 				$removedField = SecurityTxtRemovedField::tryFrom($fieldName);
@@ -383,6 +383,24 @@ final class SecurityTxtParser
 			$this->lineWarnings[$lineNumber][] = $e->getViolation();
 		}
 		return $securityTxt;
+	}
+
+
+	/**
+	 * Where the value of a field whose name may be a typo is checked, at the file's location, which a path is suggested on, as it is for the field itself
+	 */
+	private function getPossibleTypoSecurityTxt(SecurityTxt $securityTxt): SecurityTxt
+	{
+		$possibleTypo = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
+		$fileLocation = $securityTxt->getFileLocation();
+		if ($fileLocation !== null) {
+			try {
+				$possibleTypo->setFileLocation($fileLocation);
+			} catch (SecurityTxtError) {
+				// Reported for the file already
+			}
+		}
+		return $possibleTypo;
 	}
 
 

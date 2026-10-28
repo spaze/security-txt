@@ -1222,10 +1222,58 @@ final class SecurityTxtUriValidatorTest extends TestCase
 	}
 
 
+	public function testRefusedPathSuggestedOnTheFileLocation(): void
+	{
+		$wellKnown = 'https://www.example.com/.well-known/security.txt';
+		$cases = [
+			'/security-policy' => [SecurityTxtField::Policy, '/security-policy', $wellKnown],
+			'/contact' => [SecurityTxtField::Contact, '/contact', $wellKnown],
+			'/' => [SecurityTxtField::Policy, '/', $wellKnown],
+			'/jobs?team=security#apply' => [SecurityTxtField::Hiring, '/jobs?team=security#apply', $wellKnown],
+			'on an IDN host' => [SecurityTxtField::Policy, '/security-policy', "https://h\u{E1}\u{10D}ky.example/security.txt"],
+			'with a port' => [SecurityTxtField::Policy, '/security-policy', 'https://www.example.com:8443/.well-known/security.txt'],
+			'on an IPv6 host' => [SecurityTxtField::Encryption, '/pgp-key.txt', 'https://[2001:db8::1]/.well-known/security.txt'],
+			'on http' => [SecurityTxtField::Policy, '/security-policy', 'http://www.example.com/.well-known/security.txt'],
+			'with no location' => [SecurityTxtField::Policy, '/security-policy', null],
+			'with a user name' => [SecurityTxtField::Policy, '/security-policy', 'https://user@www.example.com/.well-known/security.txt'],
+			'hall-of-fame.html' => [SecurityTxtField::Policy, 'hall-of-fame.html', $wellKnown],
+			'./jobs/' => [SecurityTxtField::Hiring, './jobs/', $wellKnown],
+			'//example.net/policy' => [SecurityTxtField::Policy, '//example.net/policy', $wellKnown],
+			'/foo\\bar' => [SecurityTxtField::Policy, '/foo\\bar', $wellKnown],
+			'a fingerprint' => [SecurityTxtField::Encryption, '5F2DE5521C63A801AB59CCB603D49DE44B29100F', $wellKnown],
+			'a hostname' => [SecurityTxtField::Contact, 'example.com/contact', $wellKnown],
+		];
+		$refusals = [];
+		foreach ($cases as $name => [$field, $uri, $fileLocation]) {
+			$refusals[$name] = array_slice($this->getRefusal($field, $uri, $fileLocation), 1);
+		}
+		$path = 'The value is a path, add the "https" scheme and the host';
+		$generic = 'Use a URI as the value';
+		Assert::same([
+			'/security-policy' => ['https://www.example.com/security-policy', $path],
+			'/contact' => ['https://www.example.com/contact', $path],
+			'/' => ['https://www.example.com/', $path],
+			'/jobs?team=security#apply' => ['https://www.example.com/jobs?team=security#apply', $path],
+			'on an IDN host' => ["https://h\u{E1}\u{10D}ky.example/security-policy", $path],
+			'with a port' => ['https://www.example.com:8443/security-policy', $path],
+			'on an IPv6 host' => ['https://[2001:db8::1]/pgp-key.txt', $path],
+			'on http' => [null, $generic],
+			'with no location' => [null, $generic],
+			'with a user name' => [null, $generic],
+			'hall-of-fame.html' => [null, $generic],
+			'./jobs/' => [null, $generic],
+			'//example.net/policy' => [null, $generic],
+			'/foo\\bar' => [null, $generic],
+			'a fingerprint' => ['openpgp4fpr:5F2DE5521C63A801AB59CCB603D49DE44B29100F', 'The value looks like an OpenPGP key fingerprint, add the "openpgp4fpr" scheme'],
+			'a hostname' => ['https://example.com/contact', 'The value looks like a hostname, add the "https" scheme'],
+		], $refusals);
+	}
+
+
 	/**
 	 * @return array{string, string|null, string}
 	 */
-	private function getRefusal(?SecurityTxtField $field, string $uri): array
+	private function getRefusal(?SecurityTxtField $field, string $uri, ?string $fileLocation = null): array
 	{
 		[$notUri, $notHttps] = match ($field) {
 			null => [SecurityTxtFileLocationNotUri::class, SecurityTxtFileLocationNotHttps::class],
@@ -1235,8 +1283,8 @@ final class SecurityTxtUriValidatorTest extends TestCase
 			SecurityTxtField::Encryption => [SecurityTxtEncryptionNotUri::class, SecurityTxtEncryptionNotHttps::class],
 			default => [SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class],
 		};
-		$e = Assert::throws(function () use ($uri, $notUri, $notHttps, $field): void {
-			$this->validator->validate($uri, $notUri, $notHttps, $field, $field === null);
+		$e = Assert::throws(function () use ($uri, $notUri, $notHttps, $field, $fileLocation): void {
+			$this->validator->validate($uri, $notUri, $notHttps, $field, $field === null, $fileLocation);
 		}, SecurityTxtError::class);
 		assert($e instanceof SecurityTxtError);
 		$violation = $e->getViolation();

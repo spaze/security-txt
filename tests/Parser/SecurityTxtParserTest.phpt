@@ -543,6 +543,19 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringPathSuggestedOnTheFileLocation(): void
+	{
+		$parseResult = $this->securityTxtParser->parseString("Policy: /security-policy\n", 'https://www.example.com/.well-known/security.txt');
+		$correctValue = $parseResult->getLineErrors()[1][0]->getCorrectValue();
+		Assert::type(Url::class, $correctValue);
+		assert($correctValue instanceof Url);
+		Assert::same('https://www.example.com/security-policy', $correctValue->toUnicodeString());
+		$correctValue = $this->securityTxtParser->parseString("Acknowledgement: /thanks\n", 'https://www.example.com/.well-known/security.txt')->getLineWarnings()[1][1]->getCorrectValue();
+		assert($correctValue instanceof Url);
+		Assert::same('https://www.example.com/thanks', $correctValue->toUnicodeString());
+	}
+
+
 	public function testParseStringLineWithNulByteIsStillParsed(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString(" Cont\0act: https://example.com/\nExpires: " . new DateTimeImmutable('+42 days')->format(SecurityTxtExpires::FORMAT) . "\n");

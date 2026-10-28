@@ -503,7 +503,7 @@ final class SecurityTxt implements JsonSerializable
 	 */
 	private function checkUri(string $uri, string $notUriError, string $notHttpsError, ?SecurityTxtField $field = null, bool $fetched = false): void
 	{
-		new SecurityTxtUriValidator()->validate($uri, $notUriError, $notHttpsError, $field, $fetched);
+		new SecurityTxtUriValidator()->validate($uri, $notUriError, $notHttpsError, $field, $fetched, $this->fileLocation);
 	}
 
 

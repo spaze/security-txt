@@ -46,6 +46,8 @@ enum SecurityTxtNotUriReason: string
 
 	case SchemeMissingHostname = 'scheme-missing-hostname';
 
+	case SchemeMissingPath = 'scheme-missing-path';
+
 	case SchemeMissingFingerprint = 'scheme-missing-fingerprint';
 
 	case SchemeMissingFingerprintWithSpaces = 'scheme-missing-fingerprint-with-spaces';
@@ -125,6 +127,7 @@ enum SecurityTxtNotUriReason: string
 			self::SchemeMissingPhone,
 			self::SchemeMissingPhoneWithSpaces,
 			self::SchemeMissingHostname,
+			self::SchemeMissingPath,
 			self::SchemeMissingFingerprint,
 			self::SchemeMissingFingerprintWithSpaces => "doesn't follow the URI syntax described in RFC 3986, the scheme is missing",
 			self::NotRfc3986 => "doesn't follow the URI syntax described in RFC 3986",
@@ -175,6 +178,7 @@ enum SecurityTxtNotUriReason: string
 			self::SchemeMissingPhone => 'The value looks like a phone number, add the "tel" scheme',
 			self::SchemeMissingPhoneWithSpaces => 'The value looks like a phone number, add the "tel" scheme and use hyphens instead of the spaces',
 			self::SchemeMissingHostname => 'The value looks like a hostname, add the "https" scheme',
+			self::SchemeMissingPath => 'The value is a path, add the "https" scheme and the host',
 			self::SchemeMissingFingerprint => 'The value looks like an OpenPGP key fingerprint, add the "openpgp4fpr" scheme',
 			self::SchemeMissingFingerprintWithSpaces => 'The value looks like an OpenPGP key fingerprint, add the "openpgp4fpr" scheme and remove the spaces',
 			self::MoreThanOneUri => 'Put each URI in a field of its own',
