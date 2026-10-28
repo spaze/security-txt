@@ -366,6 +366,9 @@ final class SecurityTxtParserTest extends TestCase
 			'Cont act: https://example.com/',
 			'X-Foo: bar',
 			'!X~: bar',
+			'Signature: https://example.com/.well-known/security.txt.sig',
+			'signature:',
+			'Signatures: https://example.com/security.txt.sig',
 			'# Report to: security@example.com',
 			'',
 		];
@@ -394,12 +397,28 @@ final class SecurityTxtParserTest extends TestCase
 			'Report to : security@example.com' => [['error', 'The line (Report to : security@example.com) is neither a field nor a comment', '# Report to : security@example.com']],
 			'Contact Us: security@example.com' => [['warning', 'Field Contact Us may be a typo, did you mean Contact?', 'Contact: security@example.com']],
 			'Cont act: https://example.com/' => [['warning', 'Field Cont act may be a typo, did you mean Contact?', 'Contact: https://example.com/']],
-			'X-Foo: bar' => [['warning', 'Field X-Foo is unknown', '# X-Foo: bar']],
-			'!X~: bar' => [['warning', 'Field !X~ is unknown', '# !X~: bar']],
+			'X-Foo: bar' => [['warning', 'Field X-Foo is unknown, researchers ignore fields they don\'t support', '# X-Foo: bar']],
+			'!X~: bar' => [['warning', 'Field !X~ is unknown, researchers ignore fields they don\'t support', '# !X~: bar']],
+			'Signature: https://example.com/.well-known/security.txt.sig' => [['warning', 'Field Signature was removed in draft-foudil-securitytxt-05, the file itself is signed with an OpenPGP cleartext signature instead', null]],
+			'signature:' => [['warning', 'Field signature was removed in draft-foudil-securitytxt-05, the file itself is signed with an OpenPGP cleartext signature instead', null]],
+			'Signatures: https://example.com/security.txt.sig' => [['warning', 'Field Signatures is unknown, researchers ignore fields they don\'t support', '# Signatures: https://example.com/security.txt.sig']],
 			'# Report to: security@example.com' => [],
 			'' => [],
 		], $reported);
 		Assert::same('Put a colon after the Contact field name', $this->securityTxtParser->parseString("Contact https://example.com/\n")->getLineErrors()[1][0]->getHowToFix());
+		Assert::same("Remove the Signature field, and sign the file with an OpenPGP cleartext signature if it isn't signed already", $this->securityTxtParser->parseString("Signature: https://example.com/.well-known/security.txt.sig\n")->getLineWarnings()[1][0]->getHowToFix());
+		$unknown = $this->securityTxtParser->parseString("X-Foo: bar\n")->getLineWarnings()[1][0];
+		$removed = $this->securityTxtParser->parseString("Signature: https://example.com/.well-known/security.txt.sig\n")->getLineWarnings()[1][0];
+		Assert::same([
+			"The X-Foo field can stay, but if it's meant for researchers, use a registered field, or turn it into a comment",
+			null,
+			'2.4',
+			['class' => SecurityTxtUnknownField::class, 'params' => ['X-Foo', 'X-Foo: bar']],
+		], [$unknown->getHowToFix(), $unknown->getSince(), $unknown->getSpecSection(), $unknown->jsonSerialize()]);
+		Assert::same(
+			['draft-foudil-securitytxt-05', '2.3', ['class' => SecurityTxtUnknownField::class, 'params' => ['Signature', 'Signature: https://example.com/.well-known/security.txt.sig', 'signature']]],
+			[$removed->getSince(), $removed->getSpecSection(), $removed->jsonSerialize()],
+		);
 		Assert::null($this->securityTxtParser->parseString("Expires\n")->getLineErrors()[1][0]->getCorrectValue());
 	}
 
@@ -446,7 +465,7 @@ final class SecurityTxtParserTest extends TestCase
 			"\u{202F}Policy: https://example.com/policy" => [['error', 'The line (%E2%80%AFPolicy: https://example.com/policy) starts with whitespace', 'Policy: https://example.com/policy']],
 			"\u{FEFF}Hiring: https://example.com/jobs" => [['error', 'The line (%EF%BB%BFHiring: https://example.com/jobs) starts with whitespace', 'Hiring: https://example.com/jobs']],
 			"\u{200B}# a comment" => [['error', 'The line (%E2%80%8B# a comment) starts with whitespace', '# a comment']],
-			"\u{A0}X-Foo: bar" => [['error', 'The line (%C2%A0X-Foo: bar) starts with whitespace', 'X-Foo: bar'], ['warning', 'Field X-Foo is unknown', '# X-Foo: bar']],
+			"\u{A0}X-Foo: bar" => [['error', 'The line (%C2%A0X-Foo: bar) starts with whitespace', 'X-Foo: bar'], ['warning', 'Field X-Foo is unknown, researchers ignore fields they don\'t support', '# X-Foo: bar']],
 			"\u{A0}\u{A0}" => [['error', 'The line (%C2%A0%C2%A0) is neither a field nor a comment', "# \u{A0}\u{A0}"]],
 			"Contact\u{A0}: https://example.com/" => [['error', 'The line (Contact%C2%A0: https://example.com/) has whitespace between the field name and the colon', 'Contact: https://example.com/']],
 			"Contact:\u{A0}https://example.com/" => [['error', 'The line (Contact:%C2%A0https://example.com/) should have one space between the colon and the value', 'Contact: https://example.com/']],
@@ -836,7 +855,7 @@ final class SecurityTxtParserTest extends TestCase
 			"\x0B" => ['The line (%0B) ends with whitespace other than spaces and tabs'],
 			" \x0B " => ['The line ( %0B ) ends with whitespace other than spaces and tabs'],
 			" \t" => [],
-			"X-Foo: bar\x0B" => ['The line (X-Foo: bar%0B) ends with whitespace other than spaces and tabs', 'Field X-Foo is unknown'],
+			"X-Foo: bar\x0B" => ['The line (X-Foo: bar%0B) ends with whitespace other than spaces and tabs', 'Field X-Foo is unknown, researchers ignore fields they don\'t support'],
 			"Contact: https://example.com/\r\r" => ["The line (Contact: https://example.com/) doesn't end with either <CRLF> or <LF>"],
 			"Contact: https://example.com/\x0B\r" => ['The line (Contact: https://example.com/%0B) ends with whitespace other than spaces and tabs'],
 			"Contact: https://example.com/\r" => [],
@@ -951,7 +970,7 @@ final class SecurityTxtParserTest extends TestCase
 				'The line (Contact :https://example.com/) has whitespace between the field name and the colon',
 				'The line (Contact :https://example.com/) should have one space between the colon and the value',
 			],
-			'X-Foo : bar' => ['The line (X-Foo : bar) has whitespace between the field name and the colon', 'Field X-Foo is unknown'],
+			'X-Foo : bar' => ['The line (X-Foo : bar) has whitespace between the field name and the colon', 'Field X-Foo is unknown, researchers ignore fields they don\'t support'],
 			'Contactt : https://example.com/' => ['The line (Contactt : https://example.com/) has whitespace between the field name and the colon', 'Field Contactt may be a typo, did you mean Contact?'],
 			'# Note : a comment' => [],
 			'Contact: https://example.com/' => [],

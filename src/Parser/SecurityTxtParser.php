@@ -8,6 +8,7 @@ use Spaze\SecurityTxt\Exceptions\SecurityTxtWarning;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetchResult;
 use Spaze\SecurityTxt\Fields\SecurityTxtExpiresFactory;
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
+use Spaze\SecurityTxt\Fields\SecurityTxtRemovedField;
 use Spaze\SecurityTxt\Json\SecurityTxtJsonValueFactory;
 use Spaze\SecurityTxt\Parser\FieldProcessors\AcknowledgmentsAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\BugBountyCheckMultipleFields;
@@ -280,7 +281,9 @@ final class SecurityTxtParser
 			} elseif ($suggestion !== null) {
 				$this->lineWarnings[$lineNumber][] = new SecurityTxtPossibelFieldTypo($field[0], $suggestion->value, $line);
 			} else {
-				$this->lineWarnings[$lineNumber][] = new SecurityTxtUnknownField($field[0], $line);
+				// With the removed field only when there is one, so a stored violation carries no null for it
+				$removedField = SecurityTxtRemovedField::tryFrom($fieldName);
+				$this->lineWarnings[$lineNumber][] = $removedField !== null ? new SecurityTxtUnknownField($field[0], $line, $removedField) : new SecurityTxtUnknownField($field[0], $line);
 			}
 		}
 		if ($signatureLineNumber !== null) {
