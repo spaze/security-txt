@@ -251,9 +251,11 @@ final class SecurityTxtJsonTest extends TestCase
 		// A field name is used for all strings because some violations read the value as a field name, and the constructor doesn't say which ones
 		$string = SecurityTxtField::Contact->value;
 		$type = (string)$parameter->getType();
-		// An enum param takes a case, which goes on the wire as its backing value and comes back as the case, so any one proves the round trip, and the first is used
-		if (is_subclass_of($type, BackedEnum::class)) {
-			$cases = $type::cases();
+		// An enum param takes a case, which goes on the wire as its backing value and comes back as the case, so any one proves the round trip, and the first is used, of a
+		// nullable one too
+		$enum = ltrim($type, '?');
+		if (is_subclass_of($enum, BackedEnum::class)) {
+			$cases = $enum::cases();
 			assert($cases !== []);
 			return $cases[0];
 		}

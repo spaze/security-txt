@@ -10,6 +10,7 @@ namespace Spaze\SecurityTxt\Parser;
 
 use LogicException;
 use Override;
+use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtSplitProvider;
 use Tester\Assert;
 use Tester\TestCase;
@@ -35,6 +36,13 @@ final class SecurityTxtSplitLinesTest extends TestCase
 
 		};
 		$this->securityTxtSplitLines = new SecurityTxtSplitLines($provider);
+	}
+
+
+	public function testSplitLines(): void
+	{
+		$lines = new SecurityTxtSplitLines(new SecurityTxtPregSplitProvider())->splitLines("a\nb\r\nc\rd\r\r\ne");
+		Assert::same(["a\n", "b\r\n", "c\r", "d\r", "\r\n", 'e'], $lines);
 	}
 
 
