@@ -68,7 +68,7 @@ final class SecurityTxtSpecViolationTest extends TestCase
 			'ExpiresSoon 0' => ['The file will be considered stale in less than a day', 'Update the value of the Expires field'],
 			'SeparatorNotComma' => ['The Preferred-Languages field uses a wrong separator (#2 ;), separate multiple values with a comma (,)', 'Use a comma (,) to list multiple languages in the Preferred-Languages field'],
 			'WrongLanguageTags' => ['The language tag #2 english seems invalid, the Preferred-Languages field must contain one or more language tags as defined in RFC 5646', 'Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code, for example en'],
-			'CommonMistake' => ['The language tag #2 cz in the Preferred-Languages field is not correct, the code for the Czech language is cs, not cz', 'Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code'],
+			'CommonMistake' => ['The language tag #2 cz in the Preferred-Languages field is not correct, the code for the Czech language is cs', 'Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code'],
 			'SignedButNoCanonical' => ['When digital signatures are used, it is also recommended that organizations use the Canonical field', 'Add a Canonical field with the URI where the security.txt file is located'],
 			'TopLevelDiffers' => ['The file at the top-level path is different from the one in the /.well-known/ path', 'Redirect the top-level file to the one under the /.well-known/ path'],
 			'WellKnownPathOnly' => ["security.txt wasn't found at the top-level path", 'Redirect the top-level file to the one under the /.well-known/ path'],

@@ -1099,13 +1099,68 @@ final class SecurityTxtParserTest extends TestCase
 	}
 
 
+	public function testParseStringPreferredLanguagesCorrectValue(): void
+	{
+		$values = [
+			'English',
+			'ENGLISH',
+			'english, czech',
+			'Slovak, German',
+			'English, cz',
+			'en_US',
+			'cz_CZ',
+			'en_US, cs_CZ',
+			'zh_Hans_CN',
+			'English, Klingon',
+			'en_',
+			'Deutsch',
+			'cz',
+			'cze',
+			'CZE',
+			'cze-CZ',
+			'cz-CZ',
+			'czk',
+			'en, czh',
+		];
+		$reported = [];
+		foreach ($values as $value) {
+			$reported[$value] = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation::class, $violation->getCorrectValue()], $this->securityTxtParser->parseString("Preferred-Languages: {$value}\n")->getLineErrors()[1] ?? []);
+		}
+		$wrong = SecurityTxtPreferredLanguagesWrongLanguageTags::class;
+		$czech = SecurityTxtPreferredLanguagesCommonMistake::class;
+		Assert::same([
+			'English' => [[$wrong, 'en']],
+			'ENGLISH' => [[$wrong, 'en']],
+			'english, czech' => [[$wrong, 'en, cs']],
+			'Slovak, German' => [[$wrong, 'sk, de']],
+			'English, cz' => [[$wrong, 'en, cs']],
+			'en_US' => [[$wrong, 'en-US']],
+			'cz_CZ' => [[$wrong, 'cs-CZ']],
+			'en_US, cs_CZ' => [[$wrong, 'en-US, cs-CZ']],
+			'zh_Hans_CN' => [[$wrong, 'zh-Hans-CN']],
+			'English, Klingon' => [[$wrong, null]],
+			'en_' => [[$wrong, null]],
+			'Deutsch' => [[$wrong, null]],
+			'cz' => [[$czech, 'cs']],
+			'cze' => [[$czech, 'cs']],
+			'CZE' => [[$czech, 'cs']],
+			'cze-CZ' => [[$czech, 'cs-CZ']],
+			'cz-CZ' => [[$czech, 'cs-CZ']],
+			'czk' => [],
+			'en, czh' => [],
+		], $reported);
+		Assert::same('Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code', $this->securityTxtParser->parseString("Preferred-Languages: English\n")->getLineErrors()[1][0]->getHowToFix());
+		Assert::same('Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code, for example en', $this->securityTxtParser->parseString("Preferred-Languages: Deutsch\n")->getLineErrors()[1][0]->getHowToFix());
+	}
+
+
 	public function testParseStringPreferredLanguagesCommonMistake(): void
 	{
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: CZ,en\n");
 		$error = $parseResult->getLineErrors()[1][0];
 		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
-		Assert::same('The language tag #1 CZ in the Preferred-Languages field is not correct, the code for the Czech language is cs, not cz', $error->getMessage());
+		Assert::same('The language tag #1 CZ in the Preferred-Languages field is not correct, the code for the Czech language is cs', $error->getMessage());
 		Assert::same(['CZ', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
