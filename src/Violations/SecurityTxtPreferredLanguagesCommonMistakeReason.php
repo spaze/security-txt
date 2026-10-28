@@ -20,7 +20,7 @@ enum SecurityTxtPreferredLanguagesCommonMistakeReason: string
 	public function getFormat(): string
 	{
 		return match ($this) {
-			self::CzechUsesCsNotCz => 'the code for Czech language is %s, not %s',
+			self::CzechUsesCsNotCz => 'the code for the Czech language is %s, not %s',
 		};
 	}
 

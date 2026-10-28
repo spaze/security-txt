@@ -29,7 +29,7 @@ final class SecurityTxtPreferredLanguagesWrongLanguageTags extends SecurityTxtSp
 			[...$tagsValues, SecurityTxtField::PreferredLanguages->value],
 			'draft-foudil-securitytxt-05',
 			null,
-			'Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code like for example %s',
+			'Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code, for example %s',
 			['en'],
 			'2.5.8',
 		);

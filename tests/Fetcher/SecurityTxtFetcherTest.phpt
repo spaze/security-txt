@@ -505,7 +505,7 @@ final class SecurityTxtFetcherTest extends TestCase
 			"security.txt wasn't found under the /.well-known/ path: Can't read {$wellKnown}, the redirects go in a loop (redirects: {$wellKnown} → {$wellKnown})",
 		], $messages['a /.well-known/ redirect loop and the file at the top level'] ?? null);
 		Assert::same([
-			"security.txt not found at the top-level path: Can't read {$topLevel}, the redirects go in a loop (redirects: {$topLevel} → {$topLevel})",
+			"security.txt wasn't found at the top-level path: Can't read {$topLevel}, the redirects go in a loop (redirects: {$topLevel} → {$topLevel})",
 		], $messages['a top-level redirect loop, the top-level location required'] ?? null);
 		Assert::same([
 			'a top-level redirect loop' => [[SecurityTxtRedirectLoopException::class, $topLevel]],

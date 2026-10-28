@@ -14,12 +14,12 @@ final class SecurityTxtWellKnownPathOnly extends SecurityTxtSpecViolation
 	public function __construct(?SecurityTxtFetcherException $topLevelException = null)
 	{
 		if ($topLevelException !== null) {
-			$format = '%s not found at the top-level path: ' . $topLevelException->getMessageFormat();
+			$format = "%s wasn't found at the top-level path: " . $topLevelException->getMessageFormat();
 			$values = ['security.txt', ...$topLevelException->getMessageValues()];
 			$howToFixFormat = 'Make %s readable and redirect it to the file under the %s path';
 			$howToFixValues = ['/security.txt', '/.well-known/'];
 		} else {
-			$format = '%s not found at the top-level path';
+			$format = "%s wasn't found at the top-level path";
 			$values = ['security.txt'];
 			$howToFixFormat = 'Redirect the top-level file to the one under the %s path';
 			$howToFixValues = ['/.well-known/'];

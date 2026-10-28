@@ -71,7 +71,7 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Using [1mhttps://example.com/.well-known/security.txt[0m
 		[1;31m[Error][0m The file at https://example.com/.well-known/security.txt has a correct Content-Type of text/plain but the charset=utf-8 parameter is missing (How to fix: Add a charset=utf-8 parameter, e.g. text/plain; charset=utf-8)
 		[1;31m[Error][0m on line [1m2[0m: The file is considered stale and should not be used (How to fix: The Expires field should contain a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
-		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
+		[1m[Warning][0m security.txt wasn't found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file has expired 42 days ago[0m ({$this->expires})
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
@@ -137,13 +137,13 @@ final class SecurityTxtCheckHostCliTest extends TestCase
 		[1;90m[Info][0m Not found [1mhttps://nah1.example/[0m
 		[1;90m[Info][0m Using [1mhttps://verbose.example/.well-known/security.txt[0m
 		[1;31m[Error][0m on line [1m2[0m: The file is considered stale and should not be used (How to fix: The Expires field should contain a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
-		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
+		[1m[Warning][0m security.txt wasn't found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file has expired 42 days ago[0m ({$this->expires})
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		[1;90m[Info][0m Parsing security.txt for [1mnon-verbose.example[0m
 		[1;90m[Info][0m Using [1mhttps://non-verbose.example/.well-known/security.txt[0m
 		[1;31m[Error][0m The Expires field must always be present (How to fix: Add an Expires field with a date and time in the future formatted according to the Internet profile of ISO 8601 as defined in RFC 3339, e.g. {$this->getExpiresExample()})
-		[1m[Warning][0m security.txt not found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
+		[1m[Warning][0m security.txt wasn't found at the top-level path (How to fix: Redirect the top-level file to the one under the /.well-known/ path)
 		[1;31m[Error][0m [1;31mThe file is invalid[0m
 		EOT;
 		Assert::same($expected . "\n", $output);

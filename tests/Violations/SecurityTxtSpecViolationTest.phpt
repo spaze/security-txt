@@ -10,6 +10,7 @@ namespace Spaze\SecurityTxt\Violations;
 
 use Tester\Assert;
 use Tester\TestCase;
+use Uri\WhatWg\Url;
 
 require __DIR__ . '/../bootstrap.php';
 
@@ -38,6 +39,41 @@ final class SecurityTxtSpecViolationTest extends TestCase
 		$noContact = new SecurityTxtNoContact();
 		Assert::same('2.5.3', $noContact->getSpecSection());
 		Assert::same(['2.5.4'], $noContact->getSeeAlsoSections());
+	}
+
+
+	public function testWording(): void
+	{
+		$url = new Url('https://example.com/.well-known/security.txt');
+		$violations = [
+			'LineNoEol' => new SecurityTxtLineNoEol('Contact: https://example.com/'),
+			'ContentTypeInvalid' => new SecurityTxtContentTypeInvalid($url, 'text/html'),
+			'ContentTypeInvalid none' => new SecurityTxtContentTypeInvalid($url, null),
+			'ExpiresSoon 1' => new SecurityTxtExpiresSoon(1),
+			'ExpiresSoon 0' => new SecurityTxtExpiresSoon(0),
+			'SeparatorNotComma' => new SecurityTxtPreferredLanguagesSeparatorNotComma([2 => ';'], ['en', 'cs']),
+			'WrongLanguageTags' => new SecurityTxtPreferredLanguagesWrongLanguageTags([2 => 'english']),
+			'CommonMistake' => new SecurityTxtPreferredLanguagesCommonMistake(2, 'cz', 'cs', SecurityTxtPreferredLanguagesCommonMistakeReason::CzechUsesCsNotCz),
+			'SignedButNoCanonical' => new SecurityTxtSignedButNoCanonical(),
+			'TopLevelDiffers' => new SecurityTxtTopLevelDiffers('a', 'b'),
+			'WellKnownPathOnly' => new SecurityTxtWellKnownPathOnly(),
+			'ExpiresOldFormat' => new SecurityTxtExpiresOldFormat('2027-01-31T23:59:59+00:00'),
+		];
+		$actual = array_map(fn(SecurityTxtSpecViolation $violation): array => [$violation->getMessage(), $violation->getHowToFix()], $violations);
+		Assert::same([
+			'LineNoEol' => ["The line (Contact: https://example.com/) doesn't end with either <CRLF> or <LF>", 'End the line with either <CRLF> or <LF>'],
+			'ContentTypeInvalid' => ['The file at https://example.com/.well-known/security.txt has a Content-Type of text/html but it should be a Content-Type of text/plain with the charset parameter set to utf-8', 'Send a correct Content-Type header value of text/plain with the charset parameter set to utf-8'],
+			'ContentTypeInvalid none' => ['The file at https://example.com/.well-known/security.txt has no Content-Type but it should be a Content-Type of text/plain with the charset parameter set to utf-8', 'Send a correct Content-Type header value of text/plain with the charset parameter set to utf-8'],
+			'ExpiresSoon 1' => ['The file will be considered stale in 1 day', 'Update the value of the Expires field'],
+			'ExpiresSoon 0' => ['The file will be considered stale in less than a day', 'Update the value of the Expires field'],
+			'SeparatorNotComma' => ['The Preferred-Languages field uses a wrong separator (#2 ;), separate multiple values with a comma (,)', 'Use a comma (,) to list multiple languages in the Preferred-Languages field'],
+			'WrongLanguageTags' => ['The language tag #2 english seems invalid, the Preferred-Languages field must contain one or more language tags as defined in RFC 5646', 'Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code, for example en'],
+			'CommonMistake' => ['The language tag #2 cz in the Preferred-Languages field is not correct, the code for the Czech language is cs, not cz', 'Use language tags as defined in RFC 5646, which usually means the shortest ISO 639 code'],
+			'SignedButNoCanonical' => ['When digital signatures are used, it is also recommended that organizations use the Canonical field', 'Add a Canonical field with the URI where the security.txt file is located'],
+			'TopLevelDiffers' => ['The file at the top-level path is different from the one in the /.well-known/ path', 'Redirect the top-level file to the one under the /.well-known/ path'],
+			'WellKnownPathOnly' => ["security.txt wasn't found at the top-level path", 'Redirect the top-level file to the one under the /.well-known/ path'],
+			'ExpiresOldFormat' => ['The value of the Expires field follows the format defined in Section 3.3 of RFC 5322 but it should be formatted according to the Internet profile of ISO 8601 as defined in RFC 3339', 'Change the value of the Expires field to use the correct format'],
+		], $actual);
 	}
 
 }

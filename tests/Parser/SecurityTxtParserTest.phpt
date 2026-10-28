@@ -774,7 +774,7 @@ final class SecurityTxtParserTest extends TestCase
 			" \x0B " => ['The line ( %0B ) ends with whitespace other than spaces and tabs'],
 			" \t" => [],
 			"X-Foo: bar\x0B" => ['The line (X-Foo: bar%0B) ends with whitespace other than spaces and tabs', 'Field X-Foo is unknown'],
-			"Contact: https://example.com/\r\r" => ["The line (Contact: https://example.com/) doesn't end with neither <CRLF> nor <LF>"],
+			"Contact: https://example.com/\r\r" => ["The line (Contact: https://example.com/) doesn't end with either <CRLF> or <LF>"],
 			"Contact: https://example.com/\x0B\r" => ['The line (Contact: https://example.com/%0B) ends with whitespace other than spaces and tabs'],
 			"Contact: https://example.com/\r" => [],
 			"Contact: https://example.com/ \t" => [],
@@ -965,7 +965,7 @@ final class SecurityTxtParserTest extends TestCase
 		$error = $parseResult->getLineErrors()[1][0];
 		Assert::count(1, $parseResult->getLineErrors());
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
-		Assert::same('The language tag #1 CZ in the Preferred-Languages field is not correct, the code for Czech language is cs, not cz', $error->getMessage());
+		Assert::same('The language tag #1 CZ in the Preferred-Languages field is not correct, the code for the Czech language is cs, not cz', $error->getMessage());
 		Assert::same(['CZ', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());
@@ -1760,7 +1760,7 @@ final class SecurityTxtParserTest extends TestCase
 			[new SecurityTxtTopLevelPathOnly()],
 		);
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult);
-		Assert::same("The line (Expires: 2020-12-31T23:59:59.000Z) doesn't end with neither <CRLF> nor <LF>", $parseResult->getLineErrors()[2][0]->getMessage());
+		Assert::same("The line (Expires: 2020-12-31T23:59:59.000Z) doesn't end with either <CRLF> or <LF>", $parseResult->getLineErrors()[2][0]->getMessage());
 		Assert::same("The file is considered stale and should not be used", $parseResult->getLineErrors()[2][1]->getMessage());
 		Assert::same([], $parseResult->getLineWarnings());
 		Assert::same([], $parseResult->getFileErrors());
@@ -1815,7 +1815,7 @@ final class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
 		Assert::type(SecurityTxtContentTypeInvalid::class, $parseResult->getFetchErrors()[0]);
 		Assert::same(
-			'The file at https://example.com/security.txt has a Content-Type of foo/bar but it should be a Content-Type of text/plain with the charset parameter set to charset=utf-8',
+			'The file at https://example.com/security.txt has a Content-Type of foo/bar but it should be a Content-Type of text/plain with the charset parameter set to utf-8',
 			$parseResult->getFetchErrors()[0]->getMessage(),
 		);
 
@@ -1832,7 +1832,7 @@ final class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseFetchResult($fetchResult, 14, true);
 		Assert::type(SecurityTxtContentTypeInvalid::class, $parseResult->getFetchErrors()[0]);
 		Assert::same(
-			'The file at https://example.com/security.txt has no Content-Type but it should be a Content-Type of text/plain with the charset parameter set to charset=utf-8',
+			'The file at https://example.com/security.txt has no Content-Type but it should be a Content-Type of text/plain with the charset parameter set to utf-8',
 			$parseResult->getFetchErrors()[0]->getMessage(),
 		);
 	}
