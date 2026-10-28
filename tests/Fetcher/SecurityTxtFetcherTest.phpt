@@ -775,6 +775,23 @@ final class SecurityTxtFetcherTest extends TestCase
 	}
 
 
+	public function testFetchCharsetParameter(): void
+	{
+		$errors = [];
+		foreach (['text/plain; charset="utf-8"', 'text/plain; format=flowed; charset=UTF-8', 'text/plain; format=flowed', 'text/plain; charset = utf-8'] as $contentType) {
+			$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(200, ['content-type' => $contentType], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
+			$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
+			$errors[$contentType] = array_map(fn(SecurityTxtSpecViolation $error): string => $error->getMessage(), $fetcher->fetch(new Url('https://com.example/'), false, true)->getErrors());
+		}
+		Assert::same([
+			'text/plain; charset="utf-8"' => [],
+			'text/plain; format=flowed; charset=UTF-8' => [],
+			'text/plain; format=flowed' => ['The file at https://com.example/.well-known/security.txt has a correct Content-Type of text/plain but the charset=utf-8 parameter is missing'],
+			'text/plain; charset = utf-8' => ['The file at https://com.example/.well-known/security.txt has a correct Content-Type of text/plain but the charset = utf-8 parameter should be changed to charset=utf-8'],
+		], $errors);
+	}
+
+
 	public function testFetchNotFound(): void
 	{
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse(404, ['content-type' => 'text/plain; charset=utf-42'], 'random', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
