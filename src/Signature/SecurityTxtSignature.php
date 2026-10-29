@@ -16,8 +16,11 @@ use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnknownSigningKeyException
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnusableSigningKeyException;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyExpired;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyRevoked;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignedFileMalformed;
 use Spaze\SecurityTxt\Violations\SecurityTxtSpecViolation;
 
@@ -64,7 +67,20 @@ final class SecurityTxtSignature
 			throw new SecurityTxtWarning($violation, $e);
 		}
 
-		if (!$this->isSignatureKindaOkay($signature->getSummary())) {
+		$summary = $signature->getSummary();
+		// A good signature by a revoked key may have been made with a stolen one, a bad one is invalid whoever's key it is
+		if (($summary & GNUPG_SIGSUM_KEY_REVOKED) !== 0 && ($summary & GNUPG_SIGSUM_RED) === 0) {
+			throw new SecurityTxtError(new SecurityTxtSignatureKeyRevoked($signature->getFingerprint()));
+		}
+		// GnuPG fails an expired signature, while it gives one the green bit when the keyring trusts the key
+		if (($summary & GNUPG_SIGSUM_SIG_EXPIRED) !== 0 && ($summary & GNUPG_SIGSUM_RED) === 0) {
+			throw new SecurityTxtError(new SecurityTxtSignatureExpired());
+		}
+		// Not accepted as GnuPG accepts it, because the summary for a key that has expired and been revoked says only that it has expired
+		if (($summary & GNUPG_SIGSUM_KEY_EXPIRED) !== 0 && ($summary & GNUPG_SIGSUM_RED) === 0) {
+			throw new SecurityTxtError(new SecurityTxtSignatureKeyExpired($signature->getFingerprint()));
+		}
+		if (!$this->isSignatureKindaOkay($signature)) {
 			throw new SecurityTxtError(new SecurityTxtSignatureInvalid());
 		}
 		return new SecurityTxtSignatureVerifyResult($signature->getFingerprint(), (new DateTimeImmutable())->setTimestamp($signature->getTimestamp()));
@@ -73,11 +89,16 @@ final class SecurityTxtSignature
 
 	/**
 	 * "Kinda" okay: a structurally valid signature whose key isn't in the keyring (GNUPG_SIGSUM_KEY_MISSING) is accepted
-	 * too, not only a fully verified one (GNUPG_SIGSUM_GREEN); only a bad signature (GNUPG_SIGSUM_RED) is rejected. The key
-	 * is usually absent when checking someone else's security.txt, see "Signature verification" in the README.
+	 * too, not only a fully verified one (GNUPG_SIGSUM_GREEN), and so is a good one by a key the keyring has but doesn't trust, which has no summary bit
+	 * and no error at all; a bad signature (GNUPG_SIGSUM_RED) is rejected. The key is usually absent when checking someone else's security.txt, see
+	 * "Signature verification" in the README.
 	 */
-	private function isSignatureKindaOkay(int $summary): bool
+	private function isSignatureKindaOkay(SecurityTxtSignatureVerifySignatureInfo $signature): bool
 	{
+		$summary = $signature->getSummary();
+		if ($summary === 0) {
+			return $signature->getStatus() === 0;
+		}
 		return (($summary & GNUPG_SIGSUM_GREEN) !== 0 || ($summary & GNUPG_SIGSUM_KEY_MISSING) !== 0) && ($summary & GNUPG_SIGSUM_RED) === 0;
 	}
 
