@@ -17,6 +17,7 @@ use Spaze\SecurityTxt\Parser\SecurityTxtSplitLines;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtPregSplitProvider;
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtCannotVerifySignatureException;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyRevoked;
 use SplFileInfo;
@@ -28,6 +29,21 @@ require __DIR__ . '/../../bootstrap.php';
 
 final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 {
+
+	private const string EXPIRED_SIGNATURE = <<< EOT
+		-----BEGIN PGP SIGNED MESSAGE-----
+		Hash: SHA512
+
+		the pool on the roof must have a leak
+		-----BEGIN PGP SIGNATURE-----
+
+		iHsEARYKACMWIQQ5FoDJLVfLl6hj5jJHib2lL7c/uQUCXgvvEAWDAAFRgAAKCRBH
+		ib2lL7c/uc50AP9vVBkIuqe2qvG7aXYZMyth+oJvW/0arqSujHI/gJkL6QD/fBsP
+		98oW7BSs8HWTwh6BbXho12jaqvFk+yt9KpBGMgs=
+		=Qit0
+		-----END PGP SIGNATURE-----
+		EOT;
+
 
 	public function testSignAndVerify(): void
 	{
@@ -266,6 +282,36 @@ final class SecurityTxtSignatureGnuPgProviderTest extends TestCase
 		Assert::same(GNUPG_SIGSUM_KEY_MISSING, $verified->getSummary());
 		Assert::same(9, $verified->getStatus());
 		Assert::same(1753150207, $verified->getTimestamp());
+	}
+
+
+	/**
+	 * A signature by a key that doesn't expire, which itself expired on the day after it was made in 2020
+	 */
+	public function testVerifyExpiredSignature(): void
+	{
+		$key = <<< EOT
+		-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+		mDMEXgvhABYJKwYBBAHaRw8BAQdAdSeJTgwBPu3EtJRV0wVLG8PuR+IKeAyLlEEV
+		SkJpxKi0W0V4cGlyZWQgc2lnbmF0dXJlIHRlc3Qga2V5IChodHRwczovL3lvdXR1
+		LmJlL2RRdzR3OVdnWGNRKSA8ZXhwaXJlZC1zaWduYXR1cmVAdGVzdHMuZXhhbXBs
+		ZT6IkAQTFgoAOBYhBDkWgMktV8uXqGPmMkeJvaUvtz+5BQJeC+EAAhsDBQsJCAcC
+		BhUKCQgLAgQWAgMBAh4BAheAAAoJEEeJvaUvtz+5ji4A/A+qHeZbDrlsS4mVvIjX
+		SG4tBCj0+pPVCt/333riq+IOAQCvYCn5qUr0gcJTDsdLNy2kWsCms6/SBBi4TJdI
+		IV9pAA==
+		=wPZQ
+		-----END PGP PUBLIC KEY BLOCK-----
+		EOT;
+		$this->withKeyring($key, function (string $homeDir): void {
+			$verified = new SecurityTxtSignatureGnuPgProvider($homeDir)->verify(self::EXPIRED_SIGNATURE);
+			Assert::same(['391680C92D57CB97A863E6324789BDA52FB73FB9', GNUPG_SIGSUM_SIG_EXPIRED, 117440666], [$verified->getFingerprint(), $verified->getSummary(), $verified->getStatus()]);
+			$e = Assert::throws(function () use ($homeDir): void {
+				new SecurityTxtSignature(new SecurityTxtSignatureGnuPgProvider($homeDir))->verify(self::EXPIRED_SIGNATURE);
+			}, SecurityTxtError::class);
+			assert($e instanceof SecurityTxtError);
+			Assert::type(SecurityTxtSignatureExpired::class, $e->getViolation());
+		});
 	}
 
 

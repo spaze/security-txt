@@ -24,6 +24,7 @@ use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnknownSigningKeyException
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnusableSigningKeyException;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyExpired;
@@ -189,6 +190,32 @@ final class SecurityTxtSignatureTest extends TestCase
 		$violation = new SecurityTxtSignatureKeyExpired('fingerprint1337');
 		Assert::same('The file is digitally signed using an OpenPGP cleartext signature but the keyring the signature was verified with says the key fingerprint1337 has expired', $violation->getMessage());
 		Assert::same("Extend the key's expiration date and publish the updated public key, or sign the file with a key that hasn't expired", $violation->getHowToFix());
+	}
+
+
+	public function testVerifyExpiredSignature(): void
+	{
+		$results = [];
+		foreach ([GNUPG_SIGSUM_SIG_EXPIRED, GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_GREEN, GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_KEY_EXPIRED, GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_RED, GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_KEY_REVOKED] as $summary) {
+			$signature = new SecurityTxtSignature($this->getSignatureProvider(verifySignatureInfo: new SecurityTxtSignatureVerifySignatureInfo($summary, 'fingerprint1337', 0x123456789)));
+			try {
+				$signature->verify('signature expired');
+				$results[$summary] = null;
+			} catch (SecurityTxtError $e) {
+				$violation = $e->getViolation();
+				$results[$summary] = $violation::class;
+			}
+		}
+		Assert::same([
+			GNUPG_SIGSUM_SIG_EXPIRED => SecurityTxtSignatureExpired::class,
+			GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_GREEN => SecurityTxtSignatureExpired::class,
+			GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_KEY_EXPIRED => SecurityTxtSignatureExpired::class,
+			GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_RED => SecurityTxtSignatureInvalid::class,
+			GNUPG_SIGSUM_SIG_EXPIRED | GNUPG_SIGSUM_KEY_REVOKED => SecurityTxtSignatureKeyRevoked::class,
+		], $results);
+		$violation = new SecurityTxtSignatureExpired();
+		Assert::same('The file is digitally signed using an OpenPGP cleartext signature but the signature has expired', $violation->getMessage());
+		Assert::same("Sign the file again, with a signature that doesn't expire before the date in the Expires field", $violation->getHowToFix());
 	}
 
 

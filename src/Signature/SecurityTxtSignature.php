@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnknownSigningKeyException
 use Spaze\SecurityTxt\Signature\Exceptions\SecurityTxtUnusableSigningKeyException;
 use Spaze\SecurityTxt\Signature\Providers\SecurityTxtSignatureProvider;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureCannotVerify;
+use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureExtensionNotLoaded;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureInvalid;
 use Spaze\SecurityTxt\Violations\SecurityTxtSignatureKeyExpired;
@@ -70,6 +71,10 @@ final class SecurityTxtSignature
 		// A good signature by a revoked key may have been made with a stolen one, a bad one is invalid whoever's key it is
 		if (($summary & GNUPG_SIGSUM_KEY_REVOKED) !== 0 && ($summary & GNUPG_SIGSUM_RED) === 0) {
 			throw new SecurityTxtError(new SecurityTxtSignatureKeyRevoked($signature->getFingerprint()));
+		}
+		// GnuPG fails an expired signature, while it gives one the green bit when the keyring trusts the key
+		if (($summary & GNUPG_SIGSUM_SIG_EXPIRED) !== 0 && ($summary & GNUPG_SIGSUM_RED) === 0) {
+			throw new SecurityTxtError(new SecurityTxtSignatureExpired());
 		}
 		// Not accepted as GnuPG accepts it, because the summary for a key that has expired and been revoked says only that it has expired
 		if (($summary & GNUPG_SIGSUM_KEY_EXPIRED) !== 0 && ($summary & GNUPG_SIGSUM_RED) === 0) {
