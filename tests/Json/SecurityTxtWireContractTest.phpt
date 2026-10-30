@@ -100,6 +100,7 @@ final class SecurityTxtWireContractTest extends TestCase
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtExpiresSoon' => '(int $inDays)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtExpiresTooLong' => '()',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtExpiresWrongFormat' => '(?string $correctValue = NULL)',
+			'Spaze\\SecurityTxt\\Violations\\SecurityTxtFieldUriInWellKnown' => '(Spaze\\SecurityTxt\\Fields\\SecurityTxtField $field, string $uri)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtFieldWhitespaceBeforeColon' => '(string $fieldName, string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtFieldWrongSpaceAfterColon' => '(string $fieldName, string $line)',
 			'Spaze\\SecurityTxt\\Violations\\SecurityTxtFileLocationNotHttps' => '(string $uri)',
