@@ -182,7 +182,7 @@ final class SecurityTxtParserTest extends TestCase
 
 
 	/**
-	 * A date or a time that doesn't exist is refused, and the one PHP would roll it over to is neither suggested nor kept
+	 * A date or a time that doesn't exist, or a day of the week that isn't the date's, is refused, and the date PHP would roll it over or move it to is neither suggested nor kept
 	 */
 	public function testParseStringExpiresFieldNoSuchDate(): void
 	{
@@ -215,12 +215,25 @@ final class SecurityTxtParserTest extends TestCase
 				$parseResult->getSecurityTxt()->getExpires()?->getValue(),
 			];
 		}
-		$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: Mon, 30 Feb {$year} 00:00:00 +0000\n");
-		$results['RFC 5322'] = [
-			array_map(fn(SecurityTxtSpecViolation $error): array => [$error::class, $error->getCorrectValue()], $parseResult->getLineErrors()[2] ?? []),
-			$parseResult->getSecurityTxt()->getExpires()?->getValue(),
+		$dayOfWeek = new DateTimeImmutable("{$year}-01-01")->format('D');
+		$otherDayOfWeek = new DateTimeImmutable("{$year}-01-02")->format('D');
+		$values = [
+			'RFC 5322' => "{$dayOfWeek}, 01 Jan {$year} 00:00:00 +0000",
+			'RFC 5322 February 30' => "30 Feb {$year} 00:00:00 +0000",
+			'RFC 5322 another day of the week' => "{$otherDayOfWeek}, 01 Jan {$year} 00:00:00 +0000",
+			'another day of the week' => "{$otherDayOfWeek} {$year}-01-01 00:00:00",
+			'a timestamp' => '@' . new DateTimeImmutable("{$year}-01-02 00:00:00 +0000")->getTimestamp(),
+			'a week date' => new DateTimeImmutable("{$year}-01-02")->format('o-\\WW-N'),
 		];
+		foreach ($values as $key => $value) {
+			$parseResult = $this->securityTxtParser->parseString("Contact: https://example.com/\nExpires: {$value}\n");
+			$results[$key] = [
+				array_map(fn(SecurityTxtSpecViolation $error): array => [$error::class, $error->getCorrectValue()], $parseResult->getLineErrors()[2] ?? []),
+				$parseResult->getSecurityTxt()->getExpires()?->getValue(),
+			];
+		}
 		$wrongFormat = [[[SecurityTxtExpiresWrongFormat::class, new SecurityTxtExpiresWrongFormat()->getCorrectValue()]], null];
+		$weekDate = new DateTimeImmutable("{$year}-01-02")->format(SecurityTxtExpires::FORMAT);
 		Assert::same([
 			'-02-28T00:00:00Z' => [[], "{$year}-02-28T00:00:00+00:00"],
 			'-02-29T00:00:00Z' => $wrongFormat,
@@ -237,7 +250,12 @@ final class SecurityTxtParserTest extends TestCase
 			'-01-02T00:00:00+23:59' => [[], "{$year}-01-02T00:00:00+23:59"],
 			'-01-02T00:00:00+24:00' => $wrongFormat,
 			'-01-02T00:00:00-01:60' => $wrongFormat,
-			'RFC 5322' => $wrongFormat,
+			'RFC 5322' => [[[SecurityTxtExpiresOldFormat::class, "{$year}-01-01T00:00:00+00:00"]], "{$year}-01-01T00:00:00+00:00"],
+			'RFC 5322 February 30' => $wrongFormat,
+			'RFC 5322 another day of the week' => $wrongFormat,
+			'another day of the week' => $wrongFormat,
+			'a timestamp' => [[[SecurityTxtExpiresWrongFormat::class, "{$year}-01-02T00:00:00+00:00"]], "{$year}-01-02T00:00:00+00:00"],
+			'a week date' => [[[SecurityTxtExpiresWrongFormat::class, $weekDate]], $weekDate],
 		], $results);
 	}
 
@@ -661,6 +679,7 @@ final class SecurityTxtParserTest extends TestCase
 		return [
 			['+3 weeks', 20, 22],
 			['±3 days', 364, 366],
+			['next Monday', 0, 7],
 		];
 	}
 
