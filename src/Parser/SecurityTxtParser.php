@@ -26,6 +26,7 @@ use Spaze\SecurityTxt\Parser\FieldProcessors\HiringAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\PolicyAddFieldValue;
 use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesCheckMultipleFields;
 use Spaze\SecurityTxt\Parser\FieldProcessors\PreferredLanguagesSetFieldValue;
+use Spaze\SecurityTxt\Parser\FieldProcessors\UriCheckFieldValueInWellKnown;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
@@ -84,6 +85,7 @@ final class SecurityTxtParser
 		}
 		$this->fieldProcessors[SecurityTxtField::Acknowledgments->value] = [
 			new AcknowledgmentsAddFieldValue(),
+			new UriCheckFieldValueInWellKnown(SecurityTxtField::Acknowledgments),
 		];
 		$this->fieldProcessors[SecurityTxtField::BugBounty->value] = [
 			new BugBountyCheckMultipleFields(),
@@ -94,12 +96,14 @@ final class SecurityTxtParser
 		];
 		$this->fieldProcessors[SecurityTxtField::Contact->value] = [
 			new ContactAddFieldValue(),
+			new UriCheckFieldValueInWellKnown(SecurityTxtField::Contact),
 		];
 		$this->fieldProcessors[SecurityTxtField::Csaf->value] = [
 			new CsafAddFieldValue(),
 		];
 		$this->fieldProcessors[SecurityTxtField::Encryption->value] = [
 			new EncryptionAddFieldValue(),
+			new UriCheckFieldValueInWellKnown(SecurityTxtField::Encryption),
 		];
 		$expiresFieldFormat = new ExpiresCheckFieldFormat();
 		$this->fieldProcessors[SecurityTxtField::Expires->value] = [
@@ -110,9 +114,11 @@ final class SecurityTxtParser
 		];
 		$this->fieldProcessors[SecurityTxtField::Hiring->value] = [
 			new HiringAddFieldValue(),
+			new UriCheckFieldValueInWellKnown(SecurityTxtField::Hiring),
 		];
 		$this->fieldProcessors[SecurityTxtField::Policy->value] = [
 			new PolicyAddFieldValue(),
+			new UriCheckFieldValueInWellKnown(SecurityTxtField::Policy),
 		];
 		$this->fieldProcessors[SecurityTxtField::PreferredLanguages->value] = [
 			new PreferredLanguagesCheckMultipleFields(),

@@ -47,6 +47,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtExpired;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresOldFormat;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresTooLong;
 use Spaze\SecurityTxt\Violations\SecurityTxtExpiresWrongFormat;
+use Spaze\SecurityTxt\Violations\SecurityTxtFieldUriInWellKnown;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWhitespaceBeforeColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFieldWrongSpaceAfterColon;
 use Spaze\SecurityTxt\Violations\SecurityTxtFileLocationNotHttps;
@@ -62,6 +63,7 @@ use Spaze\SecurityTxt\Violations\SecurityTxtMultipleExpires;
 use Spaze\SecurityTxt\Violations\SecurityTxtMultiplePreferredLanguages;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoContact;
 use Spaze\SecurityTxt\Violations\SecurityTxtNoExpires;
+use Spaze\SecurityTxt\Violations\SecurityTxtPolicyNotUri;
 use Spaze\SecurityTxt\Violations\SecurityTxtPossibelFieldTypo;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesCommonMistake;
 use Spaze\SecurityTxt\Violations\SecurityTxtPreferredLanguagesEmpty;
@@ -553,6 +555,44 @@ final class SecurityTxtParserTest extends TestCase
 		$correctValue = $this->securityTxtParser->parseString("Acknowledgement: /thanks\n", 'https://www.example.com/.well-known/security.txt')->getLineWarnings()[1][1]->getCorrectValue();
 		assert($correctValue instanceof Url);
 		Assert::same('https://www.example.com/thanks', $correctValue->toUnicodeString());
+	}
+
+
+	public function testParseStringUriInWellKnown(): void
+	{
+		$contents = implode("\n", [
+			'Contact: https://example.com/.well-known/report',
+			'Encryption: https://example.com/.well-known/key.asc',
+			'Acknowledgments: https://example.com/.well-known/thanks.html',
+			'Policy: https://example.com/.well-known/policy.html',
+			'Hiring: https://example.com/.well-known/jobs.html',
+			'Canonical: https://example.com/.well-known/security.txt',
+			'CSAF: https://example.com/.well-known/csaf/provider-metadata.json',
+			'Acknowledgement: /.well-known/thanks.html',
+			'Contact: example.com/.well-known/report',
+			'Policy: <https://example.com/.well-known/policy.html>',
+			'Policy: https://example.com/policy.html',
+		]) . "\n";
+		$parseResult = $this->securityTxtParser->parseString($contents, 'https://example.com/.well-known/security.txt');
+		$classes = fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
+		Assert::same([9 => [SecurityTxtContactNotUri::class], 10 => [SecurityTxtPolicyNotUri::class]], array_map($classes, $parseResult->getLineErrors()));
+		$warnings = array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation instanceof SecurityTxtFieldUriInWellKnown ? $violation->getMessage() : $violation::class, $violations), $parseResult->getLineWarnings());
+		$wellKnown = fn(string $field, string $uri): string => "The {$field} value ({$uri}) points under the /.well-known/ path, where only the names registered with IANA can be used";
+		Assert::same([
+			1 => [$wellKnown('Contact', 'https://example.com/.well-known/report')],
+			2 => [$wellKnown('Encryption', 'https://example.com/.well-known/key.asc')],
+			3 => [$wellKnown('Acknowledgments', 'https://example.com/.well-known/thanks.html')],
+			4 => [$wellKnown('Policy', 'https://example.com/.well-known/policy.html')],
+			5 => [$wellKnown('Hiring', 'https://example.com/.well-known/jobs.html')],
+			8 => [SecurityTxtPossibelFieldTypo::class, SecurityTxtAcknowledgmentsNotUri::class, $wellKnown('Acknowledgments', '/.well-known/thanks.html')],
+			9 => [$wellKnown('Contact', 'example.com/.well-known/report')],
+			10 => [$wellKnown('Policy', '<https://example.com/.well-known/policy.html>')],
+		], $warnings);
+		// What isn't a URI is warned about when the URI suggested for it points there, here the path on the host the file came from
+		$correctValue = $parseResult->getLineWarnings()[8][1]->getCorrectValue();
+		assert($correctValue instanceof Url);
+		Assert::same('https://example.com/.well-known/thanks.html', $correctValue->toUnicodeString());
+		Assert::same(['https://example.com/.well-known/policy.html', '<https://example.com/.well-known/policy.html>', 'https://example.com/policy.html'], array_map(fn(SecurityTxtPolicy $policy): string => $policy->getUri(), $parseResult->getSecurityTxt()->getPolicy()));
 	}
 
 

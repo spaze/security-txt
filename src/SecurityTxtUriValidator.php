@@ -98,6 +98,19 @@ final class SecurityTxtUriValidator
 
 
 	/**
+	 * The URL a value is, or failing that the one suggested for it, which is where the value points once the suggestion is taken
+	 */
+	public function getUrl(string $uri, ?SecurityTxtField $field = null, ?string $fileLocation = null): ?Url
+	{
+		$result = $this->check($uri, $field, $fileLocation);
+		if ($result instanceof Url) {
+			return $result;
+		}
+		return isset($result['correctValue']) ? Url::parse($result['correctValue']) : null;
+	}
+
+
+	/**
 	 * The URL a value is, or why it is not one and what to use instead, named as the violation's parameters. Without `$explain` only whether it is one, all a suggestion
 	 * needs, so working out a suggestion never works out another one.
 	 *
