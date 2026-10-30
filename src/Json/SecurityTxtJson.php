@@ -54,8 +54,8 @@ final readonly class SecurityTxtJson
 	 * that never made a release has no stored blobs to protect, so a change there moves nothing. A reader already fails on a break it cannot handle,
 	 * so the number costs nothing and turns `fetchResult is not set or not an array` into a sentence naming both versions; bumping it for a change an older reader could have
 	 * tolerated is what would turn a benign upgrade into a forced deploy order. Nor is a `Base64` twin of a key the older decoder requires a break: that decoder refuses the
-	 * blob by field, and no stored blob carries a twin because none could be written. What a bump should mean for a decoder that could partly understand a newer blob is
-	 * issue #107, and nothing here decides it.
+	 * blob by field, and no stored blob carries a twin because none could be written. Nor is a new violation class: the older decoder reads every blob without one, and
+	 * refuses a blob with one as `class ... doesn't exist` rather than read it without the violation, because a result missing a violation looks better than the file is.
 	 */
 	public const int FORMAT_VERSION = 1;
 
