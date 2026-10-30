@@ -537,8 +537,7 @@ final class SecurityTxtJsonTest extends TestCase
 
 
 	/**
-	 * A blob from a shape this decoder does not know says so, rather than failing on whichever field happened to move. Only ever a refusal: what a reader that could partly
-	 * understand a newer blob ought to do is issue #107.
+	 * A blob from a shape this decoder does not know says so, rather than failing on whichever field happened to move, and is refused, never read in part.
 	 */
 	public function testCreateFromJsonValuesRefusesAShapeFromTheFuture(): void
 	{
