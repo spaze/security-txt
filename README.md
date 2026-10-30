@@ -143,8 +143,9 @@ The file is fetched from hosts you don't control, so the fetcher is restrictive 
 - The certificate and the hostname are verified, and the connection times out after 5 seconds, the whole transfer after 10, both configurable, see [Timeouts](#timeouts).
 
 ## DNS lookups
-DNS resolution is handled by `SecurityTxtPhpDnsProvider`, which uses PHP's built-in `dns_get_record()`. This function has no timeout parameter, the system DNS timeout applies.
-If you need explicit DNS timeout control, or would like to use for example DNS-over-HTTPS, you can add a custom provider, which implements the `SecurityTxtDnsProvider` interface,
+DNS resolution is handled by `SecurityTxtPhpDnsProvider`, which uses PHP's built-in `dns_get_record()`. This function has no timeout parameter, the system DNS timeout applies, so the [timeouts](#timeouts) limit the transfers but not the lookups. With its defaults, glibc waits 5 seconds for a resolver that doesn't answer, and asks twice, see `resolv.conf(5)`.
+To limit the lookups, set the timeout and the number of attempts, for one process with glibc's `RES_OPTIONS` environment variable, for example `RES_OPTIONS='timeout:1 attempts:2'`, or for the whole system with an `options timeout:1 attempts:2` line in `/etc/resolv.conf`. A lookup the resolver doesn't answer then throws `SecurityTxtHostNotFoundException` after about 2 seconds instead of 10.
+If you need explicit DNS timeout control in code, or would like to use for example DNS-over-HTTPS, you can add a custom provider, which implements the `SecurityTxtDnsProvider` interface,
 and then pass it to `SecurityTxtFetcher` in the `$dnsLookupProvider` parameter.
 A provider reports a host that does not resolve by throwing `SecurityTxtHostNotFoundException` with the URL and host it was given, passing any exception it wraps by name, `previous: $e`; the fetcher adds the redirects that led to the host.
 
