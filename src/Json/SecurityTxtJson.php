@@ -292,38 +292,8 @@ final readonly class SecurityTxtJson
 		if (!isset($values['fetchWarnings']) || !is_array($values['fetchWarnings'])) {
 			throw new SecurityTxtCannotParseJsonException('fetchWarnings is not set or not an array');
 		}
-		if (!isset($values['lineErrors']) || !is_array($values['lineErrors'])) {
-			throw new SecurityTxtCannotParseJsonException('lineErrors is not set or not an array');
-		}
-		$lineErrors = [];
-		foreach ($values['lineErrors'] as $errorLine => $errors) {
-			if (!is_int($errorLine)) {
-				throw new SecurityTxtCannotParseJsonException("lineErrors > {$errorLine} key is not an int");
-			}
-			if ($errorLine < 1) {
-				throw new SecurityTxtCannotParseJsonException("lineErrors > {$errorLine} key is less than 1");
-			}
-			if (!is_array($errors)) {
-				throw new SecurityTxtCannotParseJsonException("lineErrors > {$errorLine} is not an array");
-			}
-			$lineErrors[$errorLine] = $this->createViolationsFromJsonValues(array_values($errors));
-		}
-		if (!isset($values['lineWarnings']) || !is_array($values['lineWarnings'])) {
-			throw new SecurityTxtCannotParseJsonException('lineWarnings is not set or not an array');
-		}
-		$lineWarnings = [];
-		foreach ($values['lineWarnings'] as $warningLine => $warnings) {
-			if (!is_int($warningLine)) {
-				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$warningLine} key is not an int");
-			}
-			if ($warningLine < 1) {
-				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$warningLine} key is less than 1");
-			}
-			if (!is_array($warnings)) {
-				throw new SecurityTxtCannotParseJsonException("lineWarnings > {$warningLine} is not an array");
-			}
-			$lineWarnings[$warningLine] = $this->createViolationsFromJsonValues(array_values($warnings));
-		}
+		$lineErrors = $this->createLineViolationsFromJsonValues($values, 'lineErrors');
+		$lineWarnings = $this->createLineViolationsFromJsonValues($values, 'lineWarnings');
 		if (!isset($values['fileErrors']) || !is_array($values['fileErrors'])) {
 			throw new SecurityTxtCannotParseJsonException('fileErrors is not set or not an array');
 		}
@@ -373,6 +343,33 @@ final readonly class SecurityTxtJson
 			$values['strictMode'],
 			$expiresWarningThreshold ?? null,
 		);
+	}
+
+
+	/**
+	 * @param array<array-key, mixed> $values
+	 * @return array<int<1, max>, list<SecurityTxtSpecViolation>>
+	 * @throws SecurityTxtCannotParseJsonException
+	 */
+	private function createLineViolationsFromJsonValues(array $values, string $key): array
+	{
+		if (!isset($values[$key]) || !is_array($values[$key])) {
+			throw new SecurityTxtCannotParseJsonException("{$key} is not set or not an array");
+		}
+		$violations = [];
+		foreach ($values[$key] as $line => $lineViolations) {
+			if (!is_int($line)) {
+				throw new SecurityTxtCannotParseJsonException("{$key} > {$line} key is not an int");
+			}
+			if ($line < 1) {
+				throw new SecurityTxtCannotParseJsonException("{$key} > {$line} key is less than 1");
+			}
+			if (!is_array($lineViolations)) {
+				throw new SecurityTxtCannotParseJsonException("{$key} > {$line} is not an array");
+			}
+			$violations[$line] = $this->createViolationsFromJsonValues(array_values($lineViolations));
+		}
+		return $violations;
 	}
 
 
