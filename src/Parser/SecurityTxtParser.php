@@ -75,14 +75,12 @@ final class SecurityTxtParser
 		private readonly SecurityTxtSplitProvider $splitProvider,
 		private readonly SecurityTxtJsonValueFactory $jsonValueFactory,
 	) {
+		$this->initFieldProcessors();
 	}
 
 
 	private function initFieldProcessors(): void
 	{
-		if ($this->fieldProcessors !== []) {
-			return;
-		}
 		$this->fieldProcessors[SecurityTxtField::Acknowledgments->value] = [
 			new AcknowledgmentsAddFieldValue(),
 			new UriCheckFieldValueInWellKnown(SecurityTxtField::Acknowledgments),
@@ -166,7 +164,6 @@ final class SecurityTxtParser
 	public function parseString(string $contents, ?string $fileLocation = null, ?int $expiresWarningThreshold = null, bool $strictMode = false): SecurityTxtParseStringResult
 	{
 		$this->expiresWarningThreshold = $expiresWarningThreshold;
-		$this->initFieldProcessors();
 		$this->lineErrors = $this->lineWarnings = [];
 		$securityTxt = new SecurityTxt(SecurityTxtValidationLevel::AllowInvalidValues);
 		$fileLocationErrors = [];

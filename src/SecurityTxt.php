@@ -116,11 +116,6 @@ final class SecurityTxt implements JsonSerializable
 	private array $csaf = [];
 
 	/**
-	 * @var list<array<string, SecurityTxtFieldValue>>
-	 */
-	private array $fieldsWithNames = [];
-
-	/**
 	 * @var list<SecurityTxtFieldValue>
 	 */
 	private array $fields = [];
@@ -161,9 +156,7 @@ final class SecurityTxt implements JsonSerializable
 	public function setExpires(SecurityTxtExpires $expires): void
 	{
 		$this->setFieldValue(
-			function () use ($expires): SecurityTxtExpires {
-				return $this->expires = $expires;
-			},
+			fn(): SecurityTxtExpires => $this->expires = $expires,
 			function () use ($expires): void {
 				if ($expires->isExpired()) {
 					throw new SecurityTxtError(new SecurityTxtExpired());
@@ -204,9 +197,7 @@ final class SecurityTxt implements JsonSerializable
 	public function addCanonical(SecurityTxtCanonical $canonical): void
 	{
 		$this->setFieldValue(
-			function () use ($canonical): SecurityTxtCanonical {
-				return $this->canonical[] = $canonical;
-			},
+			fn(): SecurityTxtCanonical => $this->canonical[] = $canonical,
 			function () use ($canonical): void {
 				$this->checkUri($canonical->getUri(), SecurityTxtCanonicalNotUri::class, SecurityTxtCanonicalNotHttps::class, SecurityTxtField::Canonical);
 			},
@@ -229,9 +220,7 @@ final class SecurityTxt implements JsonSerializable
 	public function addContact(SecurityTxtContact $contact): void
 	{
 		$this->setFieldValue(
-			function () use ($contact): SecurityTxtContact {
-				return $this->contact[] = $contact;
-			},
+			fn(): SecurityTxtContact => $this->contact[] = $contact,
 			function () use ($contact): void {
 				$this->checkUri($contact->getUri(), SecurityTxtContactNotUri::class, SecurityTxtContactNotHttps::class, SecurityTxtField::Contact);
 			},
@@ -254,9 +243,7 @@ final class SecurityTxt implements JsonSerializable
 	public function setPreferredLanguages(SecurityTxtPreferredLanguages $preferredLanguages): void
 	{
 		$this->setFieldValue(
-			function () use ($preferredLanguages): SecurityTxtPreferredLanguages {
-				return $this->preferredLanguages = $preferredLanguages;
-			},
+			fn(): SecurityTxtPreferredLanguages => $this->preferredLanguages = $preferredLanguages,
 			function () use ($preferredLanguages): void {
 				if ($preferredLanguages->getLanguages() === []) {
 					throw new SecurityTxtError(new SecurityTxtPreferredLanguagesEmpty());
@@ -301,9 +288,7 @@ final class SecurityTxt implements JsonSerializable
 	public function addAcknowledgments(SecurityTxtAcknowledgments $acknowledgments): void
 	{
 		$this->setFieldValue(
-			function () use ($acknowledgments): SecurityTxtAcknowledgments {
-				return $this->acknowledgments[] = $acknowledgments;
-			},
+			fn(): SecurityTxtAcknowledgments => $this->acknowledgments[] = $acknowledgments,
 			function () use ($acknowledgments): void {
 				$this->checkUri($acknowledgments->getUri(), SecurityTxtAcknowledgmentsNotUri::class, SecurityTxtAcknowledgmentsNotHttps::class, SecurityTxtField::Acknowledgments);
 			},
@@ -326,9 +311,7 @@ final class SecurityTxt implements JsonSerializable
 	public function addHiring(SecurityTxtHiring $hiring): void
 	{
 		$this->setFieldValue(
-			function () use ($hiring): SecurityTxtHiring {
-				return $this->hiring[] = $hiring;
-			},
+			fn(): SecurityTxtHiring => $this->hiring[] = $hiring,
 			function () use ($hiring): void {
 				$this->checkUri($hiring->getUri(), SecurityTxtHiringNotUri::class, SecurityTxtHiringNotHttps::class, SecurityTxtField::Hiring);
 			},
@@ -351,9 +334,7 @@ final class SecurityTxt implements JsonSerializable
 	public function addPolicy(SecurityTxtPolicy $policy): void
 	{
 		$this->setFieldValue(
-			function () use ($policy): SecurityTxtPolicy {
-				return $this->policy[] = $policy;
-			},
+			fn(): SecurityTxtPolicy => $this->policy[] = $policy,
 			function () use ($policy): void {
 				$this->checkUri($policy->getUri(), SecurityTxtPolicyNotUri::class, SecurityTxtPolicyNotHttps::class, SecurityTxtField::Policy);
 			},
@@ -376,9 +357,7 @@ final class SecurityTxt implements JsonSerializable
 	public function addEncryption(SecurityTxtEncryption $encryption): void
 	{
 		$this->setFieldValue(
-			function () use ($encryption): SecurityTxtEncryption {
-				return $this->encryption[] = $encryption;
-			},
+			fn(): SecurityTxtEncryption => $this->encryption[] = $encryption,
 			function () use ($encryption): void {
 				$this->checkUri($encryption->getUri(), SecurityTxtEncryptionNotUri::class, SecurityTxtEncryptionNotHttps::class, SecurityTxtField::Encryption);
 			},
@@ -401,9 +380,7 @@ final class SecurityTxt implements JsonSerializable
 	public function addCsaf(SecurityTxtCsaf $csaf): void
 	{
 		$this->setFieldValue(
-			function () use ($csaf): SecurityTxtCsaf {
-				return $this->csaf[] = $csaf;
-			},
+			fn(): SecurityTxtCsaf => $this->csaf[] = $csaf,
 			function () use ($csaf): void {
 				$this->checkUri($csaf->getUri(), SecurityTxtCsafNotUri::class, SecurityTxtCsafNotHttps::class, SecurityTxtField::Csaf);
 				$url = Url::parse($csaf->getUri());
@@ -427,9 +404,7 @@ final class SecurityTxt implements JsonSerializable
 	public function setBugBounty(SecurityTxtBugBounty $bugBounty): void
 	{
 		$this->setFieldValue(
-			function () use ($bugBounty): SecurityTxtBugBounty {
-				return $this->bugBounty = $bugBounty;
-			},
+			fn(): SecurityTxtBugBounty => $this->bugBounty = $bugBounty,
 			function (): void {
 			},
 		);
@@ -477,8 +452,7 @@ final class SecurityTxt implements JsonSerializable
 	{
 		$this->setValue(
 			function () use ($setValue): void {
-				$this->fields[] = $fieldValue = $setValue();
-				$this->fieldsWithNames[] = [$fieldValue->getField()->value => $fieldValue];
+				$this->fields[] = $setValue();
 			},
 			$validator,
 			$warnings,
@@ -524,7 +498,7 @@ final class SecurityTxt implements JsonSerializable
 	{
 		return [
 			'fileLocation' => $this->getFileLocation(),
-			'fields' => $this->fieldsWithNames,
+			'fields' => array_map(fn(SecurityTxtFieldValue $value): array => [$value->getField()->value => $value], $this->fields),
 			'signatureVerifyResult' => $this->getSignatureVerifyResult(),
 		];
 	}

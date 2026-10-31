@@ -738,8 +738,8 @@ final class SecurityTxtJsonTest extends TestCase
 			$refused[$name] = $e?->getPrevious()?->getMessage();
 		}
 		Assert::same([
-			'no class' => 'Cannot parse JSON: class is missing, not a string or not an existing class',
-			'not an exception' => sprintf('Cannot parse JSON: The exception class %s is not a subclass of %s', DateInterval::class, SecurityTxtFetcherException::class),
+			'no class' => 'Cannot parse JSON: class is missing or not a string',
+			'not an exception' => sprintf("Cannot parse JSON: class %s doesn't extend %s", DateInterval::class, SecurityTxtFetcherException::class),
 			'no params' => 'Cannot parse JSON: params is missing or not an array',
 			'both keys' => 'Cannot parse JSON: params and paramsBase64 are both set',
 			'not Base64' => 'Cannot parse JSON: paramsBase64 is not Base64 as this library writes it',
@@ -751,19 +751,19 @@ final class SecurityTxtJsonTest extends TestCase
 	{
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues([]);
-		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing or not a string');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => 'string']);
-		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing or not a string');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => []]);
-		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing or not a string');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => 123]]);
-		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing or not a string');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => 'foo bar']]);
-		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > class is missing, not a string or not an existing class');
+		}, SecurityTxtCannotParseJsonException::class, "Cannot parse JSON: error > class foo bar doesn't exist");
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateTimeImmutable::class]]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > params is missing or not an array');
@@ -772,7 +772,7 @@ final class SecurityTxtJsonTest extends TestCase
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: error > params is missing or not an array');
 		Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => DateInterval::class, 'params' => []]]); // If the constructor was called, it would generate a different message because we're passing it a wrong number of arguments
-		}, SecurityTxtCannotParseJsonException::class, sprintf('Cannot parse JSON: The exception class %s is not a subclass of %s', DateInterval::class, SecurityTxtFetcherException::class));
+		}, SecurityTxtCannotParseJsonException::class, sprintf("Cannot parse JSON: error > class %s doesn't extend %s", DateInterval::class, SecurityTxtFetcherException::class));
 		$e = Assert::throws(function (): void {
 			$this->securityTxtJson->createFetcherExceptionFromJsonValues(['error' => ['class' => SecurityTxtNotFoundException::class, 'params' => [['https://example.com/' => []], 'https://example.com/']]]);
 		}, SecurityTxtCannotParseJsonException::class, 'Cannot parse JSON: Cannot create an object of class ' . SecurityTxtNotFoundException::class);

@@ -33,21 +33,6 @@ use Uri\WhatWg\Url;
 final class SecurityTxtCheckHost
 {
 
-	/** @var list<callable(Url): void> */
-	private array $onUrl = [];
-
-	/** @var list<callable(Url): void> */
-	private array $onFinalUrl = [];
-
-	/** @var list<callable(Url, Url): void> */
-	private array $onRedirect = [];
-
-	/** @var list<callable(Url, int): void> */
-	private array $onUrlNotFound = [];
-
-	/** @var list<callable(SecurityTxtFetcherException): void> */
-	private array $onUrlFailed = [];
-
 	/** @var list<callable(positive-int, DateTimeImmutable): void> */
 	private array $onIsExpired = [];
 
@@ -85,7 +70,6 @@ final class SecurityTxtCheckHost
 		private readonly SecurityTxtCheckHostResultFactory $resultFactory,
 		private readonly SecurityTxtUrlParser $urlParser,
 	) {
-		$this->initFetcherCallbacks();
 	}
 
 
@@ -159,36 +143,6 @@ final class SecurityTxtCheckHost
 	}
 
 
-	private function initFetcherCallbacks(): void
-	{
-		$this->fetcher->addOnUrl(
-			function (Url $url): void {
-				$this->callOnCallback($this->onUrl, $url);
-			},
-		);
-		$this->fetcher->addOnFinalUrl(
-			function (Url $url): void {
-				$this->callOnCallback($this->onFinalUrl, $url);
-			},
-		);
-		$this->fetcher->addOnRedirect(
-			function (Url $url, Url $destination): void {
-				$this->callOnCallback($this->onRedirect, $url, $destination);
-			},
-		);
-		$this->fetcher->addOnUrlNotFound(
-			function (Url $url, int $httpCode): void {
-				$this->callOnCallback($this->onUrlNotFound, $url, $httpCode);
-			},
-		);
-		$this->fetcher->addOnUrlFailed(
-			function (SecurityTxtFetcherException $exception): void {
-				$this->callOnCallback($this->onUrlFailed, $exception);
-			},
-		);
-	}
-
-
 	/**
 	 * @param list<callable(?int, SecurityTxtSpecViolation): void> $handlers
 	 */
@@ -201,7 +155,7 @@ final class SecurityTxtCheckHost
 	/**
 	 * @param list<callable> $onCallbacks
 	 */
-	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|Url|SecurityTxtHost|SecurityTxtSpecViolation|SecurityTxtFetcherException|null ...$params): void
+	private function callOnCallback(array $onCallbacks, string|int|DateTimeImmutable|SecurityTxtHost|SecurityTxtSpecViolation|null ...$params): void
 	{
 		foreach ($onCallbacks as $onCallback) {
 			$onCallback(...$params);
@@ -214,7 +168,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function addOnUrl(callable $onUrl): void
 	{
-		$this->onUrl[] = $onUrl;
+		$this->fetcher->addOnUrl($onUrl);
 	}
 
 
@@ -223,7 +177,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function addOnFinalUrl(callable $onFinalUrl): void
 	{
-		$this->onFinalUrl[] = $onFinalUrl;
+		$this->fetcher->addOnFinalUrl($onFinalUrl);
 	}
 
 
@@ -232,7 +186,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function addOnRedirect(callable $onRedirect): void
 	{
-		$this->onRedirect[] = $onRedirect;
+		$this->fetcher->addOnRedirect($onRedirect);
 	}
 
 
@@ -241,7 +195,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function addOnUrlNotFound(callable $onUrlNotFound): void
 	{
-		$this->onUrlNotFound[] = $onUrlNotFound;
+		$this->fetcher->addOnUrlNotFound($onUrlNotFound);
 	}
 
 
@@ -252,7 +206,7 @@ final class SecurityTxtCheckHost
 	 */
 	public function addOnUrlFailed(callable $onUrlFailed): void
 	{
-		$this->onUrlFailed[] = $onUrlFailed;
+		$this->fetcher->addOnUrlFailed($onUrlFailed);
 	}
 
 

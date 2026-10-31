@@ -144,7 +144,6 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
-	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
@@ -157,15 +156,19 @@ final class SecurityTxtFetcher
 	 */
 	private function fetchUrl(Url $url, SecurityTxtHost $host, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherFetchHostResult
 	{
-		$finalUrl = $url;
 		$this->callOnCallback($this->onUrl, $url);
+		$fetcherUrl = new SecurityTxtFetcherUrl($url, $this->getRedirects($url));
 		try {
-			$response = $this->getResponse(new SecurityTxtFetcherUrl($url, $this->getRedirects($url)), $host, $url, $finalUrl, $noIpv6, $maxAllowedRedirects);
+			$response = $this->getResponse($fetcherUrl, $host, $noIpv6);
+			while ($response->getHttpCode() >= 300) {
+				$fetcherUrl = $this->redirect($fetcherUrl->getUrl(), $url, $response, $maxAllowedRedirects);
+				$response = $this->getResponse($fetcherUrl, new SecurityTxtHost($fetcherUrl->getUrl()), $noIpv6);
+			}
 			$ipAddress = $response->getIpAddress();
 			$ipAddressType = $response->getIpAddressType();
 			$httpCode = $response->getHttpCode();
 		} catch (SecurityTxtUrlNotFoundException $e) {
-			$this->callOnCallback($this->onUrlNotFound, $finalUrl, $e->getCode());
+			$this->callOnCallback($this->onUrlNotFound, $fetcherUrl->getUrl(), $e->getCode());
 			$response = null;
 			$ipAddress = $e->getIpAddress();
 			$ipAddressType = $e->getIpAddressType();
@@ -173,7 +176,7 @@ final class SecurityTxtFetcher
 		}
 		return new SecurityTxtFetcherFetchHostResult(
 			$url,
-			$finalUrl,
+			$fetcherUrl->getUrl(),
 			$ipAddress,
 			$ipAddressType,
 			$httpCode,
@@ -183,11 +186,6 @@ final class SecurityTxtFetcher
 
 
 	/**
-	 * @param non-negative-int|null $maxAllowedRedirects
-	 * @throws SecurityTxtTooManyRedirectsException
-	 * @throws SecurityTxtRedirectLoopException
-	 * @throws SecurityTxtRedirectUrlTooLongException
-	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtCannotOpenUrlException
 	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
 	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
@@ -196,15 +194,12 @@ final class SecurityTxtFetcher
 	 * @throws SecurityTxtHostNotFoundException
 	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
 	 * @throws SecurityTxtHostIpAddressNotPublicException
-	 * @throws SecurityTxtCannotParseHostnameException
 	 * @throws SecurityTxtHostIpAddressInvalidException
 	 * @throws SecurityTxtNoHttpCodeException
-	 * @throws SecurityTxtNoLocationHeaderException
-	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtConnectedToWrongIpAddressException
 	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	private function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, Url $originalUrl, Url &$finalUrl, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherResponse
+	private function getResponse(SecurityTxtFetcherUrl $url, SecurityTxtHost $host, bool $noIpv6): SecurityTxtFetcherResponse
 	{
 		$ipRecord = $ipv6Record = null;
 		if (filter_var($host->getAscii(), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
@@ -245,9 +240,6 @@ final class SecurityTxtFetcher
 		$response = $this->httpClient->getResponse($url, $host, $ipAddress, $ipAddressType);
 		if ($response->getHttpCode() >= 400) {
 			throw new SecurityTxtUrlNotFoundException($url->getUrl(), $response->getHttpCode(), $ipAddress, $ipAddressType);
-		}
-		if ($response->getHttpCode() >= 300) {
-			return $this->redirect($url->getUrl(), $originalUrl, $response, $finalUrl, $noIpv6, $maxAllowedRedirects);
 		}
 		return $response;
 	}
@@ -421,27 +413,14 @@ final class SecurityTxtFetcher
 
 	/**
 	 * @param non-negative-int|null $maxAllowedRedirects
-	 * @throws SecurityTxtCannotOpenUrlException
-	 * @throws SecurityTxtCannotOpenUrlContentEncodingException
-	 * @throws SecurityTxtCannotOpenUrlExtensionNotLoadedException
-	 * @throws SecurityTxtConnectedToWrongIpAddressException
-	 * @throws SecurityTxtHostIpAddressInvalidException
-	 * @throws SecurityTxtHostIpAddressNotPublicException
-	 * @throws SecurityTxtHostIpAddressNotFoundException
-	 * @throws SecurityTxtHostNotFoundException
-	 * @throws SecurityTxtOnlyIpv6HostButIpv6DisabledException
-	 * @throws SecurityTxtNoHttpCodeException
 	 * @throws SecurityTxtNoLocationHeaderException
-	 * @throws SecurityTxtNotFoundException
 	 * @throws SecurityTxtTooManyRedirectsException
 	 * @throws SecurityTxtRedirectLoopException
 	 * @throws SecurityTxtRedirectUrlTooLongException
-	 * @throws SecurityTxtUrlNotFoundException
 	 * @throws SecurityTxtUrlUnsupportedSchemeException
 	 * @throws SecurityTxtCannotParseHostnameException
-	 * @throws SecurityTxtCannotOpenUrlUserAgentInvalidException
 	 */
-	private function redirect(Url $url, Url $originalUrl, SecurityTxtFetcherResponse $response, Url &$finalUrl, bool $noIpv6, ?int $maxAllowedRedirects): SecurityTxtFetcherResponse
+	private function redirect(Url $url, Url $originalUrl, SecurityTxtFetcherResponse $response, ?int $maxAllowedRedirects): SecurityTxtFetcherUrl
 	{
 		if ($maxAllowedRedirects === null) {
 			$maxAllowedRedirects = $this->maxAllowedRedirects;
@@ -480,17 +459,14 @@ final class SecurityTxtFetcher
 			} catch (SecurityTxtCannotParseHostnameException $e) {
 				throw new SecurityTxtCannotParseHostnameException($locationUrl->toAsciiString(), $this->getRedirects($originalUrl), $e);
 			}
-			$fetcherUrl = new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl));
-			// The caller's reference, passed on, so after any number of hops it ends as the URL that answered
-			$finalUrl = $settledUrl;
-			return $this->getResponse($fetcherUrl, new SecurityTxtHost($settledUrl), $originalUrl, $finalUrl, $noIpv6, $maxAllowedRedirects);
+			return new SecurityTxtFetcherUrl($settledUrl, $this->getRedirects($originalUrl));
 		}
 	}
 
 
 	/**
 	 * Compared as it is going to be fetched, settled, because parsing leaves the case of a letter a percent escape uncovers in a host, and `equals()` ignores the fragment, which
-	 * never reaches the server. A method of its own, so the parsed chain is gone before the next hop recurses.
+	 * never reaches the server.
 	 */
 	private function isVisited(Url $locationUrl, Url $originalUrl, SecurityTxtRedirects $redirects): bool
 	{
