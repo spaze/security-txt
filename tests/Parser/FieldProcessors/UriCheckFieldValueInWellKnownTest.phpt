@@ -36,6 +36,7 @@ final class UriCheckFieldValueInWellKnownTest extends TestCase
 				'<https://example.com/.well-known/policy.html>',
 				'Policy: https://example.com/.well-known/policy.html',
 				'https: //example.com/.well-known/policy.html',
+				'HTTPS://EXAMPLE.COM/.well-known/policy.html',
 				'https://example.com/policy.html',
 				'https://example.com/.well-known',
 				'https://example.com/.well-known-policy.html',
@@ -46,6 +47,8 @@ final class UriCheckFieldValueInWellKnownTest extends TestCase
 				'.well-known/policy.html',
 				'//example.com/.well-known/policy.html',
 				'see /.well-known/policy.html',
+				'ftp://example.com/.well-known/policy.html',
+				'sip:/.well-known/security@example.com',
 			] as $uri
 		) {
 			try {
@@ -67,6 +70,7 @@ final class UriCheckFieldValueInWellKnownTest extends TestCase
 			'<https://example.com/.well-known/policy.html>' => true,
 			'Policy: https://example.com/.well-known/policy.html' => true,
 			'https: //example.com/.well-known/policy.html' => true,
+			'HTTPS://EXAMPLE.COM/.well-known/policy.html' => true,
 			'https://example.com/policy.html' => false,
 			'https://example.com/.well-known' => false,
 			'https://example.com/.well-known-policy.html' => false,
@@ -77,6 +81,8 @@ final class UriCheckFieldValueInWellKnownTest extends TestCase
 			'.well-known/policy.html' => false,
 			'//example.com/.well-known/policy.html' => false,
 			'see /.well-known/policy.html' => false,
+			'ftp://example.com/.well-known/policy.html' => false,
+			'sip:/.well-known/security@example.com' => false,
 		], $warned);
 	}
 
