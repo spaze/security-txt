@@ -155,9 +155,6 @@ final readonly class SecurityTxtJson
 						if (!is_string($name)) {
 							throw new SecurityTxtCannotParseJsonException('field name is not a string');
 						}
-						if (SecurityTxtField::tryFrom($name) === null) {
-							throw new SecurityTxtCannotParseJsonException("fields > {$name} is an unsupported field");
-						}
 						if ($name === SecurityTxtField::Acknowledgments->value) {
 							$this->addSecurityTxtUriField($name, $value, SecurityTxtAcknowledgments::class, $securityTxt->addAcknowledgments(...));
 						} elseif ($name === SecurityTxtField::BugBounty->value) {
@@ -210,6 +207,8 @@ final readonly class SecurityTxtJson
 								$languages[] = $language;
 							}
 							$securityTxt->setPreferredLanguages(new SecurityTxtPreferredLanguages($languages));
+						} else {
+							throw new SecurityTxtCannotParseJsonException("fields > {$name} is an unsupported field");
 						}
 					}
 				}
