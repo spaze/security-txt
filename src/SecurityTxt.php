@@ -116,11 +116,6 @@ final class SecurityTxt implements JsonSerializable
 	private array $csaf = [];
 
 	/**
-	 * @var list<array<string, SecurityTxtFieldValue>>
-	 */
-	private array $fieldsWithNames = [];
-
-	/**
 	 * @var list<SecurityTxtFieldValue>
 	 */
 	private array $fields = [];
@@ -477,8 +472,7 @@ final class SecurityTxt implements JsonSerializable
 	{
 		$this->setValue(
 			function () use ($setValue): void {
-				$this->fields[] = $fieldValue = $setValue();
-				$this->fieldsWithNames[] = [$fieldValue->getField()->value => $fieldValue];
+				$this->fields[] = $setValue();
 			},
 			$validator,
 			$warnings,
@@ -524,7 +518,7 @@ final class SecurityTxt implements JsonSerializable
 	{
 		return [
 			'fileLocation' => $this->getFileLocation(),
-			'fields' => $this->fieldsWithNames,
+			'fields' => array_map(fn(SecurityTxtFieldValue $value): array => [$value->getField()->value => $value], $this->fields),
 			'signatureVerifyResult' => $this->getSignatureVerifyResult(),
 		];
 	}
