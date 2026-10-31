@@ -393,11 +393,16 @@ final class SecurityTxtUriValidator
 
 	/**
 	 * The host and the port as written, each null when the value has no authority, or the authority no port. An IPv6 address ends at its `]`.
+	 * Of a `mailto:` URI with no authority, the domains of its addresses joined by a `,`, which is in none of them, and no port, but not a domain literal like `[192.0.2.1]`,
+	 * its `[` doesn't start an IPv6 address.
 	 *
 	 * @return array{string|null, string|null}
 	 */
 	private function getHostAndPort(string $uri): array
 	{
+		if (preg_match('~^mailto:(?!//)([^?#]*)~i', $uri, $matches) === 1 && preg_match_all('~@([^@,]*+)(?=,|$)~D', $matches[1], $domains) > 0) {
+			return [implode(',', array_filter($domains[1], fn(string $domain): bool => !str_starts_with($domain, '['))), null];
+		}
 		if (preg_match('~^' . self::BEFORE_HOST . '([^/?#]*)~i', $uri, $matches) !== 1) {
 			return [null, null];
 		}
