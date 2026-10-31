@@ -95,7 +95,7 @@ final class SecurityTxtFetcherTest extends TestCase
 
 
 	/**
-	 * @return array<string, array{0:int, 1:array<string, string>, 2:int, 3:string|null, 4:class-string<SecurityTxtFetcherException>|null}>
+	 * @return array<string, array{0:int, 1:array<string, string>, 2:int, 3:class-string<SecurityTxtFetcherException>|null}>
 	 */
 	public function getHeaders(): array
 	{
@@ -107,7 +107,6 @@ final class SecurityTxtFetcherTest extends TestCase
 					'Location' => 'https://example.example/example',
 				],
 				301,
-				null,
 				SecurityTxtRedirectLoopException::class, // The client sends the same Location every time, and the only way to test redirects is to catch an exception
 			],
 			'302 redirect with no Location' => [
@@ -116,7 +115,6 @@ final class SecurityTxtFetcherTest extends TestCase
 					'Foo' => 'bar',
 				],
 				302,
-				null,
 				SecurityTxtNoLocationHeaderException::class,
 			],
 			'Random redirect with location' => [
@@ -126,14 +124,12 @@ final class SecurityTxtFetcherTest extends TestCase
 					'location' => 'https://example.org/example',
 				],
 				399,
-				null,
 				SecurityTxtRedirectLoopException::class, // The client sends the same Location every time, and the only way to test redirects is to catch an exception
 			],
 			'Success' => [
 				200,
 				[],
 				200,
-				null,
 				null,
 			],
 			'Random success with nonsensical Location' => [
@@ -143,7 +139,6 @@ final class SecurityTxtFetcherTest extends TestCase
 					'Location' => 'https://example.org/example',
 				],
 				299,
-				'https://example.org/example',
 				null,
 			],
 		];
@@ -155,7 +150,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	 * @param class-string<SecurityTxtFetcherException>|null $expectedException
 	 * @dataProvider getHeaders
 	 */
-	public function testGetResponse(int $httpCode, array $headers, int $expectedHttpCode, ?string $expectedLocation, ?string $expectedException): void
+	public function testFetchUrl(int $httpCode, array $headers, int $expectedHttpCode, ?string $expectedException): void
 	{
 		$lowercaseHeaders = [];
 		foreach ($headers as $key => $value) {
@@ -163,18 +158,17 @@ final class SecurityTxtFetcherTest extends TestCase
 		}
 		$httpClient = $this->getHttpClient(new SecurityTxtFetcherResponse($httpCode, $lowercaseHeaders, 'some random contents', false, '1.1.1.0', SecurityTxtIpAddressType::V4));
 		$fetcher = new SecurityTxtFetcher($httpClient, $this->urlParser, $this->splitLines, $this->getDnsProvider(), $this->ipAddressValidator);
-		$method = new ReflectionMethod($fetcher, 'getResponse');
-		$finalUrl = new Url('https://passed-by-ref.example/');
+		$method = new ReflectionMethod($fetcher, 'fetchUrl');
 		if ($expectedException !== null) {
-			Assert::throws(function () use ($method, $fetcher, $finalUrl): void {
-				$method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), new SecurityTxtHost(new Url('https://example.com/')), new Url('https://example.com/foo'), &$finalUrl, true, null]);
+			Assert::throws(function () use ($method, $fetcher): void {
+				$method->invoke($fetcher, new Url('https://example.com/foo'), new SecurityTxtHost(new Url('https://example.com/')), true, null);
 			}, $expectedException);
 		} else {
-			$response = $method->invokeArgs($fetcher, [new SecurityTxtFetcherUrl(new Url('https://example.com/foo'), new SecurityTxtRedirects()), new SecurityTxtHost(new Url('https://example.com/')), new Url('https://example.com/foo'), &$finalUrl, true, null]);
-			assert($response instanceof SecurityTxtFetcherResponse);
-			Assert::same($expectedHttpCode, $response->getHttpCode());
-			Assert::same($expectedLocation, $response->getHeader('location'));
-			Assert::false($response->isTruncated());
+			$result = $method->invoke($fetcher, new Url('https://example.com/foo'), new SecurityTxtHost(new Url('https://example.com/')), true, null);
+			assert($result instanceof SecurityTxtFetcherFetchHostResult);
+			Assert::same($expectedHttpCode, $result->getHttpCode());
+			Assert::same('https://example.com/foo', $result->getFinalUrl()->toAsciiString());
+			Assert::false($result->isTruncated());
 		}
 	}
 
@@ -831,7 +825,7 @@ final class SecurityTxtFetcherTest extends TestCase
 	 */
 	public function getSuccessfulCodes(): array
 	{
-		// Everything `getResponse()` lets through: it throws above 400 and follows a redirect above 300, so any other 2xx arrives here as an ordinary success
+		// Everything a fetch lets through: `getResponse()` throws above 400 and `fetchUrl()` follows a redirect above 300, so any other 2xx arrives here as an ordinary success
 		return [
 			'200 OK' => [200],
 			'203 Non-Authoritative Information' => [203],
