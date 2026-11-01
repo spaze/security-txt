@@ -11,7 +11,7 @@ enum SecurityTxtCanonicalUriMismatchReason: string
 {
 
 	/**
-	 * Nothing more to say, another host, a field that isn't a URI, a location a redirect took elsewhere, or a violation stored before it carried the reason
+	 * Nothing more to say, another host, a location a redirect took elsewhere, or a violation stored before it carried the reason
 	 */
 	case Unspecified = 'unspecified';
 
@@ -29,5 +29,10 @@ enum SecurityTxtCanonicalUriMismatchReason: string
 	 * The file was fetched from under the `/.well-known/` path, and a field lists another URI on the same host, a typo in the path say
 	 */
 	case SameHost = 'same-host';
+
+	/**
+	 * The file was fetched from under the `/.well-known/` path, and a field lists something that isn't a URI
+	 */
+	case NotUri = 'not-uri';
 
 }
