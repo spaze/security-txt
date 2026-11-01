@@ -139,6 +139,17 @@ final class SecurityTxtUriValidator
 				];
 			}
 		}
+		// RFC 6068 puts the addresses before the query, each with something before its one @ and after it, or none there and a `to` field in the query instead.
+		// Not after a `//`, which RFC 3986 reads as a host, so `mailto://security@example.com` would be said to have no address
+		if ($scheme === 'mailto' && $rfc3986->getRawHost() === null) {
+			$to = $rfc3986->getRawPath();
+			if ($to === '' && preg_match('/(?:^|&)to=[^&]/i', $rfc3986->getRawQuery() ?? '') !== 1) {
+				return ['reason' => SecurityTxtNotUriReason::EmailAddressMissing];
+			}
+			if ($to !== '' && preg_match('/^[^@,]++@[^@,]++(?:,[^@,]++@[^@,]++)*+$/D', $to) !== 1) {
+				return ['reason' => SecurityTxtNotUriReason::NotEmailAddress];
+			}
+		}
 		$url = Url::parse($uri);
 		if ($url === null) {
 			if ($rfc3986->getPort() > 65535) {
