@@ -23,6 +23,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 	private const int DEFAULT_MAX_RESPONSE_LENGTH = 10_000;
 	private const int DEFAULT_TIMEOUT = 10;
 	private const int DEFAULT_CONNECT_TIMEOUT = 5;
+	private const string STATUS_LINE = '~^HTTP/\S+ ([0-9]{3})~';
 
 	private string $userAgent;
 	private int $maxResponseLength;
@@ -184,7 +185,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 		$final = false;
 		foreach ($rawHeaders as $line) {
 			// Each status line starts the header block of another response, and only the one after an informational 1xx response is the final one
-			if (preg_match('~^HTTP/\S+ ([0-9]{3})~', $line, $matches) === 1) {
+			if (preg_match(self::STATUS_LINE, $line, $matches) === 1) {
 				$codings = [];
 				$final = (int)$matches[1] >= 200;
 				continue;
@@ -205,9 +206,10 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 	private function getHeaders(array $rawHeaders): array
 	{
 		$headers = [];
-		foreach ($rawHeaders as $i => $line) {
-			if ($i === 0) {
-				// status line, already handled via curl_getinfo
+		foreach ($rawHeaders as $line) {
+			// Each status line starts another response's header lines, so only the final response's are kept, not those of a 1xx response before it
+			if (preg_match(self::STATUS_LINE, $line) === 1) {
+				$headers = [];
 				continue;
 			}
 			if ($line === '') {

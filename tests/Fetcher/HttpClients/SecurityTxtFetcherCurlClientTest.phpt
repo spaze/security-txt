@@ -228,6 +228,25 @@ final class SecurityTxtFetcherCurlClientTest extends TestCase
 	}
 
 
+	public function testTheHeadersAreTheFinalResponses(): void
+	{
+		$headers = [
+			'one response' => ['HTTP/1.1 200 OK', 'Content-Type: text/plain', ''],
+			'a header in a 1xx response only' => ['HTTP/2 103', 'Content-Type: text/html', '', 'HTTP/2 200', ''],
+			'a header in both' => ['HTTP/1.1 103 Early Hints', 'Content-Type: text/html', '', 'HTTP/1.1 200 OK', 'Content-Type: text/plain', ''],
+			'two 1xx responses' => ['HTTP/1.1 100 Continue', '', 'HTTP/1.1 103 Early Hints', 'Link: </style.css>; rel=preload', '', 'HTTP/1.1 200 OK', 'Content-Type: text/plain', ''],
+		];
+		$method = new ReflectionMethod(SecurityTxtFetcherCurlClient::class, 'getHeaders');
+		$client = new SecurityTxtFetcherCurlClient('test');
+		Assert::same([
+			'one response' => ['content-type' => 'text/plain'],
+			'a header in a 1xx response only' => [],
+			'a header in both' => ['content-type' => 'text/plain'],
+			'two 1xx responses' => ['content-type' => 'text/plain'],
+		], array_map(fn(array $lines): mixed => $method->invoke($client, $lines), $headers));
+	}
+
+
 	public function testMaxResponseLengthPositive(): void
 	{
 		Assert::throws(function (): void {
