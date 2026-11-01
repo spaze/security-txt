@@ -102,6 +102,10 @@ enum SecurityTxtNotUriReason: string
 
 	case NotUrl = 'not-url';
 
+	case EmailAddressMissing = 'email-address-missing';
+
+	case NotEmailAddress = 'not-email-address';
+
 
 	/**
 	 * What follows the value in the message.
@@ -154,6 +158,8 @@ enum SecurityTxtNotUriReason: string
 			self::PortOutOfRange => 'has a port above 65535',
 			self::InvalidHost => "has a host that isn't a valid domain name or IP address",
 			self::NotUrl => "can't be parsed as a URL",
+			self::EmailAddressMissing => 'has no email address after the "mailto" scheme',
+			self::NotEmailAddress => "has something that isn't an email address after the \"mailto\" scheme",
 		};
 	}
 
@@ -204,6 +210,8 @@ enum SecurityTxtNotUriReason: string
 			self::EmptyUserInfo => 'Remove the @',
 			self::InvalidHost => 'Use a domain name or an IP address as the host',
 			self::NotUrl => 'Use a URL as the value',
+			self::EmailAddressMissing => 'Add the email address after the "mailto" scheme',
+			self::NotEmailAddress => 'Use a whole email address, with a name before the @ and a domain after it',
 		};
 	}
 

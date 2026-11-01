@@ -48,6 +48,8 @@ final class SecurityTxtCanonicalUriMismatchTest extends TestCase
 			'unspecified' => new SecurityTxtCanonicalUriMismatch($wellKnown, ['https://other.example/.well-known/security.txt']),
 			'same host' => new SecurityTxtCanonicalUriMismatch($wellKnown, ['https://example.com/.well-known/sercurity.txt'], SecurityTxtCanonicalUriMismatchReason::SameHost),
 			'same host of two' => new SecurityTxtCanonicalUriMismatch($wellKnown, ['https://other.example/', 'https://example.com/.well-known/sercurity.txt'], SecurityTxtCanonicalUriMismatchReason::SameHost),
+			'not a URI' => new SecurityTxtCanonicalUriMismatch($wellKnown, ['.well-known/security.txt'], SecurityTxtCanonicalUriMismatchReason::NotUri),
+			'not a URI of two' => new SecurityTxtCanonicalUriMismatch($wellKnown, ['https://other.example/', '.well-known/security.txt'], SecurityTxtCanonicalUriMismatchReason::NotUri),
 			'top-level listed' => new SecurityTxtCanonicalUriMismatch($wellKnown, ['https://example.com/security.txt'], SecurityTxtCanonicalUriMismatchReason::TopLevelListed),
 			'well-known listed' => new SecurityTxtCanonicalUriMismatch('https://example.com/security.txt', [$wellKnown], SecurityTxtCanonicalUriMismatchReason::WellKnownListed),
 		];
@@ -55,6 +57,8 @@ final class SecurityTxtCanonicalUriMismatchTest extends TestCase
 			'unspecified' => ['Add a new Canonical field with the URI https://example.com/.well-known/security.txt, or ensure the file is fetched from the listed canonical URI', []],
 			'same host' => ['Change the Canonical field to https://example.com/.well-known/security.txt, the URI the file was fetched from', []],
 			'same host of two' => ['Change the Canonical field naming this host to https://example.com/.well-known/security.txt, the URI the file was fetched from', []],
+			'not a URI' => ['Change the Canonical field to https://example.com/.well-known/security.txt, the URI the file was fetched from', []],
+			'not a URI of two' => ["Change the Canonical field that isn't a URI to https://example.com/.well-known/security.txt, the URI the file was fetched from", []],
 			'top-level listed' => ['Add a new Canonical field with the URI https://example.com/.well-known/security.txt, as the file under the /.well-known/ path is the one used', ['3']],
 			'well-known listed' => ['Serve the file under the /.well-known/ path, which the Canonical field lists, and redirect /security.txt to /.well-known/security.txt', ['3']],
 		], array_map(fn(SecurityTxtCanonicalUriMismatch $violation): array => [$violation->getHowToFix(), $violation->getSeeAlsoSections()], $violations));

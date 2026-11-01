@@ -39,7 +39,7 @@ final class CanonicalUriListedFieldValidator implements FieldValidator
 		if ($this->lists($canonicalUrls, $url)) {
 			return;
 		}
-		$reason = $this->getReason($canonicalUrls, $url);
+		$reason = $this->getReason($canonicalUrls, $url, count($canonicalUrls) < count($canonicalUris));
 		// With the reason only when there's one, so a stored violation carries nothing more than before
 		throw new SecurityTxtWarning($reason !== SecurityTxtCanonicalUriMismatchReason::Unspecified
 			? new SecurityTxtCanonicalUriMismatch($uri, $canonicalUris, $reason)
@@ -66,7 +66,7 @@ final class CanonicalUriListedFieldValidator implements FieldValidator
 	 *
 	 * @param list<Url> $canonicalUrls
 	 */
-	private function getReason(array $canonicalUrls, Url $url): SecurityTxtCanonicalUriMismatchReason
+	private function getReason(array $canonicalUrls, Url $url, bool $notUri): SecurityTxtCanonicalUriMismatchReason
 	{
 		if ($url->getQuery() !== null || $url->getFragment() !== null) {
 			return SecurityTxtCanonicalUriMismatchReason::Unspecified;
@@ -85,7 +85,7 @@ final class CanonicalUriListedFieldValidator implements FieldValidator
 				return SecurityTxtCanonicalUriMismatchReason::SameHost;
 			}
 		}
-		return SecurityTxtCanonicalUriMismatchReason::Unspecified;
+		return $notUri ? SecurityTxtCanonicalUriMismatchReason::NotUri : SecurityTxtCanonicalUriMismatchReason::Unspecified;
 	}
 
 }

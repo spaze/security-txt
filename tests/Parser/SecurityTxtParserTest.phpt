@@ -1184,6 +1184,8 @@ final class SecurityTxtParserTest extends TestCase
 			'en_US, cs_CZ',
 			'zh_Hans_CN',
 			'English, Klingon',
+			'en, English',
+			'EN, English',
 			'en_',
 			'Deutsch',
 			'cz',
@@ -1191,6 +1193,9 @@ final class SecurityTxtParserTest extends TestCase
 			'CZE',
 			'cze-CZ',
 			'cz-CZ',
+			'en, cz, sk',
+			'cs, cz',
+			'CS, cz',
 			'czk',
 			'en, czh',
 		];
@@ -1211,6 +1216,8 @@ final class SecurityTxtParserTest extends TestCase
 			'en_US, cs_CZ' => [[$wrong, 'en-US, cs-CZ']],
 			'zh_Hans_CN' => [[$wrong, 'zh-Hans-CN']],
 			'English, Klingon' => [[$wrong, null]],
+			'en, English' => [[$wrong, 'en']],
+			'EN, English' => [[$wrong, 'EN']],
 			'en_' => [[$wrong, null]],
 			'Deutsch' => [[$wrong, null]],
 			'cz' => [[$czech, 'cs']],
@@ -1218,6 +1225,9 @@ final class SecurityTxtParserTest extends TestCase
 			'CZE' => [[$czech, 'cs']],
 			'cze-CZ' => [[$czech, 'cs-CZ']],
 			'cz-CZ' => [[$czech, 'cs-CZ']],
+			'en, cz, sk' => [[$czech, 'en, cs, sk']],
+			'cs, cz' => [[$czech, 'cs']],
+			'CS, cz' => [[$czech, 'CS']],
 			'czk' => [],
 			'en, czh' => [],
 		], $reported);
@@ -1240,7 +1250,7 @@ final class SecurityTxtParserTest extends TestCase
 		$parseResult = $this->securityTxtParser->parseString("Preferred-Languages: CZ-Czechia,en\n");
 		$error = $parseResult->getLineErrors()[1][0];
 		Assert::type(SecurityTxtPreferredLanguagesCommonMistake::class, $error);
-		Assert::same('cs-Czechia', $error->getCorrectValue());
+		Assert::same('cs-Czechia, en', $error->getCorrectValue());
 		Assert::same(['CZ-Czechia', 'en'], $parseResult->getSecurityTxt()->getPreferredLanguages()?->getLanguages());
 		Assert::true($parseResult->hasErrors());
 		Assert::false($parseResult->hasWarnings());

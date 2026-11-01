@@ -31,8 +31,12 @@ final class SecurityTxtCanonicalUriMismatch extends SecurityTxtSpecViolation
 				$howToFixFormat = 'Add a new %s field with the URI %s, as the file under the %s path is the one used';
 				$howToFixValues = [...$howToFixValues, '/.well-known/'];
 				$seeAlsoSections = ['3'];
-			} elseif ($reason === SecurityTxtCanonicalUriMismatchReason::SameHost) {
-				$howToFixFormat = $count === 1 ? 'Change the %s field to %s, the URI the file was fetched from' : 'Change the %s field naming this host to %s, the URI the file was fetched from';
+			} elseif ($reason === SecurityTxtCanonicalUriMismatchReason::SameHost || $reason === SecurityTxtCanonicalUriMismatchReason::NotUri) {
+				$howToFixFormat = match (true) {
+					$count === 1 => 'Change the %s field to %s, the URI the file was fetched from',
+					$reason === SecurityTxtCanonicalUriMismatchReason::SameHost => 'Change the %s field naming this host to %s, the URI the file was fetched from',
+					default => "Change the %s field that isn't a URI to %s, the URI the file was fetched from",
+				};
 			} else {
 				$howToFixFormat = $count === 1
 					? 'Add a new %s field with the URI %s, or ensure the file is fetched from the listed canonical URI'
