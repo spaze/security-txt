@@ -51,7 +51,7 @@ final class SecurityTxt implements JsonSerializable
 	private const string LANGUAGE_TAG = '/^([a-z]{2,3}(-[a-z0-9]+)*|[xi]-[a-z0-9]+)$/i';
 
 	/**
-	 * The Czech language tag as people get it wrong, `cz` the country code, or `cze` the ISO 639-2 code, which RFC 5646 doesn't use for a language with a shorter one
+	 * How people get the Czech language tag wrong: `cz`, the country code, or `cze`, the ISO 639-2 code, which RFC 5646 doesn't use because Czech has the two-letter code `cs`
 	 */
 	private const string CZECH_MISTAKE = '/^cze?(?=-|$)/i';
 
@@ -254,19 +254,22 @@ final class SecurityTxt implements JsonSerializable
 						$wrongLanguages[$key + 1] = $value;
 					}
 				}
+				// The value to use is there only when every tag can be corrected, or it would still be wrong. Each tag is in it once, however it's written, so `EN, English` becomes `EN`
+				$correctLanguages = array_filter(array_map($this->getLanguageTag(...), $preferredLanguages->getLanguages()), fn(?string $tag): bool => $tag !== null);
+				$correctValue = count($correctLanguages) === count($preferredLanguages->getLanguages())
+					? implode(', ', array_intersect_key($correctLanguages, array_unique(array_map(strtolower(...), $correctLanguages))))
+					: null;
 				if ($wrongLanguages !== []) {
-					// Only when every tag has one, a value with some of them still wrong would be no value to use
-					$correctLanguages = array_map($this->getLanguageTag(...), $preferredLanguages->getLanguages());
-					throw new SecurityTxtError(in_array(null, $correctLanguages, true)
+					throw new SecurityTxtError($correctValue === null
 						? new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages)
-						: new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages, implode(', ', $correctLanguages)));
+						: new SecurityTxtPreferredLanguagesWrongLanguageTags($wrongLanguages, $correctValue));
 				}
 				foreach ($preferredLanguages->getLanguages() as $key => $value) {
 					if (preg_match(self::CZECH_MISTAKE, $value) === 1) {
 						throw new SecurityTxtError(new SecurityTxtPreferredLanguagesCommonMistake(
 							$key + 1,
 							$value,
-							preg_replace(self::CZECH_MISTAKE, 'cs', $value),
+							$correctValue,
 							SecurityTxtPreferredLanguagesCommonMistakeReason::CzechUsesCsNotCz,
 						));
 					}
