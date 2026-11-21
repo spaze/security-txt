@@ -146,7 +146,7 @@ final class SecurityTxtCheckHostSmokeTest extends TestCase
 
 
 	/**
-	 * `www.nic.cz` answers `/security.txt` with a bare `Location: /security.txt/`, the only relative one in the list, and what is recorded is that header resolved against the
+	 * `www.nic.cz` answers `/security.txt` with a bare `Location: /cs/security.txt/`, the only relative one in the list, and what is recorded is that header resolved against the
 	 * URL it came from. A fetcher that kept it as it arrived would store a path where a URL belongs, and the recorded destination is the only place that would show it. Note
 	 * what this cannot see: the raw header is not kept, so the day `nic.cz` starts sending an absolute `Location` the recorded chain is identical and this still passes while
 	 * the only relative one in the list has quietly gone.
@@ -156,7 +156,7 @@ final class SecurityTxtCheckHostSmokeTest extends TestCase
 		needsInternet();
 		$result = $this->getCheckHost()->check(new Url('https://www.nic.cz/'), noIpv6: true);
 		$redirects = array_map(fn(SecurityTxtRedirects $chain): array => $chain->toStrings(), $result->getRedirects());
-		Assert::same(['https://www.nic.cz/security.txt/'], $redirects['https://www.nic.cz/security.txt'] ?? []);
+		Assert::same(['https://www.nic.cz/cs/security.txt/'], $redirects['https://www.nic.cz/security.txt'] ?? []);
 	}
 
 
