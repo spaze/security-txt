@@ -12,6 +12,7 @@ jobs:
       matrix:
         php-version:
           - "8.5"
+          - "8.6"
     steps:
     - name: OS info
       run: cat /etc/os-release
@@ -33,6 +34,7 @@ jobs:
       matrix:
         php-version:
           - "8.5"
+          - "8.6"
     steps:
     - uses: actions/checkout@v7
     - name: Install PHP
@@ -62,6 +64,7 @@ jobs:
       matrix:
         php-version:
           - "8.5"
+          - "8.6"
     steps:
     - uses: actions/checkout@v7
     - name: Install PHP
