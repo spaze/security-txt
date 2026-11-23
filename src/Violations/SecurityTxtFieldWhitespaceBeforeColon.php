@@ -3,6 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
+
 final class SecurityTxtFieldWhitespaceBeforeColon extends SecurityTxtSpecViolation
 {
 
@@ -13,7 +15,7 @@ final class SecurityTxtFieldWhitespaceBeforeColon extends SecurityTxtSpecViolati
 			'The line (%s) has whitespace between the field name and the colon',
 			[$line],
 			'draft-foudil-securitytxt-00',
-			"{$fieldName}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '')),
+			"{$fieldName}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '', SecurityTxtTrim::CHARACTERS)),
 			'Remove the whitespace before the colon',
 			[],
 			'4',

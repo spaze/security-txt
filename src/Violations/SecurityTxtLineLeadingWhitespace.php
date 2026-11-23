@@ -3,6 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
+
 final class SecurityTxtLineLeadingWhitespace extends SecurityTxtSpecViolation
 {
 
@@ -20,7 +22,7 @@ final class SecurityTxtLineLeadingWhitespace extends SecurityTxtSpecViolation
 			'The line (%s) starts with whitespace',
 			[$line],
 			'draft-foudil-securitytxt-00',
-			preg_replace('/^(?:\s|' . self::UNICODE_SPACES . ')++/', '', $line) ?? ltrim($line),
+			preg_replace('/^(?:\s|' . self::UNICODE_SPACES . ')++/', '', $line) ?? ltrim($line, SecurityTxtTrim::CHARACTERS),
 			'Remove the whitespace from the start of the line',
 			[],
 			'4',

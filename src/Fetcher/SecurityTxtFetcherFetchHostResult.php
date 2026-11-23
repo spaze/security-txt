@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
 use Uri\WhatWg\Url;
 
 /**
@@ -33,7 +34,7 @@ final readonly class SecurityTxtFetcherFetchHostResult
 			$this->contentType = null;
 		} else {
 			$parts = explode(';', $header, 2);
-			$this->contentType = new SecurityTxtFetchHostContentType(trim($parts[0]), $parts[1] ?? null);
+			$this->contentType = new SecurityTxtFetchHostContentType(trim($parts[0], SecurityTxtTrim::CHARACTERS), $parts[1] ?? null);
 		}
 		$this->contents = $response?->getContents();
 		$this->isTruncated = $response !== null && $response->isTruncated();

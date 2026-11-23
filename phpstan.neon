@@ -12,6 +12,16 @@ parameters:
 		-
 			function: 'parse_url()'
 			message: 'use new Uri\WhatWg\Url() or Uri\WhatWg\Url::parse() instead'
+		-
+			function:
+				- 'trim()'
+				- 'rtrim()'
+				- 'ltrim()'
+			message: 'pass the characters, SecurityTxtTrim::CHARACTERS for the PHP 8.6 default, which PHP 8.5 does not have'
+			allowParamsAnywhereAnyValue:
+				-
+					position: 2
+					name: 'characters'
 
 includes:
 	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
