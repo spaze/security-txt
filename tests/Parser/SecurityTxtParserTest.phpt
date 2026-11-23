@@ -592,8 +592,10 @@ final class SecurityTxtParserTest extends TestCase
 			'Policy: https://example.com/policy.html',
 		]) . "\n";
 		$parseResult = $this->securityTxtParser->parseString($contents, 'https://example.com/.well-known/security.txt');
-		$classes = fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations);
-		Assert::same([9 => [SecurityTxtContactNotUri::class], 10 => [SecurityTxtPolicyNotUri::class]], array_map($classes, $parseResult->getLineErrors()));
+		Assert::same(
+			[9 => [SecurityTxtContactNotUri::class], 10 => [SecurityTxtPolicyNotUri::class]],
+			array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation::class, $violations), $parseResult->getLineErrors()),
+		);
 		$warnings = array_map(fn(array $violations): array => array_map(fn(SecurityTxtSpecViolation $violation): string => $violation instanceof SecurityTxtFieldUriInWellKnown ? $violation->getMessage() : $violation::class, $violations), $parseResult->getLineWarnings());
 		$wellKnown = fn(string $field, string $uri): string => "The {$field} value ({$uri}) points under the /.well-known/ path, where only the names registered with IANA can be used";
 		Assert::same([
