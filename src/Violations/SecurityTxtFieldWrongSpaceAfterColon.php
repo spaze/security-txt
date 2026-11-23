@@ -3,6 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
+
 final class SecurityTxtFieldWrongSpaceAfterColon extends SecurityTxtSpecViolation
 {
 
@@ -13,7 +15,7 @@ final class SecurityTxtFieldWrongSpaceAfterColon extends SecurityTxtSpecViolatio
 			'The line (%s) should have one space between the colon and the value',
 			[$line],
 			'draft-foudil-securitytxt-00',
-			"{$fieldName}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '')),
+			"{$fieldName}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '', SecurityTxtTrim::CHARACTERS)),
 			'Put one space between the colon and the value',
 			[],
 			'4',

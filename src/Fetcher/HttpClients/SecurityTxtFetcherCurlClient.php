@@ -16,6 +16,7 @@ use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherResponse;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtFetcherUrl;
 use Spaze\SecurityTxt\Fetcher\SecurityTxtIpAddressType;
 use Spaze\SecurityTxt\SecurityTxtHost;
+use Spaze\SecurityTxt\SecurityTxtTrim;
 
 final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherHttpClient
 {
@@ -106,7 +107,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			CURLOPT_HEADER => false,
 			CURLOPT_RESOLVE => [sprintf('%s:%s:%s', $host->getAscii(), $port ?? $defaultPort, $ipAddressType === SecurityTxtIpAddressType::V6 ? "[{$ipAddress}]" : $ipAddress)],
 			CURLOPT_HEADERFUNCTION => function (CurlHandle $ch, string $header) use (&$rawHeaders): int {
-				$rawHeaders[] = trim($header);
+				$rawHeaders[] = trim($header, SecurityTxtTrim::CHARACTERS);
 				return strlen($header);
 			},
 			CURLOPT_WRITEFUNCTION => function (CurlHandle $ch, string $data) use (&$contents, &$truncated): int {
@@ -190,9 +191,9 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 				$final = (int)$matches[1] >= 200;
 				continue;
 			}
-			$parts = explode(':', $line, 2);
-			if (count($parts) === 2 && strtolower(trim($parts[0])) === 'content-encoding' && trim($parts[1]) !== '') {
-				$codings[] = trim($parts[1]);
+			$parts = array_map(fn(string $part): string => trim($part, SecurityTxtTrim::CHARACTERS), explode(':', $line, 2));
+			if (count($parts) === 2 && strtolower($parts[0]) === 'content-encoding' && $parts[1] !== '') {
+				$codings[] = $parts[1];
 			}
 		}
 		return $final && $codings !== [] ? implode(', ', $codings) : null;
@@ -217,7 +218,7 @@ final readonly class SecurityTxtFetcherCurlClient implements SecurityTxtFetcherH
 			}
 			$parts = explode(':', $line, 2);
 			if (count($parts) === 2) {
-				$headers[strtolower(trim($parts[0]))] = trim($parts[1]);
+				$headers[strtolower(trim($parts[0], SecurityTxtTrim::CHARACTERS))] = trim($parts[1], SecurityTxtTrim::CHARACTERS);
 			}
 		}
 		return $headers;

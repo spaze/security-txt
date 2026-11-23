@@ -3,12 +3,14 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
+
 final class SecurityTxtLineWrongEol extends SecurityTxtSpecViolation
 {
 
 	public function __construct(string $line)
 	{
-		$correctValue = trim($line);
+		$correctValue = trim($line, SecurityTxtTrim::CHARACTERS);
 		parent::__construct(
 			func_get_args(),
 			'The line (%s) ends with whitespace other than spaces and tabs',

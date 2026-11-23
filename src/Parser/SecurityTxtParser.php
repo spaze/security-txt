@@ -30,6 +30,7 @@ use Spaze\SecurityTxt\Parser\FieldProcessors\UriCheckFieldValueInWellKnown;
 use Spaze\SecurityTxt\Parser\SplitProviders\SecurityTxtSplitProvider;
 use Spaze\SecurityTxt\SecurityTxt;
 use Spaze\SecurityTxt\SecurityTxtPrintableValue;
+use Spaze\SecurityTxt\SecurityTxtTrim;
 use Spaze\SecurityTxt\SecurityTxtValidationLevel;
 use Spaze\SecurityTxt\Signature\SecurityTxtSignature;
 use Spaze\SecurityTxt\Validator\SecurityTxtValidateResult;
@@ -217,8 +218,8 @@ final class SecurityTxtParser
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNulByte(rtrim($rawLine, "\r\n"));
 				$rawLine = str_replace("\0", '', $rawLine);
 			}
-			// So are the other control characters, but a vertical tab at an end of the line, which PHP trims as whitespace, is said to be whitespace there
-			if (preg_match(SecurityTxtLineControlCharacter::CONTROL_CHARACTERS, trim($rawLine)) === 1) {
+			// So are the other control characters, but a vertical tab or a form feed at an end of the line, which `trim()` removes as whitespace, is said to be whitespace there
+			if (preg_match(SecurityTxtLineControlCharacter::CONTROL_CHARACTERS, trim($rawLine, SecurityTxtTrim::CHARACTERS)) === 1) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineControlCharacter(rtrim($rawLine, "\r\n"));
 				$rawLine = preg_replace(SecurityTxtLineControlCharacter::CONTROL_CHARACTERS, '', $rawLine) ?? $rawLine;
 			}
@@ -227,9 +228,9 @@ final class SecurityTxtParser
 			if ($dashEscaped) {
 				$rawLine = substr($rawLine, 2);
 			}
-			$lineAsWritten = rtrim($rawLine);
+			$lineAsWritten = rtrim($rawLine, SecurityTxtTrim::CHARACTERS);
 			// A Unicode space is whitespace there too, but not when there's nothing else on the line, which isn't empty then
-			$line = preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++(?=.)/s', '', $lineAsWritten) ?? ltrim($lineAsWritten);
+			$line = preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++(?=.)/s', '', $lineAsWritten) ?? ltrim($lineAsWritten, SecurityTxtTrim::CHARACTERS);
 			$lineWithoutEol = rtrim($rawLine, "\r\n");
 			if (!str_ends_with($rawLine, "\n")) {
 				$this->lineErrors[$lineNumber][] = new SecurityTxtLineNoEol($line);
@@ -276,9 +277,9 @@ final class SecurityTxtParser
 			}
 			$fieldNameAsWritten = $field[0];
 			// Tried only where a run starts, or each byte of a long one would be a start to try the rest from
-			$field[0] = preg_replace('/(?<!\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++$/D', '', $fieldNameAsWritten) ?? rtrim($fieldNameAsWritten);
+			$field[0] = preg_replace('/(?<!\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++$/D', '', $fieldNameAsWritten) ?? rtrim($fieldNameAsWritten, SecurityTxtTrim::CHARACTERS);
 			$fieldName = strtolower($field[0]);
-			$fieldValue = trim(preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', $field[1]) ?? $field[1]);
+			$fieldValue = trim(preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', $field[1]) ?? $field[1], SecurityTxtTrim::CHARACTERS);
 			$securityTxtField = $securityTxtFields[$fieldName] ?? null;
 			// A colon before anything but whitespace is more likely a part of the value, `Acknowledgments https://example.com/`, than the one after a field name
 			$fieldWithoutColon = $securityTxtField === null && preg_match('/^(?!\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')./s', $field[1]) === 1 ? $this->getFieldWithoutColon($securityTxtFields, $line) : null;
@@ -356,7 +357,7 @@ final class SecurityTxtParser
 	 */
 	private function isSpaceAfterColon(SecurityTxtField $field, string $afterColon): bool
 	{
-		$whitespace = preg_match('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')*+/', $afterColon, $matches) === 1 ? $matches[0] : substr($afterColon, 0, strlen($afterColon) - strlen(ltrim($afterColon)));
+		$whitespace = preg_match('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')*+/', $afterColon, $matches) === 1 ? $matches[0] : substr($afterColon, 0, strlen($afterColon) - strlen(ltrim($afterColon, SecurityTxtTrim::CHARACTERS)));
 		return match ($field) {
 			SecurityTxtField::Acknowledgments,
 			SecurityTxtField::Canonical,

@@ -266,7 +266,7 @@ final class SecurityTxtUriValidator
 			&& preg_match('/^(' . self::SCHEME . '):$/iD', $words[0], $label) === 1
 			&& preg_match('/^(?:' . self::KNOWN_SCHEMES . ')$/iD', $label[1]) !== 1
 		) {
-			return ['reason' => SecurityTxtNotUriReason::Label, 'correctValue' => $this->suggest(ltrim(substr($uri, strlen($words[0]))))];
+			return ['reason' => SecurityTxtNotUriReason::Label, 'correctValue' => $this->suggest(ltrim(substr($uri, strlen($words[0])), SecurityTxtTrim::CHARACTERS))];
 		}
 		if ($this->isSchemeMissing($uri)) {
 			return $this->explainSchemeMissing($uri, $field, $fileLocation);

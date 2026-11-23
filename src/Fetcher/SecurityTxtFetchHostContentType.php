@@ -3,6 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Fetcher;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
+
 final readonly class SecurityTxtFetchHostContentType
 {
 
@@ -50,7 +52,7 @@ final readonly class SecurityTxtFetchHostContentType
 				$lowercaseCharsetParameter = 'charset=' . strtolower($charset ?? '');
 			} elseif (isset($match[3]) && preg_match('/^charset(?!' . self::TOKEN . ')/i', $match[3]) === 1) {
 				// One that isn't written as RFC 9110 has it, `charset = utf-8` or `charset:utf-8`, is one to change
-				$charsetParameter = rtrim($match[3]);
+				$charsetParameter = rtrim($match[3], SecurityTxtTrim::CHARACTERS);
 				$lowercaseCharsetParameter = strtolower($charsetParameter);
 			}
 		}

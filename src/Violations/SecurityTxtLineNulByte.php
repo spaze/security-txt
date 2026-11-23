@@ -3,12 +3,14 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
+
 final class SecurityTxtLineNulByte extends SecurityTxtSpecViolation
 {
 
 	public function __construct(string $line)
 	{
-		$correctValue = trim(str_replace("\0", '', $line));
+		$correctValue = trim(str_replace("\0", '', $line), SecurityTxtTrim::CHARACTERS);
 		parent::__construct(
 			func_get_args(),
 			'The line (%s) contains a NUL byte',

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Spaze\SecurityTxt\Violations;
 
 use Spaze\SecurityTxt\Fields\SecurityTxtField;
+use Spaze\SecurityTxt\SecurityTxtTrim;
 
 /**
  * The "Possibel" typo in the class name is an intentional Easter egg.
@@ -19,7 +20,7 @@ final class SecurityTxtPossibelFieldTypo extends SecurityTxtSpecViolation
 			'Field %s may be a typo, did you mean %s?',
 			[$fieldName, $suggestedField->value],
 			null,
-			"{$suggestedField->value}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '')),
+			"{$suggestedField->value}: " . (preg_replace('/^(?:\s|' . SecurityTxtLineLeadingWhitespace::UNICODE_SPACES . ')++/', '', explode(':', $line, 2)[1] ?? '') ?? ltrim(explode(':', $line, 2)[1] ?? '', SecurityTxtTrim::CHARACTERS)),
 			"Change %s to %s",
 			[$fieldName, $suggestedField->value],
 			null,

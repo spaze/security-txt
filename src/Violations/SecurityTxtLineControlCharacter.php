@@ -3,6 +3,8 @@ declare(strict_types = 1);
 
 namespace Spaze\SecurityTxt\Violations;
 
+use Spaze\SecurityTxt\SecurityTxtTrim;
+
 final class SecurityTxtLineControlCharacter extends SecurityTxtSpecViolation
 {
 
@@ -15,7 +17,7 @@ final class SecurityTxtLineControlCharacter extends SecurityTxtSpecViolation
 
 	public function __construct(string $line)
 	{
-		$correctValue = trim(preg_replace(self::CONTROL_CHARACTERS, '', $line) ?? '');
+		$correctValue = trim(preg_replace(self::CONTROL_CHARACTERS, '', $line) ?? '', SecurityTxtTrim::CHARACTERS);
 		parent::__construct(
 			func_get_args(),
 			'The line (%s) contains a control character',
